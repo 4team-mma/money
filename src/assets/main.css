@@ -1,0 +1,63 @@
+/* @import './base.css';
+
+#app {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-weight: normal;
+}
+
+a,
+.green {
+  text-decoration: none;
+  color: hsla(160, 100%, 37%, 1);
+  transition: 0.4s;
+  padding: 3px;
+}
+
+@media (hover: hover) {
+  a:hover {
+    background-color: hsla(160, 100%, 37%, 0.2);
+  }
+}
+
+@media (min-width: 1024px) {
+  body {
+    display: flex;
+    place-items: center;
+  }
+
+  #app {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 0 2rem;
+  } */
+
+  body {
+  background-color: #f8f8e1;
+}
+
+.nav {
+  display: flex;
+  justify-content: center;
+  gap: 60px; /* 自動產生間距 */
+  padding: 20px 0;
+  font-size: 18px;
+}
+.nav-link,
+.nav-link:visited,
+.nav-link:active {
+  color: #333;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+/* hover 效果 */
+.nav-link:hover {
+  color: #409eff;
+}
+
+h1 {
+  text-align: center;
+}
+/* } */
