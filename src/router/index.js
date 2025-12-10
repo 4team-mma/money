@@ -7,25 +7,34 @@ import Add from "../view/Add.vue";
 import Chart from "../view/Chart.vue";
 const routes =[{
     path:'/',
-    component:Home
+    component:Home,
+    name:"Home"
 },
 {
     path:'/book',
-    component:Book
+    component:Book,
+    name:Book
 },
 {
     path:'/Account',
-    component:Account
+    component:Account,
+    name:Account
 },
 {
     path:'/Add',
-    component:Add
+    component:Add,
+    name:Add
 },
 {
     path:'/chart',
-    component:Chart
-}
-]
+    component:Chart,
+    name:Chart}]
+// },{
+//     path:'/:pathMatch(.*)*',
+//     component:NotFound,
+//     name:"NotFound"
+//     },
+
 
 const router = createRouter({
     history:createWebHistory(),

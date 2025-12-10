@@ -35,6 +35,8 @@ a,
 
   body {
   background-color: #f8f8e1;
+    padding-left: 2rem;
+    padding-right: 2rem;
 }
 
 .nav {
