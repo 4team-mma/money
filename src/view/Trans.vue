@@ -2,20 +2,17 @@
 
 </script>
 <template>
-<!-- <h1>我是帳記一筆</h1> -->
 <br>
 <div class="out">
+    
     <button><RouterLink class="R" to="/Add">支出</RouterLink></button>
     <button><RouterLink class="R" to="/Inn">收入</RouterLink></button>
     <button><RouterLink class="R" to="/Trans">轉帳</RouterLink></button>
 </div>
-<h1>支出頁面</h1>
-
-
- <router-view></router-view>
+<h1>Trans轉帳頁面</h1>
 </template>
 <style scoped>
-    div{
+        div{
         text-align: center;
         border: 2px solid rgb(210, 210, 211);
         border-radius: 10px;
