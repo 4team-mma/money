@@ -1,0 +1,58 @@
+
+
+
+.t-btn {
+    display: inline-block;
+    padding: 14px 38px;
+    border-radius: 999px;
+    background: #fff;
+    /*  固定白色背景 */
+    color: #222;
+    text-decoration: none;
+    font-size: 18px;
+    border: none;
+    outline: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+    text-align: center;
+}
+
+/* 滑鼠靠近：不要消失，改點亮感 */
+.t-btn:hover {
+    background: #ffffff;
+    /* 淺灰示意 hover */
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.18);
+}
+
+/* 鍵盤 focus（保留可見提示或柔和） */
+.t-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
+}
+
+
+
+.out {
+    display: flex;
+    flex-wrap: wrap;
+    /* 防止窄螢幕爆版 */
+    justify-content: center;
+    /* 置中 */
+    gap: 40px;
+    /* 按鈕間距 */
+
+
+    width: min(90%, 720px);
+    /* 最大寬度 720px，最小 90% */
+
+    margin: -10px auto 0 auto;
+    /* 上 margin 改小就往上 */
+
+    padding: 20px;
+
+    border-radius: 14px;
+    background: linear-gradient(to bottom,
+            rgba(172, 172, 171, 0.55),
+            rgba(231, 225, 212, 0.753));
+    text-align: center;
+}
