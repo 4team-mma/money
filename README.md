@@ -4,10 +4,12 @@
 說明文件: git 下載
 
 ## Recommended IDE Setup
-剛下載完：npm install
+剛下載完：npm install,
+安裝npm install pinia套件
+==========================
 程式執行:npm run dev
 打包:npm run build
-
+===========================
 ###
 ① 隊友第一次下載你的專案（Clone Main）
 只做一次。
@@ -27,6 +29,8 @@ git checkout -b apple
 不會互相干擾
 
 ④ 隊友開發完後，推上自己的分支
+先查看自己位於哪個分支:git branch
+#######
 git add .
 git commit -m "完成 apple 分支的功能"
 git push -u origin apple
