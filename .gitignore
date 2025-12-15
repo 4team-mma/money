@@ -1,0 +1,57 @@
+# 1. 依賴與建置輸出 (Dependencies and Build Output)
+############################################
+# 專案依賴套件（重複項，但確保萬無一失）
+/node_modules
+node_modules/
+
+# Vue/Vite 建置輸出資料夾
+/dist
+/dist-ssr
+/out
+/build
+/coverage
+*.tsbuildinfo  # TypeScript 編譯狀態資訊
+
+# 2. 環境變數與敏感設定 (Environment Variables)
+###########################################################
+# 存放敏感資訊的檔案（必須忽略，您提供的清單中有重複，已整合）
+.env
+.env.local
+.env.*.local
+*.local # 忽略所有以 .local 結尾的檔案（例如 .browserslistrc.local）
+
+# 3. 日誌與除錯檔案 (Logs and Debugging)
+############################################
+# 各種套件管理工具的除錯日誌
+/logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.eslintcache # ESLint 檢查的快取檔案
+
+# 4. 編輯器與作業系統暫存檔案 (IDE and OS Temp Files)
+############################################
+# VS Code 專案設定資料夾
+.vscode/
+!.vscode/extensions.json # 例外：允許追蹤推薦的擴充功能設定
+
+# 其他常見編輯器和系統檔案
+.idea             # JetBrains (IntelliJ, WebStorm) 的專案設定資料夾
+.DS_Store         # macOS 系統檔案
+*.suo             # Visual Studio 檔案
+*.ntvs* # Visual Studio 檔案
+*.njsproj         # Visual Studio 檔案
+*.sln             # Visual Studio 解決方案檔案
+*.sw?             # Vim 編輯器的暫存交換檔案
+
+# 5. 測試相關檔案 (Testing Frameworks)
+############################################
+# Cypress 測試輸出的結果
+/cypress/videos/
+/cypress/screenshots/
+
+# Vitest 測試框架的截圖
+__screenshots__/
