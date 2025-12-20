@@ -20,10 +20,15 @@
 </template>
 
 <style scoped>
-@import '../assets/css/add_nav.css';
+
 h2 {
     text-align: center;
     margin-top: 20px;
+    margin-bottom: 20px;
+}
+.out {
+    display: flex;
+    justify-content: center;
     margin-bottom: 20px;
 }
 
