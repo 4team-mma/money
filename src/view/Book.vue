@@ -1,8 +1,13 @@
 <script setup>
-
+import Nav from '@/components/Nav.vue';
 </script>
 <template>
-<h1>我是帳本頁面</h1>
+<Nav>
+<h1>行事曆</h1>
+
+
+</Nav>
+
 </template>
 <style scoped>
     

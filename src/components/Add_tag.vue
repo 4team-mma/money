@@ -1,193 +1,168 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
-/* ---------- 面板狀態 ---------- */
-const showCategoryPanel = ref(false)
+/* ---------- 狀態控制 ---------- */
+const showModal = ref(false)
+const showAdd = ref(false)
 
-/* ---------- 類別列表 ---------- */
 const categoryItems = ref([
-    { id: 1, itemName: '衝動', color: '#ef4444' },
-    { id: 2, itemName: '必要', color: '#3b82f6' },
-    { id: 3, itemName: '旅遊', color: '#22c55e' },
+    { id: 1, itemName: '一般', color: '#004B97' },
+    { id: 2, itemName: '旅遊', color: '#22c55e' },
+    { id: 3, itemName: '必要', color: '#3b82f6' },
+    { id: 4, itemName: '衝動', color: '#ef4444' },
 ])
 
-const selectedCategory = ref(categoryItems.value[0])
+const selectedIds = ref([1])
 const newAdd = ref('')
-const newColor = ref('#000000')
+const newColor = ref('#ef4444')
 
-// 顏色池（最多10個）
-const colors = ref(['#ef4444', '#3b82f6', '#22c55e', '#f97316'])
+// 圖片中的顏色序列
+const colors = ['#ef4444', '#3b82f6','#004B97', '#22c55e', '#f97316', '#a855f7', '#ec4899']
 
-// 暫存預覽顏色，不直接改類別
-const previewColor = ref(selectedCategory.value.color)
+/* ---------- 計算屬性 ---------- */
 
-// 選擇類別
-const selectCategory = (item) => {
-    selectedCategory.value = item
-    previewColor.value = item.color
-}
+// 1. 找出所有「被選中」的完整標籤物件
+const selectedItems = computed(() => {
+    return categoryItems.value.filter(i => selectedIds.value.includes(i.id))
+})
 
-// 確定修改顏色
-const applyColor = (color) => {
-    selectedCategory.value.color = color
-    previewColor.value = color
-    // 加入顏色池（最多10個）
-    if (!colors.value.includes(color) && colors.value.length < 10) {
-        colors.value.push(color)
+// 2. 計算主頁面按鈕要顯示的文字
+const displayText = computed(() => {
+    if (selectedItems.value.length === 0) return '選擇標籤'
+    return selectedItems.value.map(i => i.itemName).join(', ')
+})
+
+/* ---------- 方法 ---------- */
+const toggleTag = (id) => {
+    const index = selectedIds.value.indexOf(id)
+    if (index > -1) {
+        selectedIds.value.splice(index, 1)
+    } else {
+        selectedIds.value.push(id)
     }
 }
 
-// 新增類別
 const addNewItem = () => {
     if (!newAdd.value.trim()) return
     const newItem = { id: Date.now(), itemName: newAdd.value, color: newColor.value }
     categoryItems.value.push(newItem)
-    selectedCategory.value = newItem
-    previewColor.value = newItem.color
-
-    // 加入顏色池（最多10個）
-    if (!colors.value.includes(newColor.value) && colors.value.length < 10) {
-        colors.value.push(newColor.value)
-    }
-
+    selectedIds.value.push(newItem.id)
     newAdd.value = ''
-    newColor.value = '#000000'
-}
-
-// 刪除類別
-const removeItem = (id) => {
-    categoryItems.value = categoryItems.value.filter(i => i.id !== id)
+    showAdd.value = false
 }
 </script>
 
 <template>
-    <!-- 主按鈕 -->
-    <button class="btn btn-outline-primary" @click="showCategoryPanel = !showCategoryPanel">
-        <span class="color-dot" :style="{ backgroundColor: selectedCategory.color }"></span>
-        {{ selectedCategory.itemName }}
-    </button>
-
-    <!-- 類別面板 -->
-    <div v-if="showCategoryPanel" class="category-panel">
-        <div class="box1">
-
-            <!-- 類別列表 -->
-            <div class="category-buttons">
-                <button v-for="item in categoryItems" :key="item.id" @click="selectCategory(item)"
-                    :class="{ active: selectedCategory.id === item.id }">
-                    <span class="color-dot" :style="{ backgroundColor: item.color }"></span>
-                    {{ item.itemName }}
-                </button>
-            </div>
+    <div class="picker-trigger" @click="showModal = true">
+        <div class="dot-group" v-if="selectedItems.length > 0">
+            <span v-for="item in selectedItems" :key="item.id" class="color-dot"
+                :style="{ backgroundColor: item.color }"></span>
         </div>
-        <div class="box2">
-            <!-- 編輯顏色 -->
-            <div class="color-picker">
-                <input type="color" v-model="newColor" @input="onColorInput" />
-                <span v-for="color in colors" :key="color" class="color-dot"
-                    :class="{ selected: previewColor === color }" :style="{ backgroundColor: color }"
-                    @click="applyColor(color)"></span>
-            </div>
-
-            <!-- 新增類別 -->
-            <div class="add-category">
-                <input v-model="newAdd" placeholder="新增類別名稱" @keyup.enter="addNewItem" />
-                <!-- <input type="color" v-model="newColor" /> -->
-                <button @click="applyColor(newColor)">新增/套用顏色</button>
-            </div>
-        </div>
+        <span class="current-name">{{ displayText }}</span>
     </div>
 
+    <Teleport to="body">
+        <transition name="fade">
+            <div v-if="showModal" class="modal-overlay" @click="showModal = false">
+                <div class="modal-content" @click.stop>
+
+                    <div class="modal-header">
+                        <h3>選擇標籤 (多選)</h3>
+                        <button class="confirm-btn" @click="showModal = false">完成</button>
+                    </div>
+
+                    <div class="tag-flex">
+                        <div v-for="item in categoryItems" :key="item.id" class="tag-pill"
+                            :class="{ active: selectedIds.includes(item.id) }" @click="toggleTag(item.id)">
+                            <span class="color-dot" :style="{ backgroundColor: item.color }"></span>
+                            {{ item.itemName }}
+                        </div>
+                    </div>
+
+                    <div class="add-section">
+                        <div class="add-form" style="margin-top: 0;">
+                            <input v-model="newAdd" placeholder="新增標籤名稱" class="tag-input" @keyup.enter="addNewItem" />
+
+                            <div class="color-picker-wrapper">
+                                <div v-for="c in colors" :key="c" class="color-option-container" @click="newColor = c">
+                                    <span class="color-dot-large" :style="{ backgroundColor: c }"
+                                        :class="{ 'is-selected': newColor === c }">
+                                    </span>
+                                </div>
+                            </div>
+
+                            <button class="btn-submit-large" @click="addNewItem">新增並選取</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </transition>
+    </Teleport>
 </template>
 
 <style scoped>
+@import '../assets/css/add.css';
 
-.add-category{
-    
-    padding-bottom: 5px;
-
-}
-.category-panel {
-    margin-top: 12px;
-
-}
-
-.box1 {
-    display: flex;
+/* 標籤觸發器樣式 */
+/* .tag-trigger {
+    border-color: #3b82f6;
     justify-content: center;
-    /* 水平置中 */
-
+    gap: 8px;
 }
 
-.box2 {
-    display: flex;
-    justify-content: center;
-    /* 水平置中 */
+.tag-trigger .current-name {
+    color: #3b82f6;
+} */
 
-}
-
-/* 類別列表 */
-.category-buttons {
+/* 修正點：讓多個圓點水平排列 */
+.dot-group {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 12px;
-}
-
-.category-buttons button {
-    padding: 6px 12px;
-    border-radius: 6px;
-    background: #eee;
-    border: none;
-    cursor: pointer;
-    display: flex;
+    gap: 4px;
     align-items: center;
-    gap: 6px;
 }
 
-.category-buttons button.active {
-    background: #dbeafe;
+/* 顏色選擇圓點樣式 */
+.color-picker-wrapper {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 15px 0;
 }
 
-/* 顏色圓點 */
-.color-dot {
-    width: 16px;
-    height: 16px;
+.color-dot-large {
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
-    display: inline-block;
-    border: 1px solid #ccc;
-
-
+    cursor: pointer;
+    display: block;
+    transition: transform 0.2s;
+    border: 2px solid transparent;
 }
 
-.color-dot.selected {
-    outline: 2px solid #000;
-
+.color-dot-large.is-selected {
+    outline: 2px solid #3b82f6;
+    outline-offset: 3px;
+    transform: scale(1.1);
 }
 
-/* 色盤 */
-.color-picker {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    padding-right: 10px;
-    margin-bottom: 12px;
+.btn-submit-large {
+    width: 100%;
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 1rem;
 }
 
-/* 新增 */
-.add-category {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.add-category input {
-    padding: 6px 8px;
-
-}
-
-.add-category button {
-    padding: 6px 10px;
+.tag-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-sizing: border-box;
 }
 </style>

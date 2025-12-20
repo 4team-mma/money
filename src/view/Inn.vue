@@ -1,62 +1,174 @@
 <script setup>
+import Nav from '@/components/Nav.vue'
 import Add_bar from '@/components/Add_bar.vue'
-import Add_account from '@/components/Add_account.vue';
-import Add_member from '@/components/Add_member.vue';
-import Add_tag from '@/components/Add_tag.vue';
-import Add_cato_inn from '@/components/Add_cato_inn.vue';
-
+import Add_cato_inn from '@/components/Add_cato_inn.vue'
+import Add_account from '@/components/Add_account.vue'
+import Add_member from '@/components/Add_member.vue'
+import Add_tag from '@/components/Add_tag.vue'
 </script>
 
 <template>
-    <Add_bar />
+    <Nav>
+        <div class="page">
+            <Add_bar />
 
-    <h4>2025年12月25日 周四</h4>
+            <div class="card">
+                <div class="header">
+                    <h2>新增收入</h2>
+                    <span class="date">2025 年 12 月 25 日・週四</span>
+                </div>
 
-    <div class="form">
-        金額 : <input type="number" placeholder="金額輸入" method="post" />
-        <br><br>
+                <div class="form-group">
+                    <label>收入金額</label>
+                    <input type="number" placeholder="NT$ 0" class="amount-input" />
+                </div>
 
-        類別:&nbsp;
-        <Add_cato_inn></Add_cato_inn>&nbsp;&nbsp;&nbsp;
+                <div class="grid">
+                    <div class="form-group">
+                        <label>類別</label>
+                        <Add_cato_inn />
+                    </div>
 
-        帳戶:&nbsp;
-        <Add_account></Add_account>&nbsp;&nbsp;&nbsp;
-        成員:&nbsp;
-        <Add_member></Add_member>&nbsp;&nbsp;&nbsp;
-        標籤:&nbsp;
-        <Add_tag></Add_tag>
-        <p></p>
-        照片:
-        <input type="file">
-        <p></p>
-        <textarea name="textarea" id=""></textarea>&nbsp;<br>
-        <button>儲存</button>&nbsp;&nbsp;
-        <button>再記一筆</button>
+                    <div class="form-group">
+                        <label>帳戶</label>
+                        <Add_account />
+                    </div>
 
+                    <div class="form-group">
+                        <label>成員</label>
+                        <Add_member />
+                    </div>
 
-    </div>
+                    <div class="form-group">
+                        <label>標籤</label>
+                        <Add_tag />
+                    </div>
+                </div>
 
-    <router-view />
+                <div class="form-group">
+                    <label>上傳附件</label>
+                    <input type="file" />
+                </div>
+
+                <div class="form-group">
+                    <label>備註</label>
+                    <textarea placeholder="收入說明（選填）"></textarea>
+                </div>
+
+                <div class="actions">
+                    <button class="btn-primary">儲存收入</button>
+                    <button class="btn-secondary">再記一筆</button>
+                </div>
+            </div>
+        </div>
+    </Nav>
 </template>
 
 <style scoped>
-@import "../assets/css/add_nav.css";
+/* 引用共用樣式 */
+@import '../assets/css/add.css';
 
-h4 {
-    text-align: center;
+
+
+.card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
 }
 
-.form {
-    text-align: center;
+.header {
+    margin-bottom: 24px;
 }
 
-/* textarea */
+.header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.date {
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+/* 表單通用群組 */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+/* 修正檔案上傳寬度問題 */
+.form-group input[type="file"] {
+    align-self: flex-start;
+    cursor: pointer;
+    width: auto;
+}
+
+label {
+    font-size: 0.85rem;
+    color: #475569;
+}
+
+/* 金額輸入框樣式 */
+.amount-input {
+    height: 52px;
+    font-size: 1.4rem;
+    font-weight: 600;
+    padding: 0 16px;
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+}
+
+/* 二欄式網格佈局 */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)); 
+    gap: 12px;
+    width: 100%;
+}
+
+/* 手機版自動切換為一欄 */
+@media (max-width: 480px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 備註輸入框樣式 */
 textarea {
-    width: 50%;
-    min-height: 80px;
-    padding: 6px 8px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
+    min-height: 120px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
     resize: vertical;
+}
+
+/* 下方按鈕區 */
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.btn-primary {
+    background: #2563eb;
+    color: white;
+    padding: 10px 20px;
+    border: 0;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background: #e7eef5;
+    color: #334155;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 0;
+    cursor: pointer;
 }
 </style>

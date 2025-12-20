@@ -1,11 +1,11 @@
 <script setup>
+import { ref } from 'vue'
 
-import { ref, nextTick } from 'vue'
-/* ---------- 狀態 ---------- */
-const showCategoryPanel = ref(false)
+const showModal = ref(false)
+const showAdd = ref(false)
 
 const categoryItems = ref([
-    { id: 1, itemName: '自己'},
+    { id: 1, itemName: '自己' },
     { id: 2, itemName: '父母' },
     { id: 3, itemName: '孩子' },
 ])
@@ -13,125 +13,62 @@ const categoryItems = ref([
 const selectedCategory = ref(categoryItems.value[0])
 const newAdd = ref('')
 
-/* ---------- 類別操作 ---------- */
 const selectCategory = (item) => {
     selectedCategory.value = item
-    collapsePanel()
+    showModal.value = false
 }
 
 const addNewItem = () => {
     if (!newAdd.value.trim()) return
-
-    const newItem = {
-        id: Date.now(),
-        itemName: newAdd.value,
-    }
-
+    const newItem = { id: Date.now(), itemName: newAdd.value }
     categoryItems.value.push(newItem)
     selectedCategory.value = newItem
     newAdd.value = ''
-    collapsePanel()
+    showAdd.value = false
+    showModal.value = false
 }
 
 const removeItem = (id) => {
-    categoryItems.value = categoryItems.value.filter(item => item.id !== id)
-
-    if (selectedCategory.value?.id === id) {
-        selectedCategory.value = categoryItems.value[0] || null
-    }
-}
-
-/* ---------- 面板動畫 ---------- */
-const togglePanel = () => {
-    showCategoryPanel.value = !showCategoryPanel.value
+    categoryItems.value = categoryItems.value.filter(i => i.id !== id)
+    if (selectedCategory.value?.id === id) selectedCategory.value = categoryItems.value[0] || null
 }
 </script>
+
 <template>
-<button @click="togglePanel" class="btn btn-secondary">
-        {{ selectedCategory.icon }} {{ selectedCategory.itemName }}
-    </button>
+<div class="picker-trigger" @click="showModal = true">
+        <span class="current-icon">👤</span> <span class="current-name">{{ selectedCategory?.itemName }}</span>
 
-    <!-- 類別面板 -->
-    <transition name="fade-slide">
-        <div v-if="showCategoryPanel" class="category-panel">
-            <!-- 類別列表 -->
-            <div class="category-buttons">
-                <button v-for="item in categoryItems" :key="item.id" @click="selectCategory(item)">
-                    {{ item.icon }} {{ item.itemName }}
-                    <span @click.stop="removeItem(item.id)"> ✕ </span>
-                </button>
-            </div>
+    </div>
 
-            <!-- 新增類別 -->
-            <div class="add-category">
-                <input v-model="newAdd" @keyup.enter="addNewItem" placeholder="新增類別" />
- 
+    <Teleport to="body">
+        <transition name="fade">
+            <div v-if="showModal" class="modal-overlay" @click="showModal = false">
+                <div class="modal-content" @click.stop>
+                    <div class="modal-header">
+                        <h3>選擇成員</h3>
+                        <button class="close-btn" @click="showModal = false">✕</button>
+                    </div>
+
+                    <div class="tag-flex">
+                        <div v-for="item in categoryItems" :key="item.id" 
+                             class="tag-pill" @click="selectCategory(item)">
+                            {{ item.itemName }}
+                            <span style="margin-left:8px; font-size:10px; color:#94a3b8" @click.stop="removeItem(item.id)">✕</span>
+                        </div>
+                    </div>
+
+                    <div class="add-section">
+                        <div class="add-form" style="margin-top:0">
+                            <input v-model="newAdd" placeholder="輸入新成員名稱" @keyup.enter="addNewItem" />
+                            <button class="btn-submit" @click="addNewItem">新增成員</button>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </transition>
+        </transition>
+    </Teleport>
 </template>
+
 <style scoped>
-
-/* 類別面板 */
-.category-panel {
-    margin-top: 12px;
-}
-
-/* 類別列表按鈕 */
-.category-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
-    margin-bottom: 10px;
-}
-
-.category-buttons button {
-    padding: 6px 12px;
-    border-radius: 6px;
-    background: #eee;
-    border: none;
-    cursor: pointer;
-}
-
-.category-buttons button:hover {
-    background: #ddd;
-}
-
-/* 新增類別 */
-.add-category {
-    margin-top: 10px;
-    padding-bottom: 5px;
-}
-
-/* Icon 選擇器 */
-.icon-picker {
-    display: flex;
-    flex-wrap: wrap; /* ✅ 重要，自動換行 */
-    gap: 10px;
-    margin: 10px 0;
-    justify-content: center;
-}
-
-.icon-picker span {
-    cursor: pointer;
-    font-size: 24px;
-    padding: 4px 8px;
-    border-radius: 6px;
-}
-
-.icon-picker .selected {
-    background: #cce5ff;
-}
-
-/* 展開/收起動畫 */
-.fade-slide-enter-active,
-.fade-slide-leave-active {
-    transition: all 0.25s ease;
-}
-.fade-slide-enter-from,
-.fade-slide-leave-to {
-    opacity: 0;
-    transform: translateY(-10px);
-}
+@import '../assets/css/add.css';
 </style>
