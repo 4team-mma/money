@@ -72,7 +72,7 @@ const navigation = [
         <!-- Header -->
         <div class="sidebar-header">
           <RouterLink to="/dashboard" class="logo">
-            <div class="logo-icon">🤖</div>
+            <div class="logo-icon"> <img src="../assets/logo.svg" alt="logo" width="48" height="48"></div>
             <span class="logo-text">Money MMA</span>
           </RouterLink>
           <button class="close-button" @click="sidebarOpen = false">✕</button>

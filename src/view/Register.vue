@@ -32,7 +32,7 @@ const handleRegister = () => {
         registeredDate: new Date().toLocaleDateString(),
         status: 'active',
         statusText: '正常',
-        role: '一般用戶'
+        role: 'user'
     };
 
     savedUsers.push(newUser);

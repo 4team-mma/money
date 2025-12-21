@@ -59,7 +59,9 @@ const handleRegister = () => {
                 <div class="form-card">
                     <div class="logo-section">
                         <div class="logo-icon">
-                            <span class="icon">💼</span>
+                            <span class="icon">    
+                                <img src="../assets/logo.svg" alt="logo" width="48" height="48">
+                                </span>
                         </div>
                         <h1 class="brand-name">Money MMA</h1>
                     </div>
