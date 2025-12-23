@@ -159,7 +159,7 @@ const saveNotifications = () => {
 
                     <div class="form-grid">
                         <div class="form-group">
-                            <label>姓名</label>
+                            <label>暱稱</label>
                             <input type="text" v-model="profile.name" placeholder="輸入姓名">
                         </div>
 
@@ -168,10 +168,6 @@ const saveNotifications = () => {
                             <input type="email" v-model="profile.email" placeholder="輸入 Email">
                         </div>
 
-                        <div class="form-group">
-                            <label>電話</label>
-                            <input type="tel" v-model="profile.phone" placeholder="輸入電話號碼">
-                        </div>
 
                         <div class="form-group">
                             <label>生日</label>
@@ -195,19 +191,6 @@ const saveNotifications = () => {
             <div v-if="activeTab === 'preferences'" class="tab-content">
                 <div class="settings-section">
                     <h2>顯示設定</h2>
-
-                    <div class="preference-item">
-                        <div class="preference-info">
-                            <h3>語言</h3>
-                            <p>選擇顯示語言</p>
-                        </div>
-                        <select v-model="preferences.language" class="select-input">
-                            <option value="zh-TW">繁體中文</option>
-                            <option value="zh-CN">简体中文</option>
-                            <option value="en">English</option>
-                            <option value="ja">日本語</option>
-                        </select>
-                    </div>
 
                     <div class="preference-item">
                         <div class="preference-info">
@@ -236,7 +219,8 @@ const saveNotifications = () => {
                 </div>
 
                 <div class="settings-section">
-                    <h2>財務設定</h2>
+                    <h2>預算設定</h2>
+                    總預算,分類預算,預算週期
 
                     <div class="preference-item">
                         <div class="preference-info">
@@ -304,55 +288,13 @@ const saveNotifications = () => {
                     <button class="btn-primary" @click="changePassword">變更密碼</button>
                 </div>
 
-                <div class="settings-section">
-                    <h2>雙因素認證</h2>
 
-                    <div class="security-toggle">
-                        <div class="security-info">
-                            <h3>啟用雙因素認證</h3>
-                            <p>為您的帳戶增加額外的安全層</p>
-                        </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" v-model="security.twoFactor">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-
-                    <div v-if="security.twoFactor" class="security-details">
-                        <p>雙因素認證已啟用</p>
-                        <button class="btn-secondary">查看備用代碼</button>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <h2>登入記錄</h2>
-
-                    <div class="login-history">
-                        <div v-for="login in security.loginHistory" :key="login.id" class="login-item">
-                            <div class="login-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-                                    <line x1="12" y1="18" x2="12.01" y2="18" />
-                                </svg>
-                            </div>
-                            <div class="login-info">
-                                <h4>{{ login.device }}</h4>
-                                <p>{{ login.location }} • {{ login.time }}</p>
-                            </div>
-                            <span :class="['login-status', login.status]">{{ login.statusText }}</span>
-                        </div>
-                    </div>
-                </div>
+          
 
                 <div class="settings-section danger-zone">
                     <h2>危險區域</h2>
-                    <div class="danger-item">
-                        <div class="danger-info">
-                            <h3>登出所有裝置</h3>
-                            <p>從所有已登入的裝置登出</p>
-                        </div>
-                        <button class="btn-danger-outline">登出全部</button>
-                    </div>
+ 
+
                     <div class="danger-item">
                         <div class="danger-info">
                             <h3>刪除帳戶</h3>
