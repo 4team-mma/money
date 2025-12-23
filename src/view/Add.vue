@@ -90,6 +90,17 @@ const showCategoryModal = ref(false)
         </div>
 
 
+<div class="form-group">
+  <label>測試</label>
+
+  <div style="border: 1px; width: 50px;" @click="showCategoryModal = true">
+
+    >點我
+
+  </div>
+</div>
+
+
 
 
 
