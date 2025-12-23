@@ -11,7 +11,8 @@ import 'v-calendar/style.css';
 import { ref } from 'vue';
 const date = ref(new Date());
 
-
+import BaseModal from '@/components/BaseModal.vue'
+const showCategoryModal = ref(false)
 </script>
 
 <template>
@@ -87,6 +88,11 @@ const date = ref(new Date());
                 </div>
             </div>
         </div>
+
+
+
+
+
     </Nav>
 </template>
 <style scoped>
