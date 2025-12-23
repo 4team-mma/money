@@ -7,7 +7,7 @@
 請先確認電腦已安裝：
 
 - ✅ Node.js（建議 LTS 版本）
-- ✅ npm（安裝 Node.js 時會一起安裝）
+                   - ✅ npm（安裝 Node.js 時會一起安裝）
 - ✅ Git
 - ✅ Visual Studio Code（或其他 IDE）
 
