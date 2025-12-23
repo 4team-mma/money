@@ -6,28 +6,30 @@ import Nav from '@/components/Nav.vue';
 <template>
     <Nav>
 <div class="acc_head">
+    <p class="transparent-text">(空白)</p>
     <div>  
-        <h1>帳戶管理</h1>
-        <p>管理您的所有帳戶與資產</p>
+        <h1 class="page-title">帳戶管理</h1>
+        <p class="page-subtitle">管理您的所有帳戶與資產</p>
     </div>
     <button class="add_account_button"><i class="bi bi-plus">新增帳戶</i></button>
 </div>
 <br>
+<br>
 <div class="acc_head">
-    <div class="box">
-        <h5>總淨值 &nbsp;&nbsp;<span class="bi bi-suitcase-lg-fill"></span></h5>
-        <h3>NT$ 571,200</h3>
-        <p>總資產減去總負債</p>
+    <div class="box value-card">
+        <div class="acc_head"><h5>總淨值 &nbsp;&nbsp;</h5><span class="bi bi-suitcase-lg-fill"></span></div>
+        <h3 class="amount">NT$ 571,200</h3>
+        <p class="change-text">總資產減去總負債</p>
     </div>
-    <div class="box">
-        <h5>總資產 &nbsp;&nbsp;<span class="bi bi-graph-up-arrow"></span></h5>
-        <h3>NT$ 583,500</h3>
-        <p>所有正資產總和</p>
+    <div class="box assets-card">
+        <div class="acc_head"><h5>總資產 &nbsp;&nbsp;</h5><span class="bi bi-graph-up-arrow"></span></div>
+        <h3 class="amount">NT$ 583,500</h3>
+        <p class="change-text">所有正資產總和</p>
     </div>
-    <div class="box">
-        <h5>總負債 &nbsp;&nbsp;<span class="bi bi-graph-down-arrow"></span></h5>
-        <h3>NT$ 12,300</h3>
-        <p>所有負債總和</p>
+    <div class="box debt-card">
+        <div class="acc_head"><h5>總負債 &nbsp;&nbsp;</h5><span class="bi bi-graph-down-arrow"></span></div>
+        <h3 class="amount">NT$ 12,300</h3>
+        <p class="change-text">所有負債總和</p>
     </div>
 </div>
 <br>
@@ -79,9 +81,11 @@ import Nav from '@/components/Nav.vue';
     </div>
 </div>
 
+<br>
+<br>
 
 <!-- 按鈕 -->
-<div>
+<div class="acc_head">
     <H3>新增帳戶</H3>
     <button>✕</button>
 </div>
@@ -121,6 +125,37 @@ import Nav from '@/components/Nav.vue';
 
 
 <style scoped>
+
+    .transparent-text {
+    opacity: 0;
+    }
+
+    .page-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 8px 0;
+    }
+
+    .page-subtitle {
+    font-size: 14px;
+    color: #64748b;
+    margin: 0;
+    }
+
+    .amount {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 10px;
+    }
+
+    .change-text{
+    font-size: 12px;
+    color: #64748b;
+    margin: 0;
+    }
+
     .acc_head{
         display: flex;
         justify-content: space-between;
@@ -133,11 +168,16 @@ import Nav from '@/components/Nav.vue';
     }
 
     .add_account_button{
-        border-radius: 30px;
-        width: 100px;
-        margin: 15px;
-        border: 0.5px solid gray;
-        background-color: oldlace;
+        background: white;
+        font-size: 12px;
+        border-radius: 16px;
+        width: 80px;
+        height: 40px;
+        padding: 4px;
+        border: 0.5px solid white;
+        border-left: 2px solid;
+        border-left-color: #e8ef28;
+        
     }
 
     .three_dots_button{
@@ -147,11 +187,13 @@ import Nav from '@/components/Nav.vue';
     }
 
     .box{
-        border-radius: 40px;
-        border: 1px solid darkgrey;
-        width: 300px;
-        padding: 25px;
-        background-color: white;
+        background: white;
+        border-radius: 16px;
+        width: 250px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        border-left: 4px solid;
+        transition: transform 0.2s, box-shadow 0.2s;
     }
 
     .sec_box{
@@ -165,5 +207,17 @@ import Nav from '@/components/Nav.vue';
     }
     .account-icon-wrapper{
         padding: 1rem;
+    }
+
+    .value-card {
+    border-left-color: #3b82f6;
+    }
+
+    .assets-card {
+    border-left-color: #ef4444;
+    }
+
+    .debt-card {
+    border-left-color: #0ea5e9;
     }
 </style>
