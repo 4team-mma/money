@@ -256,7 +256,7 @@ const formatNumber = (num) => {
 
 
 <style scoped>
-  @import '../assets/css/dashboard.css'
+  @import '../assets/css/dashboard.css';
 </style>
 
 
