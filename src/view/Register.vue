@@ -1,7 +1,8 @@
 
 <script setup>
 import { reactive } from 'vue'
-
+import { useRouter } from 'vue-router' 
+const router = useRouter() 
 const formData = reactive({
     name: '',
     email: '',
@@ -41,6 +42,10 @@ const handleRegister = () => {
     alert('註冊成功，請重新登入！');
     router.push('/'); // 回登入頁
 }
+const goToLogin = () => {
+    router.push('/')
+}
+
 </script>
 
 
