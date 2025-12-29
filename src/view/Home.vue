@@ -92,7 +92,9 @@ const handleRegister = () => {
 
                     <div class="register-link">
                         還沒有帳號？ <a href="#" @click.prevent="handleRegister">立即註冊</a>
+                     <p>忘記密碼？</p>
                     </div>
+                   
                 </div>
             </div>
 
@@ -100,8 +102,8 @@ const handleRegister = () => {
                 <div class="showcase-content">
                     <div class="showcase-title">
                         <h2>數位財務管理系統</h2><br>
-                        <span>1.「讓數據開口說話，讓金錢有跡可循」</span><br>
-                        <span>2.「把記帳，升級成一套可分析的財務系統」</span><br>
+                        <span>邁向財富自由ＧＯ！</span><br>
+                   
                         <p></p>
                     </div>
 

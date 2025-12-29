@@ -1,7 +1,26 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import Nav from '@/components/Nav.vue';
+import axios from 'axios'
 
+// 💡 存放從 API 抓回來的「活資料」
+const transactions = ref([])
+
+const fetchTransactions = async () => {
+    try {
+        // 💡 指向您的 FastAPI 路由
+        const response = await axios.get('http://127.0.0.1:8000/records/')
+        transactions.value = response.data
+    } catch (error) {
+        console.error("API 串接失敗，請檢查後端是否啟動:", error)
+    }
+}
+
+onMounted(() => {
+    fetchTransactions()
+})
+
+// --- 以下為暫時預設的靜態資料，未來可由其他同學串接 ---
 const currentMonth = ref({
   income: 85000,
   expense: 52340,
@@ -14,13 +33,6 @@ const accounts = ref([
   { name: '信用卡', balance: -12300, type: 'credit', change: 15.3 }
 ])
 
-const recentTransactions = ref([
-  { id: 1, name: '星巴克咖啡', amount: -180, category: '飲食', date: '2025-12-13', type: 'expense' },
-  { id: 2, name: '薪資入帳', amount: 85000, category: '收入', date: '2025-12-10', type: 'income' },
-  { id: 3, name: '超市購物', amount: -1250, category: '居家', date: '2025-12-09', type: 'expense' },
-  { id: 4, name: '捷運月票', amount: -1280, category: '交通', date: '2025-12-08', type: 'expense' }
-])
-
 const budgets = ref([
   { category: '飲食', spent: 8500, limit: 12000, color: 'color-1' },
   { category: '交通', spent: 3200, limit: 5000, color: 'color-2' },
@@ -28,14 +40,10 @@ const budgets = ref([
 ])
 
 const formatNumber = (num) => {
-  return num.toLocaleString()
+  return num ? num.toLocaleString() : 0
 }
 
-
-
 </script>
-
-
 
 
 <template>
@@ -175,32 +183,29 @@ const formatNumber = (num) => {
           <p class="card-description">最新的收支紀錄</p>
         </div>
         <div class="card-body">
-          <div class="transactions-list">
-            <div v-for="transaction in recentTransactions" :key="transaction.id" class="transaction-item">
-              <div class="transaction-info">
-                <div class="transaction-icon" :class="transaction.type">
-                  <svg v-if="transaction.type === 'income'" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                  </svg>
-                  <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
-                  </svg>
-                </div>
-                <div>
-                  <div class="transaction-name">{{ transaction.name }}</div>
-                  <div class="transaction-category">{{ transaction.category }}</div>
+         <div class="transactions-list">
+                <div v-for="t in transactions" :key="t.id" class="transaction-item">
+                  <div class="transaction-info">
+                    <div class="transaction-icon" :class="t.add_type ? 'income' : 'expense'">
+                      <span v-if="t.add_class_icon">{{ t.add_class_icon }}</span>
+                      <svg v-else-if="t.add_type" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline></svg>
+                      <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline></svg>
+                    </div>
+                    <div>
+                      <div class="transaction-name">{{ t.add_note || '無備註' }}</div>
+                      <div class="transaction-category">{{ t.add_class }}</div>
+                    </div>
+                  </div>
+                  <div class="transaction-details">
+                    <div class="transaction-amount" :class="{ income: t.add_type }">
+                      {{ t.add_type ? '+' : '-' }}NT$ {{ formatNumber(t.add_amount*1) }}
+                    </div>
+                    <div class="transaction-date">{{ t.add_date }}</div>
+                  </div>
                 </div>
               </div>
-              <div class="transaction-details">
-                <div class="transaction-amount" :class="{ income: transaction.amount > 0 }">
-                  {{ transaction.amount > 0 ? '+' : '' }}NT$ {{ formatNumber(Math.abs(transaction.amount)) }}
-                </div>
-                <div class="transaction-date">{{ transaction.date }}</div>
-              </div>
+              <button class="btn-outline">查看所有交易</button>
             </div>
-          </div>
-          <button class="btn-outline">查看所有交易</button>
-        </div>
       </div>
 
       <div class="card">

@@ -1,8 +1,9 @@
 <script setup>
 import { ref } from 'vue';
 import Nav from '@/components/Nav.vue';
-
+import Account_add from '@/components/Account_add.vue';
 </script>
+
 <template>
     <Nav>
 <div class="acc_head">
@@ -11,7 +12,7 @@ import Nav from '@/components/Nav.vue';
         <h1 class="page-title">帳戶管理</h1>
         <p class="page-subtitle">管理您的所有帳戶與資產</p>
     </div>
-    <button class="add_account_button"><i class="bi bi-plus">新增帳戶</i></button>
+    <Account_add />
 </div>
 <br>
 <br>
@@ -81,41 +82,6 @@ import Nav from '@/components/Nav.vue';
     </div>
 </div>
 
-<br>
-<br>
-
-<!-- 按鈕 -->
-<div class="acc_head">
-    <H3>新增帳戶</H3>
-    <button>✕</button>
-</div>
-<hr>
-<div>
-    <h4>帳戶名稱</h4>
-    <input type="text" placeholder="例如：玉山銀行">
-</div>
-<br>
-<div>
-    <h4>帳戶類型</h4>
-    <option value="account_type"></option>
-</div>
-<br>
-<div>
-    <h4>貨幣</h4>
-    <option value="currency"></option>
-</div>
-<br>
-<div>
-    <h4>初始餘額</h4>
-    <input type="number" placeholder="0">
-</div>
-<br>
-<div>
-    <h4>圖示</h4>
-    <option value="icon_id"></option>
-</div>
-<br>
-
 </Nav>
 </template>
 
@@ -167,18 +133,7 @@ import Nav from '@/components/Nav.vue';
         justify-content: flex-start
     }
 
-    .add_account_button{
-        background: white;
-        font-size: 12px;
-        border-radius: 16px;
-        width: 80px;
-        height: 40px;
-        padding: 4px;
-        border: 0.5px solid white;
-        border-left: 2px solid;
-        border-left-color: #e8ef28;
-        
-    }
+
 
     .three_dots_button{
         border: none;

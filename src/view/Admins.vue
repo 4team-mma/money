@@ -177,8 +177,8 @@ onMounted(() => {
                 <div class="stats-row">
                     <div v-for="s in [
                         { l: '總用戶量', v: users.length, i: '👥', c: currentStyle.primary },
-                        { l: '全站資產', v: '$12,458,900', i: '💰', c: '#10b981' },
-                        { l: '核心延遲', v: '120ms', i: '⚡', c: '#f59e0b' }
+                        { l: '總交易數', v: '$12,458,900', i: '💰', c: '#10b981' },
+                        { l: '活躍用戶', v: '120ms', i: '⚡', c: '#f59e0b' }
                     ]" :key="s.l" class="stat-card"
                         :style="{ backgroundColor: currentStyle.card, borderColor: currentStyle.border }">
                         <div class="stat-data">
