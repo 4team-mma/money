@@ -5,17 +5,17 @@ import Book from "../view/Book.vue";
 import Account from "../view/Account.vue";
 import Add from "../view/Add.vue";
 import Chart from "../view/Chart.vue";
-import Inn from "@/view/Inn.vue";
-import Trans from "@/view/Trans.vue";
+import AddIncome from "@/view/AddIncome.vue";
+import AddTrans from "@/view/AddTrans.vue";
 import Achievements from "@/view/Achievements.vue";
 import Dashboard from "@/view/Dashboard.vue";
 import Settings from "../view/Settings.vue";
 import Admins from "@/view/Admins.vue";
 import Register from "@/view/Register.vue";
-import NetWorth from "../view/Chart_1_NetWorth.vue"
-import Balance from "../view/Chart_2_Balance.vue"
-import Expense from "../view/Chart_3_Expense.vue"
-import Income from "../view/Chart_4_Income.vue"
+import ChartFirstNetWorth from "../view/ChartFirstNetworth.vue"
+import ChartSecondBalance from "../view/ChartSecondBalance.vue"
+import ChartThirdExpense from "../view/ChartThirdExpense.vue"
+import ChartForthIncome from "../view/ChartForthIncome.vue"
 
 
 
@@ -61,14 +61,14 @@ const routes = [
     name: Achievements,
   },
   {
-    path: "/Inn",
-    component: Inn,
-    name: Inn,
+    path: "/AddIncome",
+    component: AddIncome,
+    name: AddIncome,
   },
   {
-    path: "/Trans",
-    component: Trans,
-    name: Trans,
+    path: "/AddTrans",
+    component: AddTrans,
+    name: AddTrans,
   },
   {
     path: "/Settings",
@@ -86,24 +86,24 @@ const routes = [
     name: "Register",
   },
     {
-    path: "/NetWorth",
-    component: NetWorth,
-    name: "NetWorth",
+    path: "/ChartFirstNetWorth",
+    component: ChartFirstNetWorth,
+    name: "ChartFirstNetWorth",
   },
     {
-    path: "/Balance",
-    component: Balance,
-    name: "Balance",
+    path: "/ChartSecondBalance",
+    component: ChartSecondBalance,
+    name: "ChartSecondBalance",
   },
     {
-    path: "/Expense",
-    component: Expense,
-    name: "Expense",
+    path: "/ChartThirdExpense",
+    component: ChartThirdExpense,
+    name: "ChartThirdExpense",
   },
     {
-    path: "/Income",
-    component: Income,
-    name: "Income",
+    path: "/ChartForthIncome",
+    component: ChartForthIncome,
+    name: "ChartForthIncome",
   }
 
 ];
