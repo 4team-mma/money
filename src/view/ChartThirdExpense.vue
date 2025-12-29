@@ -1,23 +1,8 @@
 <script setup>
 import Nav from '@/components/Nav.vue';
-import Chart_Preface from '@/components/Chart_Preface.vue';
+import Chart_Preface from '@/components/ChartPreface.vue';
 import { ref } from 'vue'
 
-
-
-
-// 預設數值
-const currentMonth = ref({
-    income: 85000,
-    expense: 52340,
-    balance: 32660
-})
-
-const budgets = ref([
-    { category: '飲食', spent: 8500, limit: 12000, color: 'color-1' },
-    { category: '交通', spent: 3200, limit: 5000, color: 'color-2' },
-    { category: '娛樂', spent: 6800, limit: 8000, color: 'color-3' }
-])
 
 // 顯示當天日期
 import { computed } from 'vue'
@@ -43,14 +28,15 @@ const dailyChartRef = ref(null)
     <Nav>
         <Chart_Preface />
 
-        <!-- 藍底背景 -->
+        <!-- overview 小卡 -->
         <div style="display: flex; min-height: 100vh;">
+            <!-- 本月收入 -->
             <div class="dashboard-container" style="flex: 1;">
-                <h3>收支趨勢</h3>
+                <h3>支出分析</h3>
                 <span class="date">{{ today }}</span>
                 <hr>
-                <!-- 收支趨勢頁面 -->
-                <!-- 收支趨勢_(支出/收入/總收支) -->
+                <!-- 支出分析頁面 -->
+                <!-- 支出分析圖表_(圓餅圖支出項目分析) -->
                 <div class="charts-grid">
                     <div class="chart-card">
                         <div class="chart-header">
@@ -59,54 +45,58 @@ const dailyChartRef = ref(null)
                         <div class="chart-wrapper">
                             <canvas ref="dailyChartRef"></canvas>
                         </div>
+                        <div class="summary">
+                            <div>合計：NT$52,340</div>
+                            <div>平均每天：NT$18,346</div>
+                        </div>
                     </div>
                 </div>
-                <!-- 收支趨勢_文字 -->
+                <!-- 支出_文字 -->
                 <table class="money-table">
+                    <colgroup>
+                        <col style="width: 80px;"> <!-- 排序（窄） -->
+                        <col style="width: 400px;"> <!-- 類別 -->
+                        <col style="width: 400px;"> <!-- 金額 -->
+                        <col style="width: auto;"> <!-- 比例（吃剩下的） -->
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th>月份</th>
-                            <th>收入</th>
-                            <th>支出</th>
-                            <th>本期收支</th>
-                            <th>總資產</th>
+                            <th>排序</th>
+                            <th>類別</th>
+                            <th>金額</th>
+                            <th>比例</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>2025年5月</td>
-                            <td>NT$40,000</td>
-                            <td>NT$20,456</td>
-                            <td>+12,532</td>
-                            <td>NT$56,279</td>
+                            <td>1</td>
+                            <td>飲食</td>
+                            <td>NT$8,935</td>
+                            <td>21.1%</td>
                         </tr>
                         <tr>
-                            <td>2025年4月</td>
-                            <td>NT$39,000</td>
-                            <td>NT$17,428</td>
-                            <td>+10,532</td>
-                            <td>NT$53,795</td>
+                            <td>2</td>
+                            <td>學習深造</td>
+                            <td>NT$2,680</td>
+                            <td>10.3%</td>
                         </tr>
                         <tr>
-                            <td>2025年3月</td>
-                            <td>NT$39,000</td>
-                            <td>NT$16,488</td>
-                            <td>+15,342</td>
-                            <td>NT$34,859</td>
+                            <td>3</td>
+                            <td>美容/美髮</td>
+                            <td>NT$2,000</td>
+                            <td>10.0%</td>
                         </tr>
                         <tr>
-                            <td>2025年2月</td>
-                            <td>NT$39,000</td>
-                            <td>NT$18,778</td>
-                            <td>+13,532</td>
-                            <td>NT$33,426</td>
+                            <td>4</td>
+                            <td>教育</td>
+                            <td>NT$1,292</td>
+                            <td>8.2%</td>
                         </tr>
                         <tr>
-                            <td>2025年1月</td>
-                            <td>NT$39,000</td>
-                            <td>NT$16,468</td>
-                            <td>+18,532</td>
-                            <td>NT$35,797</td>
+                            <td>5</td>
+                            <td>醫療保健</td>
+                            <td>NT$700</td>
+                            <td>5.2%</td>
                         </tr>
                     </tbody>
                 </table>
@@ -177,7 +167,6 @@ h2 {
     height: 350px;
 }
 
-
 /* 文字趨勢_日期的格式 */
 .TitleForm {
     font-size: 18px;
@@ -227,5 +216,27 @@ h2 {
 /* 最下面（tbody 最後一列）不要線 */
 .money-table tbody tr:last-child td {
     border-bottom: none;
+}
+
+/* 合計/平均每天統計的樣式 */
+.summary {
+    width: 1290px;
+    /* 跟表格同寬 */
+    margin: 0 auto;
+    /* 整排置中 */
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* 兩欄等寬 */
+    text-align: center;
+    font-weight: 700;
+}
+
+.summary>div {
+    padding: 8px 0;
+}
+
+.summary>div:first-child {
+    border-right: 1px solid #ccc;
+    /* 中間那條直線 */
 }
 </style>

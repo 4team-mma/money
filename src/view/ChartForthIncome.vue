@@ -1,6 +1,6 @@
 <script setup>
 import Nav from '@/components/Nav.vue';
-import Chart_Preface from '@/components/Chart_Preface.vue';
+import Chart_Preface from '@/components/ChartPreface.vue';
 import { ref } from 'vue'
 
 

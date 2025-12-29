@@ -1,3 +1,8 @@
+# 命名規則：
+componment命名：
+大駝峰->例如：AccountAdd
+
+
 # mma-app
 
 說明文件: git 下載

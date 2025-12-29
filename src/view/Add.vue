@@ -1,10 +1,10 @@
 <script setup>
 import Nav from '@/components/Nav.vue'
-import Add_bar from '@/components/Add_bar.vue'
-import Add_cato from '@/components/Add_cato.vue'
-import Add_account from '@/components/Add_account.vue'
-import Add_member from '@/components/Add_member.vue'
-import Add_tag from '@/components/Add_tag.vue'
+import Add_bar from '@/components/AddBar.vue'
+import Add_cato from '@/components/AddCato.vue'
+import Add_account from '@/components/AddAccount.vue'
+import Add_member from '@/components/AddMember.vue'
+import Add_tag from '@/components/AddTag.vue'
 //月曆部分
 import { DatePicker } from 'v-calendar';
 import 'v-calendar/style.css';

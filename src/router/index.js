@@ -5,17 +5,17 @@ import Book from "../view/Book.vue";
 import Account from "../view/Account.vue";
 import Add from "../view/Add.vue";
 import Chart from "../view/Chart.vue";
-import Inn from "@/view/Inn.vue";
-import Trans from "@/view/Trans.vue";
+import Inn from "@/view/AddInn.vue";
+import Trans from "@/view/AddTrans.vue";
 import Achievements from "@/view/Achievements.vue";
 import Dashboard from "@/view/Dashboard.vue";
 import Settings from "../view/Settings.vue";
 import Admins from "@/view/Admins.vue";
 import Register from "@/view/Register.vue";
-import NetWorth from "../view/Chart_1_NetWorth.vue"
-import Balance from "../view/Chart_2_Balance.vue"
-import Expense from "../view/Chart_3_Expense.vue"
-import Income from "../view/Chart_4_Income.vue"
+import NetWorth from "../view/ChartFirstNetworth.vue"
+import Balance from "../view/ChartSecondBalance.vue"
+import Expense from "../view/ChartThirdExpense.vue"
+import Income from "../view/ChartForthIncome.vue"
 
 
 
