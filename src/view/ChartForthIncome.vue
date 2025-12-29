@@ -31,7 +31,7 @@ const dailyChartRef = ref(null)
         <!-- overview 小卡 -->
         <div style="display: flex; min-height: 100vh;">
             <!-- 本月收入 -->
-            <div class="dashboard-container" style="flex: 1;">
+            <div class="dashboard-container_1" style="flex: 1;">
                 <h3>收入分析</h3>
                 <span class="date">{{ today }}</span>
                 <hr>
@@ -54,9 +54,9 @@ const dailyChartRef = ref(null)
                 <!-- 支出_文字 -->
                 <table class="money-table">
                     <colgroup>
-                        <col style="width: 80px;"> <!-- 排序（窄） -->
-                        <col style="width: 400px;"> <!-- 類別 -->
-                        <col style="width: 400px;"> <!-- 金額 -->
+                        <col style="width: 100px;"> <!-- 排序（窄） -->
+                        <col style="width: 350px;"> <!-- 類別 -->
+                        <col style="width: 350px;"> <!-- 金額 -->
                         <col style="width: auto;"> <!-- 比例（吃剩下的） -->
                     </colgroup>
                     <thead>
@@ -149,14 +149,14 @@ h2 {
 }
 
 .chart-title {
-    font-size: 18px;
+    font-size: 14px;
     font-weight: 600;
     color: #1e293b;
     margin: 0 0 4px 0;
 }
 
 .chart-description {
-    font-size: 13px;
+    font-size: 14px;
     color: #94a3b8;
     margin: 0;
 }
@@ -185,27 +185,28 @@ h2 {
 .money-table {
     table-layout: fixed;
     text-align: center;
-    width: 1290px;
+    /* width: 100%;
+    max-width: 1290px; */
     margin: 20px;
-    padding: 30px;
-    line-height: 60px;
-    font-size: 18px;
+    line-height: 10px;
+    font-size: 14px;
     font-variant-numeric: tabular-nums;
+    width: 100%;
+    margin-left: 1px;
 }
 
 .money-table th {
     background-color: #779FBF;
     color: white;
-    line-height: 30px;
-    font-size: 18px;
     border-bottom: 1px solid rgba(119, 159, 191, 0.35);
     /* 每列底線 */
+    padding: 12px 24px;
 }
 
 .money-table td {
-    font-size: 20px;
     border-bottom: 1px solid rgba(119, 159, 191, 0.35);
     /* 每列底線 */
+    padding: 12px 24px;
 }
 
 /* 最上面（thead 第一列）不要線 */
@@ -220,7 +221,7 @@ h2 {
 
 /* 合計/平均每天統計的樣式 */
 .summary {
-    width: 1290px;
+    width: 100%;
     /* 跟表格同寬 */
     margin: 0 auto;
     /* 整排置中 */
@@ -239,4 +240,13 @@ h2 {
     border-right: 1px solid #ccc;
     /* 中間那條直線 */
 }
+
+.dashboard-container_1 {
+    padding: 12px 24px 24px 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+    background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%);
+    min-height: 100vh;
+}
+
 </style>

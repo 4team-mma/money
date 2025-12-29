@@ -25,75 +25,77 @@ const budgets = ref([
 </script>
 
 <template>
-    <!-- <Nav> -->
-    <h2>圖表分析</h2>
-    <!-- 跳頁設定 -->
-    <div class="PageTurn">
-        <div class="btn-group t-btn-group" role="group" aria-label="Basic outlined example">
-            <RouterLink class="btn btn-outline-primary" to="/NetWorth">淨資產趨勢</RouterLink>
-            <RouterLink class="btn btn-outline-primary" to="/Balance">收支趨勢</RouterLink>
-            <RouterLink class="btn btn-outline-primary" to="/Expense">支出分析</RouterLink>
-            <RouterLink class="btn btn-outline-primary" to="/Income">收入分析</RouterLink>
+    <div class="full-width">
+        <!-- <Nav> -->
+        <h2>圖表分析</h2>
+        <!-- 跳頁設定 -->
+        <div class="PageTurn">
+            <div class="btn-group t-btn-group" role="group" aria-label="Basic outlined example">
+                <RouterLink class="btn btn-outline-primary" to="/ChartFirstNetworth">淨資產趨勢</RouterLink>
+                <RouterLink class="btn btn-outline-primary" to="/ChartSecondBalance">收支趨勢</RouterLink>
+                <RouterLink class="btn btn-outline-primary" to="/ChartThirdExpense">支出分析</RouterLink>
+                <RouterLink class="btn btn-outline-primary" to="/ChartForthIncome">收入分析</RouterLink>
+            </div>
         </div>
-    </div>
-    <!-- overview 小卡 -->
-    <div class="dashboard-page-layout" style="display: flex;">
-        <!-- 本月收入 -->
-        <div class=dashboard-page-layout style="flex: 1;">
-            <div class="overview-grid">
-                <div class="stat-card income-card">
-                    <div class="card-header">
-                        <span class="card-title">本月收入</span>
-                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                            <polyline points="17 6 23 6 23 12"></polyline>
-                        </svg>
+        <!-- overview 小卡 -->
+        <div div class="dashboard-page-layout" style="display: flex"  min height:100vh >
+            <!-- 本月收入 -->
+            <div class=dashboard-page-layout style="flex: 1;">
+                <div class="overview-grid_1">
+                    <div class="stat-card income-card">
+                        <div class="card-header">
+                            <span class="card-title">本月收入</span>
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                                <polyline points="17 6 23 6 23 12"></polyline>
+                            </svg>
+                        </div>
+                        <div class="card-content">
+                            <div class="amount">NT$ {{ formatNumber(currentMonth.income) }}</div>
+                            <p class="change-text_1">較上月增加/減少＿＿%</p>
+                        </div>
                     </div>
-                    <div class="card-content">
-                        <div class="amount">NT$ {{ formatNumber(currentMonth.income) }}</div>
-                        <p class="change-text">較上月增加/減少＿＿%</p>
+                    <!-- 本月支出 -->
+                    <div class="stat-card expense-card">
+                        <div class="card-header">
+                            <span class="card-title">本月支出</span>
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+                                <polyline points="17 18 23 18 23 12"></polyline>
+                            </svg>
+                        </div>
+                        <div class="card-content">
+                            <div class="amount">NT$ {{ formatNumber(currentMonth.expense) }}</div>
+                            <p class="change-text_1">較上月增加/減少＿＿＿%</p>
+                        </div>
                     </div>
-                </div>
-                <!-- 本月支出 -->
-                <div class="stat-card expense-card">
-                    <div class="card-header">
-                        <span class="card-title">本月支出</span>
-                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
-                            <polyline points="17 18 23 18 23 12"></polyline>
-                        </svg>
+                    <!-- 本月淨收支 -->
+                    <div class="stat-card balance-card">
+                        <div class="card-header">
+                            <span class="card-title">本月淨收支</span>
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+                                <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+                                <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
+                            </svg>
+                        </div>
+                        <div class="card-content">
+                            <div class="amount balance">NT$ {{ formatNumber(currentMonth.balance) }}</div>
+                        </div>
                     </div>
-                    <div class="card-content">
-                        <div class="amount">NT$ {{ formatNumber(currentMonth.expense) }}</div>
-                        <p class="change-text">較上月增加/減少＿＿＿%</p>
-                    </div>
-                </div>
-                <!-- 本月淨收支 -->
-                <div class="stat-card balance-card">
-                    <div class="card-header">
-                        <span class="card-title">本月淨收支</span>
-                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
-                            <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
-                            <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
-                        </svg>
-                    </div>
-                    <div class="card-content">
-                        <div class="amount balance">NT$ {{ formatNumber(currentMonth.balance) }}</div>
-                    </div>
-                </div>
-                <!-- 淨資產 -->
-                <div class="stat-card balance-card">
-                    <div class="card-header">
-                        <span class="card-title">淨資產</span>
-                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
-                            <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
-                            <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
-                        </svg>
-                    </div>
-                    <div class="card-content">
-                        <div class="amount balance">NT$ {{ formatNumber(currentMonth.balance) }}</div>
+                    <!-- 淨資產 -->
+                    <div class="stat-card balance-card">
+                        <div class="card-header">
+                            <span class="card-title">淨資產</span>
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+                                <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+                                <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
+                            </svg>
+                        </div>
+                        <div class="card-content">
+                            <div class="amount balance">NT$ {{ formatNumber(currentMonth.balance) }}</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -120,15 +122,50 @@ h2 {
 
 
 
-
-
-
-
-
-
-
-
 .dashboard-page-layout {
-    margin-top: 15px;
+    margin: 13px auto 10px auto;
+    /* ← 關鍵 */
+    width: 100%;
+    max-width: 1400px;
 }
+
+
+
+.full-width {
+    width: 100%;
+}
+
+.overview-grid_1 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+}
+
+.card-title {
+  font-size: 10px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.card-content .amount {
+  font-size: 20px;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 4px;
+}
+
+.change-text_1 {
+  font-size: 11px;
+  color: #64748b;
+  margin: 0;
+}
+
+
 </style>

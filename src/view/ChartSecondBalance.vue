@@ -42,10 +42,9 @@ const dailyChartRef = ref(null)
 <template>
     <Nav>
         <Chart_Preface />
-
         <!-- 藍底背景 -->
         <div style="display: flex; min-height: 100vh;">
-            <div class="dashboard-container" style="flex: 1;">
+            <div class="dashboard-container_1" style="flex: 1;">
                 <h3>收支趨勢</h3>
                 <span class="date">{{ today }}</span>
                 <hr>
@@ -143,8 +142,7 @@ h2 {
 
 .charts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(120x, 1fr)); 
 }
 
 .chart-card {
@@ -196,25 +194,25 @@ h2 {
 .money-table {
     table-layout: fixed;
     text-align: center;
-    width: 1290px;
+    width: 100%;
+    max-width: 1290px;
     margin: 20px;
     padding: 30px;
-    line-height: 60px;
-    font-size: 18px;
     font-variant-numeric: tabular-nums;
+    width: 100%;
+    margin-left: 1px;
+    line-height: 30px;
+    font-size: 14px;
 }
 
 .money-table th {
     background-color: #779FBF;
     color: white;
-    line-height: 30px;
-    font-size: 18px;
     border-bottom: 1px solid rgba(119, 159, 191, 0.35);
     /* 每列底線 */
 }
 
 .money-table td {
-    font-size: 20px;
     border-bottom: 1px solid rgba(119, 159, 191, 0.35);
     /* 每列底線 */
 }
@@ -227,5 +225,13 @@ h2 {
 /* 最下面（tbody 最後一列）不要線 */
 .money-table tbody tr:last-child td {
     border-bottom: none;
+}
+
+.dashboard-container_1 {
+    padding: 12px 24px 24px 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+    background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%);
+    min-height: 100vh;
 }
 </style>
