@@ -198,7 +198,7 @@ const formatNumber = (num) => {
                   </div>
                   <div class="transaction-details">
                     <div class="transaction-amount" :class="{ income: t.add_type }">
-                      {{ t.add_type ? '+' : '-' }}NT$ {{ formatNumber(t.add_amount)*1 }}
+                      {{ t.add_type ? '+' : '-' }}NT$ {{ formatNumber(t.add_amount*1) }}
                     </div>
                     <div class="transaction-date">{{ t.add_date }}</div>
                   </div>
