@@ -12,6 +12,10 @@ import Dashboard from "@/view/Dashboard.vue";
 import Settings from "../view/Settings.vue";
 import Admins from "@/view/Admins.vue";
 import Register from "@/view/Register.vue";
+import NetWorth from "../view/Chart_1_NetWorth.vue"
+import Balance from "../view/Chart_2_Balance.vue"
+import Expense from "../view/Chart_3_Expense.vue"
+import Income from "../view/Chart_4_Income.vue"
 
 
 
@@ -80,6 +84,26 @@ const routes = [
     path: "/Register",
     component: Register,
     name: "Register",
+  },
+    {
+    path: "/NetWorth",
+    component: NetWorth,
+    name: "NetWorth",
+  },
+    {
+    path: "/Balance",
+    component: Balance,
+    name: "Balance",
+  },
+    {
+    path: "/Expense",
+    component: Expense,
+    name: "Expense",
+  },
+    {
+    path: "/Income",
+    component: Income,
+    name: "Income",
   }
 
 ];
