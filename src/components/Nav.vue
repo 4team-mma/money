@@ -48,13 +48,13 @@ const logout = () => {
 
 // 主選單
 const navigation = [
-  { name: '行事曆', to: '/Book', icon: '📅' },
+  { name: '行事曆', to: '/Book', icon: '🗓' },
   { name: '儀表板', to: '/dashboard', icon: '📊' },
-  { name: '帳戶管理', to: '/Account', icon: '💼' },
+  { name: '帳戶管理', to: '/Account', icon: '⛺' },
   { name: '記一筆', to: '/Add', icon: '➕' },
   { name: '圖表分析', to: '/Chart', icon: '📈' },
   { name: '成就系統', to: '/Achievements', icon: '🏆' },
-  // { name: '報表匯出', to: '/reports', icon: '📥' },
+
   { name: '設定', to: '/Settings', icon: '⚙️' }
 ]
 

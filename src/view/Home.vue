@@ -114,12 +114,12 @@ const handleRegister = () => {
                             <p>視覺化數據洞察</p>
                         </div>
                         <div class="feature-card">
-                            <div class="feature-icon">📅</div>
+                            <div class="feature-icon">🗓</div>
                             <h3>行事曆</h3>
                             <p>時間軸收支管理</p>
                         </div>
                         <div class="feature-card">
-                            <div class="feature-icon">💼</div>
+                            <div class="feature-icon">⛺</div>
                             <h3>記帳功能</h3>
                             <p>管理所有資產</p>
                         </div>
