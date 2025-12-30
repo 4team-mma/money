@@ -1,9 +1,6 @@
 <script setup>
 
 import { ref } from 'vue'
-import '../assets/acc_picture/dog_3089505.png'
-import '../assets/acc_picture/kangaroo_2424371.png'
-import '../assets/acc_picture/squirrel_1635907.png'
 const showAddDialog = ref(false)
 
 const accountTypes = ref([
