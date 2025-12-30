@@ -32,11 +32,11 @@ const dailyChartRef = ref(null)
         <div style="display: flex; min-height: 100vh;">
             <!-- 本月收入 -->
             <div class="dashboard-container_1" style="flex: 1;">
-                <h3>淨資產趨勢</h3>
+                <h3>支出分析</h3>
                 <span class="date">{{ today }}</span>
                 <hr>
-                <!-- 頁面(預設先淨資產) -->
-                <!-- 淨資產趨勢_折線圖 -->
+                <!-- 支出分析頁面 -->
+                <!-- 支出分析圖表_(圓餅圖支出項目分析) -->
                 <div class="charts-grid">
                     <div class="chart-card">
                         <div class="chart-header">
@@ -45,42 +45,58 @@ const dailyChartRef = ref(null)
                         <div class="chart-wrapper">
                             <canvas ref="dailyChartRef"></canvas>
                         </div>
+                        <div class="summary">
+                            <div>合計：NT$52,340</div>
+                            <div>平均每天：NT$18,346</div>
+                        </div>
                     </div>
                 </div>
-                <!-- 淨資產趨勢_文字 -->
+                <!-- 支出_文字 -->
                 <table class="money-table">
+                    <colgroup>
+                        <col style="width: 100px;"> <!-- 排序（窄） -->
+                        <col style="width: 350px;"> <!-- 類別 -->
+                        <col style="width: 350px;"> <!-- 金額 -->
+                        <col style="width: auto;"> <!-- 比例（吃剩下的） -->
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th>月份</th>
-                            <th>本期淨資產</th>
-                            <th>淨資產增減(與上月相比)</th>
+                            <th>排序</th>
+                            <th>類別</th>
+                            <th>金額</th>
+                            <th>比例</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>2025年5月</td>
-                            <td>NT$939,878</td>
-                            <td style="color: #3b82f6;">+13,510</td>
+                            <td>1</td>
+                            <td>飲食</td>
+                            <td>NT$8,935</td>
+                            <td>21.1%</td>
                         </tr>
                         <tr>
-                            <td>2025年4月</td>
-                            <td>NT$926,368</td>
-                            <td style="color: #ef4444;">-3,280</td>
+                            <td>2</td>
+                            <td>學習深造</td>
+                            <td>NT$2,680</td>
+                            <td>10.3%</td>
                         </tr>
                         <tr>
-                            <td>2025年3月</td>
-                            <td>NT$929,648</td>
-                            <td style="color: #3b82f6;">+16,185</td>
+                            <td>3</td>
+                            <td>美容/美髮</td>
+                            <td>NT$2,000</td>
+                            <td>10.0%</td>
                         </tr>
                         <tr>
-                            <td>2025年2月</td>
-                            <td>NT$913,463</td>
-                            <td style="color: #3b82f6;">+2,890</td>
+                            <td>4</td>
+                            <td>教育</td>
+                            <td>NT$1,292</td>
+                            <td>8.2%</td>
                         </tr>
                         <tr>
-                            <td>2025年1月</td>
-                            <td>NT$910,573</td>
-                            <td>-</td>
+                            <td>5</td>
+                            <td>醫療保健</td>
+                            <td>NT$700</td>
+                            <td>5.2%</td>
                         </tr>
                     </tbody>
                 </table>
@@ -94,9 +110,31 @@ const dailyChartRef = ref(null)
 <style scoped>
 @import '../assets/css/dashboard.css';
 
+.PageTurn {
+    display: flex;
+    justify-content: center;
+}
+
+h2 {
+    text-align: center;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.page {
+    max-width: 820px;
+    margin: 0 auto;
+    /* padding: 24px; */
+    background: linear-gradient(135deg, rgba(69, 179, 243, 0.05), rgba(161, 187, 243, 0.05));
+    padding: 1rem;
+    border-radius: 12px;
+    /* height: 100vh; */
+}
+
 .charts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 24px;
 }
 
 .chart-card {
@@ -110,9 +148,15 @@ const dailyChartRef = ref(null)
     margin-bottom: 20px;
 }
 
+.chart-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 4px 0;
+}
 
 .chart-description {
-    font-size: 13px;
+    font-size: 14px;
     color: #94a3b8;
     margin: 0;
 }
@@ -123,19 +167,30 @@ const dailyChartRef = ref(null)
     height: 350px;
 }
 
-/* 表格拉寬 */
+/* 文字趨勢_日期的格式 */
+.TitleForm {
+    font-size: 18px;
+    background-color: #779FBF;
+    color: white;
+    margin: 20px;
+    padding: 3px;
+    line-height: 30px;
+    font-weight: 700;
+    letter-spacing: 0.5em;
+    text-indent: 1em;
+    text-align: center;
+}
+
+/* 表格格式 */
 .money-table {
     table-layout: fixed;
     text-align: center;
-    width: 100%;
-    max-width: 1290px;
     margin: 20px;
-    padding: 30px;
+    line-height: 10px;
+    font-size: 14px;
     font-variant-numeric: tabular-nums;
     width: 100%;
     margin-left: 1px;
-    line-height: 30px;
-    font-size: 14px;
 }
 
 .money-table th {
@@ -143,11 +198,13 @@ const dailyChartRef = ref(null)
     color: white;
     border-bottom: 1px solid rgba(119, 159, 191, 0.35);
     /* 每列底線 */
+    padding: 12px 24px;
 }
 
 .money-table td {
     border-bottom: 1px solid rgba(119, 159, 191, 0.35);
     /* 每列底線 */
+    padding: 12px 24px;
 }
 
 /* 最上面（thead 第一列）不要線 */
@@ -158,6 +215,28 @@ const dailyChartRef = ref(null)
 /* 最下面（tbody 最後一列）不要線 */
 .money-table tbody tr:last-child td {
     border-bottom: none;
+}
+
+/* 合計/平均每天統計的樣式 */
+.summary {
+    width: 100%;
+    /* 跟表格同寬 */
+    margin: 0 auto;
+    /* 整排置中 */
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* 兩欄等寬 */
+    text-align: center;
+    font-weight: 700;
+}
+
+.summary>div {
+    padding: 8px 0;
+}
+
+.summary>div:first-child {
+    border-right: 1px solid #ccc;
+    /* 中間那條直線 */
 }
 
 .dashboard-container_1 {

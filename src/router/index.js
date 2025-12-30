@@ -5,13 +5,17 @@ import Book from "../view/Book.vue";
 import Account from "../view/Account.vue";
 import Add from "../view/Add.vue";
 import Chart from "../view/Chart.vue";
-import Inn from "@/view/Inn.vue";
-import Trans from "@/view/Trans.vue";
+import AddIncome from "@/view/AddIncome.vue";
+import AddTrans from "@/view/AddTrans.vue";
 import Achievements from "@/view/Achievements.vue";
 import Dashboard from "@/view/Dashboard.vue";
 import Settings from "../view/Settings.vue";
 import Admins from "@/view/Admins.vue";
 import Register from "@/view/Register.vue";
+import ChartFirstNetWorth from "../view/ChartFirstNetworth.vue"
+import ChartSecondBalance from "../view/ChartSecondBalance.vue"
+import ChartThirdExpense from "../view/ChartThirdExpense.vue"
+import ChartForthIncome from "../view/ChartForthIncome.vue"
 
 
 
@@ -57,14 +61,14 @@ const routes = [
     name: Achievements,
   },
   {
-    path: "/Inn",
-    component: Inn,
-    name: Inn,
+    path: "/AddIncome",
+    component: AddIncome,
+    name: AddIncome,
   },
   {
-    path: "/Trans",
-    component: Trans,
-    name: Trans,
+    path: "/AddTrans",
+    component: AddTrans,
+    name: AddTrans,
   },
   {
     path: "/Settings",
@@ -80,6 +84,26 @@ const routes = [
     path: "/Register",
     component: Register,
     name: "Register",
+  },
+    {
+    path: "/ChartFirstNetWorth",
+    component: ChartFirstNetWorth,
+    name: "ChartFirstNetWorth",
+  },
+    {
+    path: "/ChartSecondBalance",
+    component: ChartSecondBalance,
+    name: "ChartSecondBalance",
+  },
+    {
+    path: "/ChartThirdExpense",
+    component: ChartThirdExpense,
+    name: "ChartThirdExpense",
+  },
+    {
+    path: "/ChartForthIncome",
+    component: ChartForthIncome,
+    name: "ChartForthIncome",
   }
 
 ];

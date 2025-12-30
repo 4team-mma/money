@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import Nav from '@/components/Nav.vue';
-import Account_add from '@/components/Account_add.vue';
+import Account_add from '@/components/AccountAdd.vue';
 </script>
 
 <template>

@@ -1,9 +1,16 @@
 <script setup>
 import Nav from '@/components/Nav.vue'
-import Add_bar from '@/components/Add_bar.vue'
-import Add_account from '@/components/Add_account.vue'
-import Add_member from '@/components/Add_member.vue'
-import Add_tag from '@/components/Add_tag.vue'
+import Add_bar from '@/components/AddBar.vue'
+import Add_cato_inn from '@/components/AddCatoInn.vue'
+import Add_account from '@/components/AddAccount.vue'
+import Add_member from '@/components/AddMember.vue'
+import Add_tag from '@/components/AddTag.vue'
+//月曆部分
+import { DatePicker } from 'v-calendar';
+import 'v-calendar/style.css';
+import { ref } from 'vue';
+const date = ref(new Date());
+
 </script>
 
 <template>
@@ -13,23 +20,36 @@ import Add_tag from '@/components/Add_tag.vue'
 
             <div class="card">
                 <div class="header">
-                    <h2>新增轉帳</h2>
-                    <span class="date">2025 年 12 月 25 日・週四</span>
+                    <h2>新增收入</h2>
+                       <DatePicker v-model="date">
+                            <template #default="{ togglePopover, inputValue, inputEvents }">
+                            <div class="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
+                            <button class="flex justify-center items-center px-2 bg-accent-100 hover:bg-accent-200 text-accent-700 border-r border-gray-300 dark:bg-gray-700 dark:text-accent-300 dark:border-gray-600 dark:hover:bg-gray-600" @click="() => togglePopover()">
+                            <i class="bi bi-calendar"></i>
+                            </button>
+                            <input
+                            :value="inputValue"
+                            v-on="inputEvents"
+                            class="flex-grow px-2 py-1 bg-white dark:bg-gray-700"
+                            />
+                            </div>
+                            </template>
+                        </DatePicker>
                 </div>
 
                 <div class="form-group">
-                    <label>轉帳金額</label>
+                    <label>收入金額</label>
                     <input type="number" placeholder="NT$ 0" class="amount-input" />
                 </div>
 
                 <div class="grid">
                     <div class="form-group">
-                        <label>從 (轉出帳戶)</label>
-                        <Add_account />
+                        <label>類別</label>
+                        <Add_cato_inn />
                     </div>
 
                     <div class="form-group">
-                        <label>到 (轉入帳戶)</label>
+                        <label>帳戶</label>
                         <Add_account />
                     </div>
 
@@ -45,18 +65,18 @@ import Add_tag from '@/components/Add_tag.vue'
                 </div>
 
                 <div class="form-group">
-                    <label>上傳附件 (選填)</label>
+                    <label>上傳附件</label>
                     <input type="file" />
                 </div>
 
                 <div class="form-group">
                     <label>備註</label>
-                    <textarea placeholder="轉帳說明（選填）"></textarea>
+                    <textarea placeholder="收入說明（選填）"></textarea>
                 </div>
 
                 <div class="actions">
-                    <button class="btn-primary">確認轉帳</button>
-                    <button class="btn-secondary">取消</button>
+                    <button class="btn-primary">儲存收入</button>
+                    <button class="btn-secondary">再記一筆</button>
                 </div>
             </div>
         </div>
@@ -64,8 +84,9 @@ import Add_tag from '@/components/Add_tag.vue'
 </template>
 
 <style scoped>
-/* 引用共用樣式，確保按鈕高度、間距統一 */
+/* 引用共用樣式 */
 @import '../assets/css/add.css';
+
 
 
 .card {
@@ -89,7 +110,7 @@ import Add_tag from '@/components/Add_tag.vue'
     color: #64748b;
 }
 
-/* 表單通用 */
+/* 表單通用群組 */
 .form-group {
     display: flex;
     flex-direction: column;
@@ -97,7 +118,7 @@ import Add_tag from '@/components/Add_tag.vue'
     margin-bottom: 16px;
 }
 
-/* 檔案上傳樣式修正 */
+/* 修正檔案上傳寬度問題 */
 .form-group input[type="file"] {
     align-self: flex-start;
     cursor: pointer;
@@ -109,7 +130,7 @@ label {
     color: #475569;
 }
 
-/* 金額輸入 */
+/* 金額輸入框樣式 */
 .amount-input {
     height: 52px;
     font-size: 1.4rem;
@@ -117,25 +138,24 @@ label {
     padding: 0 16px;
     border-radius: 12px;
     border: 2px solid #e2e8f0;
-    width: 100%;
-    box-sizing: border-box;
 }
 
-/* 網格佈局 */
+/* 二欄式網格佈局 */
 .grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr)); 
-    gap: 16px;
+    gap: 12px;
     width: 100%;
 }
 
+/* 手機版自動切換為一欄 */
 @media (max-width: 480px) {
     .grid {
         grid-template-columns: 1fr;
     }
 }
 
-/* 備註 */
+/* 備註輸入框樣式 */
 textarea {
     min-height: 120px;
     padding: 12px;
@@ -144,7 +164,7 @@ textarea {
     resize: vertical;
 }
 
-/* 按鈕區 */
+/* 下方按鈕區 */
 .actions {
     display: flex;
     justify-content: flex-end;
@@ -156,7 +176,7 @@ textarea {
     background: #2563eb;
     color: white;
     padding: 10px 20px;
-    border: 0px;
+    border: 0;
     border-radius: 10px;
     font-weight: 600;
     cursor: pointer;
@@ -167,7 +187,7 @@ textarea {
     color: #334155;
     padding: 10px 20px;
     border-radius: 10px;
-    border: 0px;
+    border: 0;
     cursor: pointer;
 }
 </style>

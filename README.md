@@ -1,3 +1,8 @@
+# 命名規則：
+componment命名：
+大駝峰->例如：AccountAdd
+
+
 # mma-app
 
 說明文件: git 下載
@@ -7,15 +12,20 @@
 請先確認電腦已安裝：
 
 - ✅ Node.js（建議 LTS 版本）
-                   - ✅ npm（安裝 Node.js 時會一起安裝）
+- ✅ pnpm
 - ✅ Git
 - ✅ Visual Studio Code（或其他 IDE）
 
 檢查方式（打開終端機輸入）
 ```cmd
 node -v
-npm -v
+pnpm -v
 git --version
+```
+
+如果還沒安裝 pnpm
+```cmd
+npm i -g pnpm
 ```
 
 ## 📥 第一次下載專案（Clone Main）
@@ -27,15 +37,18 @@ git clone https://github.com/xu3ru8p/money.git
 
 ## 📦 安裝專案套件（第一次或套件更新後）
 ```cmd
-npm install
-npm install pinia
+pnpm install
+pnpm add pinia
+
+## 安裝 v-calendar 套件
+pnpm install v-calendar@next @popperjs/core
 ```
 - 這是在安裝專案需要用到的套件
 - 通常只在「第一次」或「套件有變更」時需要執行
 
 ## ▶️ 啟動專案（開始開發）
 ```cmd
-npm run dev
+pnpm dev
 ```
 啟動後，終端機會出現網址，例如：
 ```
@@ -45,7 +58,7 @@ http://localhost:5173
 
 ## 📦 打包專案
 ```cmd
-npm run build
+pnpm build
 ```
 - 只有在要部署或正式打包時才需要
 
@@ -110,3 +123,37 @@ git pull origin main
 ```cmd
 git checkout -b apple_v2
 ```
+
+## 專案怎麼從 npm 改成 pnpm
+### 1️⃣ 安裝 pnpm
+```cmd
+npm install -g pnpm
+```
+確認是否安裝成功：
+```cmd
+pnpm -v
+```
+### 2️⃣ 刪除 npm 相關檔案
+刪除整個`node_modules`資料夾和`package-lock.json`
+
+### 3️⃣ 用 pnpm 重新安裝套件
+```cmd
+pnpm install
+```
+📌 這一步會產生：
+- `pnpm-lock.yaml`
+
+### 4️⃣ 確認原本指令都能跑
+```cmd
+pnpm dev
+pnpm build
+```
+👉 如果能跑，代表轉換成功
+
+### npm 與 pnpm 指令對照
+| 指令功能 | npm               | pnpm           |
+| ------- | ----------------- | -------------- |
+| 套件安裝 | npm install       | pnpm install   |
+| 套件安裝 | npm install pinia | pnpm add pinia |
+| 啟動專案 | npm run dev       | pnpm dev       |
+| 打包專案 | npm run build     | pnpm build     |

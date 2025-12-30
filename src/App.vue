@@ -5,6 +5,7 @@ import { ref, onMounted } from 'vue'
 import { RouterView } from 'vue-router'
 const isLoggedIn = ref(false)
 
+
 onMounted(() => {
     isLoggedIn.value = window.location.pathname !== '/' &&
     window.location.pathname !== '/login'

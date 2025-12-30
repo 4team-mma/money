@@ -120,6 +120,8 @@ const removeItem = (id) => {
     display: flex; flex-direction: column; align-items: center; cursor: pointer; position: relative;
 }
 .card-icon { font-size: 1.5rem; margin-bottom: 4px; }
+
+
 .card-name { font-size: 0.85rem; color: #64748b; }
 .del-x { position: absolute; top: 5px; right: 5px; font-size: 10px; color: #cbd5e1; }
 
