@@ -73,8 +73,8 @@ const removeItem = (id) => {
                             <input v-model="newAdd" placeholder="輸入名稱..." class="full-input" @keyup.enter="addNewItem" />
                             <div class="icon-selector-grid">
                                 <span v-for="icon in iconOptions" :key="icon" 
-                                      @click="newIcon = icon"
-                                      :class="{ active: newIcon === icon }" class="icon-option">
+                                    @click="newIcon = icon"
+                                    :class="{ active: newIcon === icon }" class="icon-option">
                                     {{ icon }}
                                 </span>
                             </div>
