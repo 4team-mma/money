@@ -20,12 +20,6 @@ const currencys = ref([
 ])
 const selectedCurrency = ref(currencys.value[0].value)
 
-
-const icons = ["🐵", "🐶", "🐷", "🐻", "🐨", "🐮", "🦁", "🐯", "🐰", "🐭", "🦉", "🐸"]
-//const icons = [
-    //new URL('../assets/acc_picture/dog_3089505.png', import.meta.url).href,
-    //new URL('../assets/acc_picture/kangaroo_2424371.png', import.meta.url).href,
-    //new URL('../assets/acc_picture/squirrel_1635907.png', import.meta.url).href]
 </script>
 
 <template>
@@ -70,21 +64,12 @@ const icons = ["🐵", "🐶", "🐷", "🐻", "🐨", "🐮", "🦁", "🐯", "
             </div>
             <br>
             <div>
-                <label class="acc_button_word_small">圖示:</label>
-                <div>
-                    <button v-for="(icon, index) in icons" :key="index" class="acc_button_color">
-                        <span class="emoji">{{ icon }}</span>
-                    </button>
-                </div>
+                <h4 class="acc_button_word_small">圖示</h4>
+                <option value="icon_id"></option>
             </div>
             <br>
-            <div class="submit_box_button">
-                <button class="submit_button">新增帳戶</button>
-            </div>
-            
         </div>
     </div>
-    
 </template>
 
 <style scoped>
@@ -97,7 +82,7 @@ const icons = ["🐵", "🐶", "🐷", "🐻", "🐨", "🐮", "🦁", "🐯", "
         width: 80px;
         height: 40px;
         padding: 4px;
-        border: 0.5px solid rgb(253, 253, 253);
+        border: 0.5px solid white;
         border-left: 2px solid;
         border-left-color: #e8ef28;
     }
@@ -148,48 +133,8 @@ const icons = ["🐵", "🐶", "🐷", "🐻", "🐨", "🐮", "🦁", "🐯", "
     }
 
     .acc_button_word_small{
-        font-size: 20px;
+        font-size: 25px;
         font-weight: 400;
         color: #626367;
-    }
-
-    .acc_button_color {
-        background: none;
-        border: none;
-        cursor: pointer;
-        margin: 5px;
-    }
-
-
-    /* 按下去 */
-    .acc_button_color:active {
-        transform: translateY(2px);
-        box-shadow: 0 2px 0 #ccc;
-    }
-
-    .submit_box_button:active {
-        transform: translateY(2px);
-        box-shadow: 0 2px 0 #fffefe;
-    }
-
-
-    .submit_button{
-        background-color: #1e293b;
-        color: white;
-        padding: 10px 20px;
-        border: 0px;
-        margin-top: 10px;
-        border-radius: 10px;
-        font-weight: 600;
-    }
-
-    .submit_box_button{
-        align-items: center;
-        display: flex;
-        justify-content: center; 
-    }
-
-    .emoji{
-        font-size: 24px;
     }
 </style>
