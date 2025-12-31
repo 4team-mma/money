@@ -23,14 +23,19 @@ const tabs = [
 /* ========================
 管理者名單與身分驗證 (連動登入系統)
 ======================== */
-// 從 localStorage 抓取當前登入者，若無則預設 admin
-const currentLoginAdmin = ref(JSON.parse(localStorage.getItem('currentUser')) || {
-    username: 'admin',
-    email: 'mma.save.money@gmail.com'
-})
+// 🌟 修正點 1：增加 Try-Catch 保護，防止解析失敗導致全白
+const getInitialAdmin = () => {
+    try {
+        const saved = localStorage.getItem('currentUser')
+        return saved ? JSON.parse(saved) : { username: 'admin', email: 'mma.save.money@gmail.com' }
+    } catch (e) {
+        return { username: 'admin', email: 'mma.save.money@gmail.com' }
+    }
+}
 
-// 這是專案預設的管理者清單，包含您的隊員資訊
-//頂尖特務風	最高指揮官000	代號：時空觀測者	代號：資產解碼手	代號：情報視覺特工
+const currentLoginAdmin = ref(getInitialAdmin())
+
+// 這是專案預設的管理者清單
 const adminList = ref([
     {
         uid: '0000', username: 'admin', password: '123', name: '白白',
@@ -61,7 +66,6 @@ const isEditModalOpen = ref(false)
 const editForm = ref({ uid: '', username: '', name: '', email: '' })
 
 const openEditModal = (u) => {
-    // 專業邏輯：僅限修改本人
     if (u.username !== currentLoginAdmin.value.username) {
         alert('權限限制：您僅能修改自己的個人資訊！')
         return
@@ -74,7 +78,6 @@ const saveAdmin = () => {
     const idx = adminList.value.findIndex(a => a.uid === editForm.value.uid)
     if (idx !== -1) {
         adminList.value[idx] = { ...adminList.value[idx], ...editForm.value }
-        // 同步更新 Header 與本地狀態
         currentLoginAdmin.value.username = editForm.value.username
         localStorage.setItem('currentUser', JSON.stringify(currentLoginAdmin.value))
         isEditModalOpen.value = false
@@ -111,30 +114,41 @@ const themes = {
         text: '#78350f', border: 'rgba(245, 158, 11, 0.2)'
     }
 }
+
+// 🌟 修正點 2：增加安全回退機制。如果讀取到不支援的舊主題，強制使用 mma_light
 const currentTheme = ref(localStorage.getItem('adminTheme') || 'mma_light')
-const currentStyle = computed(() => themes[currentTheme.value])
+const currentStyle = computed(() => {
+    return themes[currentTheme.value] || themes.mma_light
+})
+
 const setTheme = (id) => { currentTheme.value = id; localStorage.setItem('adminTheme', id); }
 
 /* ========================
    數據連動計算 (Sum Logic)
 ======================== */
 const totalTransactionAmount = computed(() => {
-    // 自動加總 Pinia store 中所有一般用戶的 totalSpent
-    return userStore.users.reduce((sum, u) => sum + (u.totalSpent || 0), 0)
+    // 🌟 修正點 3：增加保護，確保 users 存在，防止計算錯誤導致全白
+    if (!userStore.users) return 0
+    return userStore.users.reduce((sum, u) => sum + (Number(u.totalSpent) || 0), 0)
 })
 
 const searchQuery = ref('')
 const adminFiltered = computed(() => adminList.value.filter(a => 
     a.name.includes(searchQuery.value) || a.username.includes(searchQuery.value)
 ))
-const normalUsersFiltered = computed(() => userStore.users.filter(u => 
-    u.role === 'user' && (u.name?.includes(searchQuery.value) || u.email.includes(searchQuery.value))
-))
+const normalUsersFiltered = computed(() => {
+    if (!userStore.users) return []
+    return userStore.users.filter(u => 
+        u.role === 'user' && (u.name?.includes(searchQuery.value) || u.email.includes(searchQuery.value))
+    )
+})
 
 const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(val)
 const handleLogout = () => { if (confirm('確定斷開連線並登出系統？')) router.push('/') }
 
-onMounted(() => userStore.loadUsers())
+onMounted(() => {
+    if (userStore.loadUsers) userStore.loadUsers()
+})
 </script>
 
 <template>
@@ -146,7 +160,11 @@ onMounted(() => userStore.loadUsers())
 
         <aside class="sidebar-glass" :style="{ backgroundColor: currentStyle.sidebarBg, borderColor: currentStyle.border }">
             <div class="brand-zone">
-                <div class="logo-box">📊</div>
+                        <div class="logo-icon">
+                            <span class="icon">    
+                                <img src="../assets/logo.svg" alt="logo" width="48" height="48">
+                                </span>
+                        </div>
                 <div class="brand-info">
                     <h2>Money MMA</h2>
                     <span class="badge" :style="{ background: currentStyle.primary }">ADMIN PANEL</span>
@@ -184,7 +202,7 @@ onMounted(() => userStore.loadUsers())
                     <div class="stat-glass-card">
                         <div class="stat-info">
                             <span class="stat-label">總註冊用戶</span>
-                            <div class="stat-value">{{ userStore.users.length }}</div>
+                            <div class="stat-value">{{ userStore.users ? userStore.users.length : 0 }}</div>
                         </div>
                         <div class="stat-icon-circle" style="background: #3b82f620; color: #3b82f6;">👥</div>
                     </div>
@@ -329,76 +347,54 @@ onMounted(() => userStore.loadUsers())
 </template>
 
 <style scoped>
-/* 全局佈局結構 */
+/* 此處保留您提供的所有 CSS，不進行任何位置調整 */
 .admin-layout { display: flex; width: 100vw; height: 100vh; overflow: hidden; position: fixed; top: 0; left: 0; font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; }
 .background-effects { position: absolute; inset: 0; pointer-events: none; }
 .effect-circle { position: absolute; border-radius: 50%; opacity: 0.12; animation: floating 20s infinite linear; }
 @keyframes floating { 0% { transform: translate(0, 0) scale(1); } 50% { transform: translate(40px, -40px) scale(1.1); } 100% { transform: translate(0, 0) scale(1); } }
 .effect-circle:nth-child(odd) { background: #3b82f6; width: 400px; height: 400px; }
 .effect-circle:nth-child(even) { background: #10b981; width: 300px; height: 300px; }
-
-/* 側邊欄優化：登出按鈕置中 */
 .sidebar-glass { width: 260px; backdrop-filter: blur(20px); border-right: 1px solid; display: flex; flex-direction: column; padding: 40px 0; z-index: 10; }
 .brand-zone { padding: 0 30px; margin-bottom: 40px; display: flex; align-items: center; gap: 15px; }
 .logo-box { width: 48px; height: 48px; background: linear-gradient(135deg, #b1e7eb, #c1cadf); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
 .nav-menu { flex: 1; padding: 0 15px; }
 .nav-link { width: 100%; border: none; padding: 14px 20px; border-radius: 12px; text-align: left; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 12px; transition: 0.3s; background: transparent; color: inherit; }
 .nav-link.is-active { font-weight: 800; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1); }
-
-/* 登出按鈕完美對稱設計 */
 .sidebar-bottom { display: flex; justify-content: center; width: 100%; padding: 0 20px; margin-top: auto; }
 .btn-logout { width: 100%; padding: 12px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1.5px solid rgba(239, 68, 68, 0.2); border-radius: 10px; cursor: pointer; font-weight: 700; transition: 0.3s; }
 .btn-logout:hover { background: #ef4444; color: white; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3); }
-
-/* 主內容與表格滾動修復 (解決裁切) */
 .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .main-header { height: 70px; display: flex; justify-content: space-between; align-items: center; padding: 0 40px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); }
 .scroll-view { flex: 1; overflow-y: auto; padding: 35px 40px; }
-
-/* 統計卡片 */
 .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; margin-bottom: 30px; }
 .stat-glass-card { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(10px); border-radius: 20px; padding: 22px 25px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.5); }
 .stat-value { font-size: 24px; font-weight: 800; }
 .stat-icon-circle { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; }
-
-/* 表格裁切防禦機制 */
 .table-wrapper { width: 100%; overflow-x: auto; border-radius: 12px; padding-bottom: 8px; }
 .mma-table { width: 100%; min-width: 1000px; border-collapse: collapse; }
 .mma-table th { text-align: left; padding: 20px 15px; border-bottom: 2px solid rgba(0,0,0,0.05); color: #64748b; font-size: 14px; }
 .mma-table td { padding: 20px 15px; border-bottom: 1px solid rgba(0,0,0,0.02); vertical-align: middle; }
-
-/* UID 視覺整型 */
 .uid-tag { padding: 5px 15px; border-radius: 20px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; background: white; border: 1.5px solid; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
 .admin-uid { border-color: #cbd5e1; color: #475569; }
 .user-uid { border-color: rgba(59, 130, 246, 0.3); color: #3b82f6; }
-
-/* 勳章標籤回歸 */
 .rank-badge { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: white; font-weight: 900; font-size: 12px; }
 .rank-1 { background: #fbbf24; box-shadow: 0 0 15px rgba(251, 191, 36, 0.6); }
 .rank-2 { background: #94a3b8; }
 .rank-3 { background: #b45309; }
-
-/* 統一按鈕設計語彙 */
 .btn-mma-action { background: white; border: 1.5px solid #3b82f6; color: #3b82f6; padding: 6px 16px; border-radius: 10px; cursor: pointer; font-weight: 500; transition: 0.2s; white-space: nowrap; }
 .btn-mma-action:hover:not(.is-disabled) { background: #3b82f6; color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2); }
 .btn-mma-action.delete { border-color: #ef4444; color: #ef4444; margin-left: 8px; }
 .btn-mma-action.delete:hover { background: #ef4444; color: white; }
 .is-disabled { opacity: 0.3; cursor: not-allowed; border-color: #cbd5e1; color: #94a3b8; filter: grayscale(1); }
-
-/* 主題切換器設計 */
 .theme-picker { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 25px; }
 .theme-item { cursor: pointer; text-align: center; transition: 0.3s; }
 .theme-preview { width: 140px; height: 90px; border-radius: 15px; position: relative; overflow: hidden; border: 3px solid transparent; transition: 0.3s; }
 .preview-sidebar { width: 35px; height: 100%; position: absolute; left: 0; opacity: 0.5; }
 .preview-accent { width: 15px; height: 15px; border-radius: 50%; position: absolute; bottom: 10px; right: 10px; }
 .theme-item.is-selected .theme-preview { border-color: #3b82f6; transform: scale(1.08); box-shadow: 0 12px 25px rgba(59, 130, 246, 0.3); }
-
-/* 卡片與容器間距優化 */
 .content-glass-card { border-radius: 24px; padding: 40px; border: 1px solid; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.05); min-height: 650px; }
 .group-title { font-size: 19px; font-weight: 700; margin-bottom: 25px; padding-left: 12px; border-left: 6px solid #3b82f6; }
 .mma-input { width: 400px; padding: 14px 22px; border-radius: 12px; border: 2px solid #e2e8f0; outline: none; transition: 0.3s; margin-bottom: 35px; }
-
-/* 專業 Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(8px); z-index: 1000; display: flex; align-items: center; justify-content: center; }
 .modal-card { width: 440px; background: white; padding: 40px; border-radius: 28px; box-shadow: 0 30px 60px rgba(0,0,0,0.2); }
 .m-field { margin-bottom: 25px; }
@@ -406,7 +402,6 @@ onMounted(() => userStore.loadUsers())
 .m-field input { width: 100%; padding: 12px 18px; border-radius: 12px; border: 2px solid #e2e8f0; outline: none; }
 .modal-foot { display: flex; justify-content: flex-end; gap: 15px; margin-top: 35px; }
 .btn-save { color: white; border: none; padding: 12px 25px; border-radius: 12px; cursor: pointer; font-weight: 700; }
-
 .job-badge { background: #eff6ff; color: #1d4ed8; padding: 5px 12px; border-radius: 8px; font-size: 14px; font-weight: 700; white-space: nowrap; }
 .fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
