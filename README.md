@@ -2,6 +2,9 @@
 componment命名：
 大駝峰->例如：AccountAdd
 
+# 提醒:
+專案已經成功搬家到 4team-mma 組織,請先打這個在push
+git remote set-url origin https://github.com/4team-mma/money.git
 
 # mma-app
 
