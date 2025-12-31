@@ -2,6 +2,10 @@
 componment命名：
 大駝峰->例如：AccountAdd
 
+# 遷移說明:
+- Vue 專案不需要重新下載，請在 money 資料夾內打開終端機，輸入這行指令即可：
+git remote set-url origin https://github.com/4team-mma/money.git
+- 輸入完後可用 git remote -v 確認地址是否已變更為 4team-mma。
 
 # mma-app
 
