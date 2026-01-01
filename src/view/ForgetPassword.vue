@@ -1,18 +1,19 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios' // 記得先執行 npm install axios
+import axios from 'axios' 
 
 const router = useRouter()
 
-// API 基本路徑 (請根據你之後 API 專案的實際位址修改，例如 http://localhost:3000)
-const API_BASE_URL = 'http://localhost:3000/api'
+// 🌟 修正點 1：對應 FastAPI 的位址與通訊埠 (8000)
+// 注意：因為 main.py 已經有 prefix="/auth"，所以這裡基礎路徑改為 root 即可
+const API_BASE_URL = 'http://localhost:8000/auth'
 
 // 狀態管理
 const loading = ref(false)
 const errorMessage = ref('')
-const isEmailChecked = ref(false)  // 是否已發送驗證碼
-const isOtpVerified = ref(false)   // 驗證碼是否通過
+const isEmailChecked = ref(false) 
+const isOtpVerified = ref(false) 
 
 // 表單資料
 const email = ref('')
@@ -21,7 +22,7 @@ const newPassword = ref('')
 const confirmPassword = ref('')
 
 /**
- * 功能 1：發送驗證碼 (連接 API)
+ * 功能 1：發送驗證碼
  */
 const sendVerifyCode = async () => {
     if (!email.value) {
@@ -33,24 +34,23 @@ const sendVerifyCode = async () => {
     errorMessage.value = ''
 
     try {
-        // 發送 POST 請求到後端，後端應檢查 email 是否存在並寄信
-        const response = await axios.post(`${API_BASE_URL}/forgot-password/send-otp`, {
+        // 🌟 修正點 2：對應路徑 /forgot-password/send-otp
+        await axios.post(`${API_BASE_URL}/forgot-password/send-otp`, {
             email: email.value
         })
 
-        // 假設後端回傳成功時狀態碼為 200
         isEmailChecked.value = true
         alert('驗證碼已發送至您的信箱，請於 5 分鐘內輸入')
     } catch (err) {
-        // 抓取後端回傳的錯誤訊息 (例如: "此信箱尚未註冊")
-        errorMessage.value = err.response?.data?.message || '發送失敗，請稍後再試'
+        // 🌟 修正點 3：FastAPI 報錯訊息通常在 err.response.data.detail
+        errorMessage.value = err.response?.data?.detail || '此信箱尚未註冊或發送失敗'
     } finally {
         loading.value = false
     }
 }
 
 /**
- * 功能 2：檢查驗證碼 (連接 API)
+ * 功能 2：檢查驗證碼
  */
 const checkOtp = async () => {
     if (otp.value.length !== 6) {
@@ -62,24 +62,22 @@ const checkOtp = async () => {
     errorMessage.value = ''
 
     try {
-        // 將 email 與 otp 送交後端比對
-        const response = await axios.post(`${API_BASE_URL}/forgot-password/verify-otp`, {
+        await axios.post(`${API_BASE_URL}/forgot-password/verify-otp`, {
             email: email.value,
             otp: otp.value
         })
 
-        // 比對成功
         isOtpVerified.value = true
         alert('驗證成功，請設定新密碼')
     } catch (err) {
-        errorMessage.value = err.response?.data?.message || '驗證碼錯誤或已過期'
+        errorMessage.value = err.response?.data?.detail || '驗證碼錯誤或已過期'
     } finally {
         loading.value = false
     }
 }
 
 /**
- * 功能 3：最終修改密碼 (連接 API)
+ * 功能 3：最終修改密碼
  */
 const resetPassword = async () => {
     if (!canSubmit.value) return
@@ -88,17 +86,17 @@ const resetPassword = async () => {
     errorMessage.value = ''
 
     try {
-        // 送出新密碼。注意：為了安全，通常會再次附帶 email 與 otp 以供後端最後確認
+        // 🌟 修正點 4：欄位名稱需對應後端 Pydantic Schema 的 new_password (蛇形)
         await axios.post(`${API_BASE_URL}/forgot-password/reset`, {
             email: email.value,
             otp: otp.value,
-            newPassword: newPassword.value
+            new_password: newPassword.value 
         })
 
         alert('密碼重設成功！請使用新密碼登入')
-        router.push('/') // 重導向回登入頁
+        router.push('/') 
     } catch (err) {
-        errorMessage.value = err.response?.data?.message || '修改失敗，請稍後再試'
+        errorMessage.value = err.response?.data?.detail || '修改失敗，請稍後再試'
     } finally {
         loading.value = false
     }
@@ -109,7 +107,7 @@ const canSubmit = computed(() => {
         newPassword.value &&
         confirmPassword.value &&
         newPassword.value === confirmPassword.value &&
-        newPassword.value.length >= 8 // 增加基本長度檢查
+        newPassword.value.length >= 3 // 🌟 密碼長度限制
 })
 
 const goToLogin = () => router.push('/')
