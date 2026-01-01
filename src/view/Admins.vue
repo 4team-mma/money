@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import axios from 'axios'
 
 /* ========================
 Router / Store
@@ -36,34 +37,25 @@ const getInitialAdmin = () => {
 const currentLoginAdmin = ref(getInitialAdmin())
 
 // 這是專案預設的管理者清單
-const adminList = ref([
-    {
-        uid: '0000', username: 'admin', password: '123', name: '白白',
-        email: 'lee611014007@gmail.com', role: 'admin',
-        job: '冒險團團長', permission: '全系統支配權 (整合建置與 Debug)'
-    },
-    {
-        uid: '0001', username: 'peiqing_mma', password: '123', name: '沛青',
-        email: 'peiqing@example.com', role: 'admin',
-        job: '時光大祭司', permission: '任務成就調度權 (成就任務)'
-    },
-    {
-        uid: '0002', username: 'yuyu_mma', password: '123', name: '育育',
-        email: 'yuyu@example.com', role: 'admin',
-        job: '資產鍊金術師', permission: '財務帳戶管轄權 (帳戶管理)'
-    },
-    {
-        uid: '0003', username: 'julia_mma', password: '123', name: 'Julia',
-        email: 'julia@example.com', role: 'admin',
-        job: '數據預言家', permission: '數據視覺化權 (圖表 & 會員)'
-    }
-])
+/* ========================
+管理者名單 - 改為從 Store 動態獲取
+======================== */
+const adminList = computed(() => {
+    const allUsers = userStore.users || [];
+
+    // 🌟 簡化邏輯：直接過濾 role，並保留 Store 已經處理好的欄位
+    return allUsers.filter(u => u.role === 'admin').map(u => ({
+        ...u, // 直接展開 Store 裡面的所有欄位 (包含 uid, name, job 等)
+        // 額外權限欄位目前資料庫沒有，可以繼續留著預設
+        permission: u.permission || '全系統操作權限'
+    }));
+});
 
 /* ========================
-   編輯 Modal 邏輯
+編輯 Modal 邏輯
 ======================== */
 const isEditModalOpen = ref(false)
-const editForm = ref({ uid: '', username: '', name: '', email: '' })
+const editForm = ref({ uid: '', username: '', name: '', email: '', job: '' })
 
 const openEditModal = (u) => {
     if (u.username !== currentLoginAdmin.value.username) {
@@ -74,14 +66,24 @@ const openEditModal = (u) => {
     isEditModalOpen.value = true
 }
 
-const saveAdmin = () => {
-    const idx = adminList.value.findIndex(a => a.uid === editForm.value.uid)
-    if (idx !== -1) {
-        adminList.value[idx] = { ...adminList.value[idx], ...editForm.value }
-        currentLoginAdmin.value.username = editForm.value.username
-        localStorage.setItem('currentUser', JSON.stringify(currentLoginAdmin.value))
-        isEditModalOpen.value = false
-        alert('個人資料已連動更新！')
+// 在 admins.vue 的 saveAdmin 函式中
+const saveAdmin = async () => {
+    try {
+        // 🌟 正式連動後端
+        await axios.put(`http://localhost:8000/users/${editForm.value.uid}`, {
+            username: editForm.value.username,
+            name: editForm.value.name,
+            email: editForm.value.email,
+            job: editForm.value.job // 傳送修改後的職稱
+        });
+
+        // 重新從資料庫抓取最新名單，確保 UI 同步
+        await userStore.loadUsers();
+
+        isEditModalOpen.value = false;
+        alert('職稱已成功永久儲存至資料庫！');
+    } catch (err) {
+        alert('更新失敗：' + (err.response?.data?.detail || '系統錯誤'));
     }
 }
 
@@ -133,9 +135,12 @@ const totalTransactionAmount = computed(() => {
 })
 
 const searchQuery = ref('')
-const adminFiltered = computed(() => adminList.value.filter(a =>
-    a.name.includes(searchQuery.value) || a.username.includes(searchQuery.value)
-))
+const adminFiltered = computed(() => {
+    return adminList.value.filter(a =>
+        (a.name || '').includes(searchQuery.value) ||
+        (a.username || '').includes(searchQuery.value)
+    )
+})
 const normalUsersFiltered = computed(() => {
     // 🌟 核心簡化：直接從 store 拿資料，因為 store 已經在 loadUsers 時幫我們去重並合併好了
     const allUsers = userStore.users || [];
@@ -143,7 +148,7 @@ const normalUsersFiltered = computed(() => {
     return allUsers.filter(u => {
         // 1. 只顯示一般用戶 (排除 admin)
         const isUser = u.role === 'user';
-        
+
         // 2. 搜尋邏輯 (同時支援 帳號、名稱、Email 搜尋)
         const search = searchQuery.value.toLowerCase();
         const matchesSearch = (
@@ -151,7 +156,7 @@ const normalUsersFiltered = computed(() => {
             (u.name || '').toLowerCase().includes(search) ||
             (u.email || '').toLowerCase().includes(search)
         );
-        
+
         return isUser && matchesSearch;
     });
 });
@@ -313,37 +318,40 @@ onMounted(() => {
                             </div>
                         </div>
 
-<div class="user-group-div" style="margin-top: 50px;">
-    <div class="group-title">👤 一般用戶組 ({{ normalUsersFiltered.length }})</div>
-    <div class="table-wrapper">
-        <table class="mma-table">
-            <thead>
-                <tr>
-                    <th>UID</th>
-                    <th>帳號</th> <th>名稱</th>
-                    <th>電子郵件</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="u in normalUsersFiltered" :key="u.uid">
-                    <td><span class="uid-tag user-uid">U-{{ u.uid }}</span></td>
-                    
-                    <td class="font-bold">{{ u.username }}</td> 
-                    
-                    <td>{{ u.name }}</td> 
-                    
-                    <td>{{ u.email }}</td> 
-                    
-                    <td class="action-btns">
-                        <button class="btn-mma-action promote" :style="{ borderColor: currentStyle.primary, color: currentStyle.primary }">修改</button>
-                        <button class="btn-mma-action delete" @click="userStore.deleteUser(u.uid)">註銷</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
+                        <div class="user-group-div" style="margin-top: 50px;">
+                            <div class="group-title">👤 一般用戶組 ({{ normalUsersFiltered.length }})</div>
+                            <div class="table-wrapper">
+                                <table class="mma-table">
+                                    <thead>
+                                        <tr>
+                                            <th>UID</th>
+                                            <th>帳號</th>
+                                            <th>名稱</th>
+                                            <th>電子郵件</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="u in normalUsersFiltered" :key="u.uid">
+                                            <td><span class="uid-tag user-uid">U-{{ u.uid }}</span></td>
+
+                                            <td class="font-bold">{{ u.username }}</td>
+
+                                            <td>{{ u.name }}</td>
+
+                                            <td>{{ u.email }}</td>
+
+                                            <td class="action-btns">
+                                                <button class="btn-mma-action promote"
+                                                    :style="{ borderColor: currentStyle.primary, color: currentStyle.primary }">修改</button>
+                                                <button class="btn-mma-action delete"
+                                                    @click="userStore.deleteUser(u.uid)">註銷</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </section>
 
                     <section v-if="activeTab === 'api'" class="tab-content">
@@ -394,10 +402,13 @@ onMounted(() => {
                         <div class="m-field"><label>帳號名稱</label><input v-model="editForm.username" /></div>
                         <div class="m-field"><label>真實姓名</label><input v-model="editForm.name" /></div>
                         <div class="m-field"><label>電子郵件</label><input v-model="editForm.email" /></div>
+                        <div class="m-field">
+                            <label>職位名稱</label>
+                            <input v-model="editForm.job" placeholder="自行發揮" />
+                        </div>
                     </div>
                     <div class="modal-foot">
-                        <button class="btn-cancel" @click="isEditModalOpen = false" 
-                        >
+                        <button class="btn-cancel" @click="isEditModalOpen = false">
                             取消</button>
                         <button class="btn-save" @click="saveAdmin"
                             :style="{ background: currentStyle.primary }">確認更新</button>
@@ -836,6 +847,7 @@ onMounted(() => {
     cursor: pointer;
     font-weight: 700;
 }
+
 .btn-cancel {
     color: rgb(255, 255, 255);
     border: none;

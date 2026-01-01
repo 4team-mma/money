@@ -1,6 +1,8 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios' // 🌟 記得匯入 axios
+
 const router = useRouter()
 
 const formData = ref({
@@ -8,46 +10,58 @@ const formData = ref({
     password: ''
 })
 
-const handleLogin = () => {
+// 🌟 改為 async 函式
+const handleLogin = async () => {
     const { email: loginIdentifier, password } = formData.value
-    // 這裡 email 其實是登入識別碼
+    
+    try {
+        // 1. 優先嘗試後端 API
+        const response = await axios.post('http://localhost:8000/auth/login', {
+            identifier: loginIdentifier,
+            password: password
+        });
 
-    // 1. 定義測試帳號 
+        if (response.data && response.data.user) {
+            const user = response.data.user;
+            localStorage.setItem('currentUser', JSON.stringify(user));
+            
+            // 跳轉邏輯
+            if (user.role === 'admin') {
+                router.push('/admins');
+            } else {
+                router.push('/book');
+            }
+            return;
+        }
+    } catch (err) {
+        // 2. 錯誤處理：區分「密碼錯」與「伺服器沒開」
+        if (err.response) {
+            // 伺服器有回傳，代表帳密真的錯了，或是格式有誤
+            alert(err.response.data.detail || '登入失敗');
+            return; // 🛑 停止，不進入本地驗證，這是為了保護管理者
+        }
+        console.warn('後端連線失敗，啟動離線測試模式...');
+    }
+
+    // 3. 本地回退 (LocalStorage Fallback)
+    // 🌟 現在只保留基本的 user 測試帳號，管理者帳號已移除，安全性提升
     const defaultAccount = [
-        { username: 'admin', email: 'lee611014007@gmail.com', password: '123', role: 'admin' },
-        { username: 'peiqing_mma', email: 'peiqing@example.com', password: '123', role: 'admin' },
-        { username: 'yuyu_mma', email: 'yuyu@example.com', password: '123', role: 'admin' },
-        { username: 'julia_mma', email: 'julia@example.com', password: '123', role: 'admin' },
-        { username: 'user', email: 'mma.save.money@gmail.com', password: '123', role: 'user' } // 使用者測試帳號
+        { username: 'user', email: 'mma.save.money@gmail.com', password: '123', role: 'user' }
     ];
 
-    // 2. 讀取註冊用戶
     const registeredUser = JSON.parse(localStorage.getItem('mma_users')) || [];
-
-    // 3. 合併所有用戶
     const allUsers = [...defaultAccount, ...registeredUser];
 
-    // 4. 比對：識別碼可以是 username 或 email
-    const user = allUsers.find(u =>
+    const localUser = allUsers.find(u =>
         (u.email === loginIdentifier || u.username === loginIdentifier) &&
         u.password === password
     );
 
-    if (user) {
-        // 🌟 關鍵修正：確保存入 localStorage 的 email 是資料中的「真實信箱」
-        localStorage.setItem('currentUser', JSON.stringify({
-            username: user.username,
-            email: user.email, // 這裡會存入 lee6110... 或 mma.save...
-            role: user.role
-        }));
-
-        if (user.role === 'admin') {
-            router.push('/admins');
-        } else {
-            router.push('/book');
-        }
+    if (localUser) {
+        localStorage.setItem('currentUser', JSON.stringify(localUser));
+        router.push(localUser.role === 'admin' ? '/admins' : '/book');
     } else {
-        alert('登入失敗，請檢查您的帳號/信箱或密碼。');
+        alert('登入失敗，請確認帳號密碼或檢查伺服器連線。');
     }
 }
 
