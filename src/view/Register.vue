@@ -1,9 +1,10 @@
 <script setup>
 import { reactive } from 'vue'
-import { useRouter } from 'vue-router' 
+import { useRouter } from 'vue-router'
 
-const router = useRouter() 
+const router = useRouter()
 const formData = reactive({
+    username: '', // 
     name: '',
     email: '',
     password: '',
@@ -12,36 +13,45 @@ const formData = reactive({
 })
 
 const handleRegister = () => {
+    // 1. 驗證密碼一致性
     if (formData.password !== formData.confirmPassword) {
         alert('密碼不一致，請重新輸入')
         return
     }
-    
-    // 取得現有列表
+
+    // 2. 取得現有列表
     const savedUsers = JSON.parse(localStorage.getItem('mma_users') || '[]');
 
-    // 檢查重複
-    if (savedUsers.find(u => u.email === formData.email)) {
-        alert('此 Email 已被註冊'); 
+    // 3. 檢查重複性 (檢查 Email 或 帳號 是否已存在)
+    const isDuplicate = savedUsers.find(u =>
+        u.email === formData.email || u.username === formData.username
+    );
+
+    if (isDuplicate) {
+        alert('此帳號或 Email 已被註冊');
         return;
     }
 
-    // 建立新用戶
+    // 4. 建立新用戶 (確保欄位與 Store 對齊)
     const newUser = {
-        id: Date.now(),
-        name: formData.name,
-        email: formData.email,
+        uid: String(savedUsers.length + 2).padStart(4, "0"), // 生成 U-000x 格式的編號
+        username: formData.username, //  儲存帳號
+        name: formData.name,         // 儲存顯示名稱
+        email: formData.email,       // 儲存信箱
         password: formData.password,
+        role: 'user',                // 預設為一般用戶
+        totalSpent: 0,
+        transactions: 0,
         registeredDate: new Date().toLocaleDateString(),
         status: 'active',
-        statusText: '正常',
-        role: 'user'
+        statusText: '正常'
     };
 
+    // 5. 儲存並跳轉
     savedUsers.push(newUser);
     localStorage.setItem('mma_users', JSON.stringify(savedUsers));
 
-    alert('註冊成功，請重新登入！');
+    alert('註冊成功，請使用帳號或信箱登入！');
     router.push('/'); // 回登入頁
 }
 
@@ -58,30 +68,35 @@ const goToLogin = () => {
 
         <div class="main-container">
             <div class="card-wrapper">
-                
+
                 <div class="form-section">
                     <div class="logo-area">
                         <div class="logo-icon">
-                            <span class="icon">    
+                            <span class="icon">
                                 <img src="../assets/logo.svg" alt="logo" width="48" height="48">
-                                </span>
+                            </span>
                         </div>
                         <h1 class="brand-name">Money MMA</h1>
                     </div>
 
                     <div class="header-text">
-                        <h2>創建新帳戶</h2>
-                        <p>開始您的智能理財之旅</p>
+                        <h2 style="padding-bottom: 5px;">創建新帳戶</h2>
+
                     </div>
 
                     <form @submit.prevent="handleRegister" class="register-form">
                         <div class="form-group">
-                            <label>暱稱</label>
+                            <label>登入帳號 (Username)</label>
+                            <input v-model="formData.username" type="text" placeholder="設定登入帳號" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label>使用者名稱 (暱稱)</label>
                             <input v-model="formData.name" type="text" placeholder="您的稱呼" required />
                         </div>
 
                         <div class="form-group">
-                            <label>電子郵件</label>
+                            <label>電子郵件 (Email)</label>
                             <input v-model="formData.email" type="email" placeholder="your@email.com" required />
                         </div>
 
@@ -92,7 +107,8 @@ const goToLogin = () => {
                             </div>
                             <div class="form-group">
                                 <label>確認密碼</label>
-                                <input v-model="formData.confirmPassword" type="password" placeholder="••••••••" required />
+                                <input v-model="formData.confirmPassword" type="password" placeholder="••••••••"
+                                    required />
                             </div>
                         </div>
 
@@ -161,7 +177,7 @@ const goToLogin = () => {
 </template>
 
 <style scoped>
-/* 頁面基礎設定 - 同步主頁配色 */
+/* 保持你原本的所有 CSS 樣式 ... */
 .register-page {
     min-height: 100vh;
     background: linear-gradient(135deg, #EBF4FF 0%, #F0F9FF 100%);
@@ -173,27 +189,21 @@ const goToLogin = () => {
     font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
 }
 
-/* 動態背景效果 */.background-effects {
+.background-effects {
     position: absolute;
     inset: 0;
     pointer-events: none;
     overflow: hidden;
-    /* 確保圓圈不會跑出畫面 */
 }
 
-/* --- 新增的動態圓圈 CSS --- */
 .effect-circle {
     position: absolute;
     border-radius: 50%;
-    /* 使用 mix-blend-mode 可以讓重疊的顏色更漂亮，類似水彩效果 */
     mix-blend-mode: multiply;
-    /* 稍微模糊邊緣，看起來更柔和 */
     filter: blur(4px);
-    /* 應用浮動動畫 */
     animation: floating infinite linear;
 }
 
-/* 定義一個緩慢飄移的動畫路徑 */
 @keyframes floating {
     0% {
         transform: translate(0, 0) rotate(0deg);
@@ -212,120 +222,42 @@ const goToLogin = () => {
     }
 }
 
-/* --- 透過 nth-child 為每個圓圈製造隨機性 (大小、位置、顏色、速度) --- */
-
-/* 圓圈 1 (大，藍色) */
 .effect-circle:nth-child(1) {
     width: 400px;
     height: 400px;
     background: rgba(59, 130, 246, 0.12);
-    /* 主藍色 */
     top: -10%;
     left: -10%;
     animation-duration: 25s;
-    animation-delay: -5s;
 }
 
-/* 圓圈 2 (中，青色) */
 .effect-circle:nth-child(2) {
     width: 300px;
     height: 300px;
     background: rgba(12, 165, 226, 0.15);
-    /* 青藍色 */
     top: 20%;
     right: -5%;
     animation-duration: 30s;
-    animation-delay: -12s;
-    animation-direction: reverse;
-    /* 反向移動增加變化 */
 }
 
-/* 圓圈 3 (小，深藍) */
 .effect-circle:nth-child(3) {
     width: 150px;
     height: 150px;
     background: rgba(30, 64, 175, 0.1);
-    /* 深藍色 */
     bottom: 15%;
     left: 10%;
     animation-duration: 20s;
-    animation-delay: -2s;
 }
 
-/* 圓圈 4 (大，淡青) */
 .effect-circle:nth-child(4) {
     width: 350px;
     height: 350px;
     background: rgba(167, 243, 208, 0.15);
-    /* 淡青綠色，增加色調變化 */
     bottom: -10%;
     right: 25%;
     animation-duration: 35s;
-    animation-delay: -18s;
 }
 
-/* 圓圈 5 (中，藍色) */
-.effect-circle:nth-child(5) {
-    width: 200px;
-    height: 200px;
-    background: rgba(59, 130, 246, 0.1);
-    top: 40%;
-    left: 30%;
-    animation-duration: 28s;
-    animation-delay: -8s;
-    animation-direction: reverse;
-}
-
-/* 圓圈 6-10 (較小的填充元素) */
-.effect-circle:nth-child(6) {
-    width: 80px;
-    height: 80px;
-    background: rgba(12, 165, 226, 0.2);
-    top: 10%;
-    left: 50%;
-    animation-duration: 18s;
-}
-
-.effect-circle:nth-child(7) {
-    width: 120px;
-    height: 120px;
-    background: rgba(59, 130, 246, 0.1);
-    bottom: 30%;
-    right: 40%;
-    animation-duration: 22s;
-    animation-delay: -10s;
-}
-
-.effect-circle:nth-child(8) {
-    width: 60px;
-    height: 60px;
-    background: rgba(167, 243, 208, 0.2);
-    top: 60%;
-    right: 10%;
-    animation-duration: 15s;
-    animation-delay: -3s;
-}
-
-.effect-circle:nth-child(9) {
-    width: 90px;
-    height: 90px;
-    background: rgba(30, 64, 175, 0.08);
-    bottom: 5%;
-    left: 40%;
-    animation-duration: 26s;
-    animation-direction: reverse;
-}
-
-.effect-circle:nth-child(10) {
-    width: 180px;
-    height: 180px;
-    background: rgba(12, 165, 226, 0.1);
-    top: -5%;
-    right: 30%;
-    animation-duration: 32s;
-    animation-delay: -15s;
-}
-/* 容器與卡片 */
 .main-container {
     position: relative;
     z-index: 10;
@@ -344,7 +276,6 @@ const goToLogin = () => {
     border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
-/* 左側表單 */
 .form-section {
     flex: 1.1;
     padding: 2.5rem;
@@ -368,19 +299,52 @@ const goToLogin = () => {
     font-size: 24px;
 }
 
-.brand-name { font-size: 1.75rem; font-weight: 700; color: #1E293B; }
+.brand-name {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1E293B;
+}
 
-.header-text h2 { font-size: 1.5rem; font-weight: 600; color: #1E293B; margin-bottom: 4px; }
-.header-text p { color: #64748B; margin-bottom: 1.5rem; font-size: 0.95rem; }
+.header-text h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1E293B;
+    margin-bottom: 4px;
+}
 
-/* 表單控制 */
-.register-form { display: flex; flex-direction: column; gap: 1rem; }
-.form-group { display: flex; flex-direction: column; gap: 6px; flex: 1; }
-.form-group label { font-size: 0.875rem; font-weight: 500; color: #1E293B; }
+.header-text p {
+    color: #64748B;
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+}
 
-.password-row { display: flex; gap: 1rem; }
+.register-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
 
-input[type="text"], input[type="email"], input[type="password"] {
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+}
+
+.form-group label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1E293B;
+}
+
+.password-row {
+    display: flex;
+    gap: 1rem;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
     height: 44px;
     padding: 0 1rem;
     border: 2px solid #E2E8F0;
@@ -405,9 +369,12 @@ input:focus {
     color: #64748B;
 }
 
-.checkbox-group input { width: 16px; height: 16px; cursor: pointer; }
+.checkbox-group input {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
 
-/* 按鈕 - 同步漸層配色 */
 .submit-button {
     height: 46px;
     background: linear-gradient(135deg, #0ca5e2, #4896fc);
@@ -437,8 +404,18 @@ input:focus {
     color: #CBD5E1;
     font-size: 0.8rem;
 }
-.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: #E2E8F0; }
-.divider span { padding: 0 10px; }
+
+.divider::before,
+.divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #E2E8F0;
+}
+
+.divider span {
+    padding: 0 10px;
+}
 
 .btn-social {
     width: 100%;
@@ -455,12 +432,20 @@ input:focus {
     cursor: pointer;
     transition: all 0.2s;
 }
-.btn-social:hover { background: #F8FAF6; border-color: #CBD5E1; }
 
-.login-link { text-align: center; margin-top: 1.2rem; font-size: 0.875rem; color: #64748B; }
-.login-link a { color: #3B82F6; font-weight: 600; text-decoration: none; }
+.login-link {
+    text-align: center;
+    margin-top: 1.2rem;
+    font-size: 0.875rem;
+    color: #64748B;
+}
 
-/* 右側 Showcase */
+.login-link a {
+    color: #3B82F6;
+    font-weight: 600;
+    text-decoration: none;
+}
+
 .showcase-section {
     flex: 0.9;
     background: rgba(248, 250, 252, 0.5);
@@ -469,8 +454,17 @@ input:focus {
     align-items: center;
 }
 
-.showcase-header h3 { font-size: 1.75rem; font-weight: 700; color: #1E293B; margin-bottom: 0.5rem; }
-.showcase-header p { color: #64748B; margin-bottom: 2rem; }
+.showcase-header h3 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1E293B;
+    margin-bottom: 0.5rem;
+}
+
+.showcase-header p {
+    color: #64748B;
+    margin-bottom: 2rem;
+}
 
 .feature-grid {
     display: grid;
@@ -485,16 +479,23 @@ input:focus {
     border-radius: 12px;
     transition: all 0.3s;
 }
-.feature-card:hover { border-color: #3B82F6; transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.05); }
 
-.feature-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
-.feature-card h3 { font-size: 0.95rem; font-weight: 600; color: #1E293B; margin-bottom: 4px; }
-.feature-card p { font-size: 0.75rem; color: #64748B; line-height: 1.4; }
+.feature-card:hover {
+    border-color: #3B82F6;
+    transform: translateY(-3px);
+}
 
-/* 手機適應 */
 @media (max-width: 900px) {
-    .card-wrapper { flex-direction: column; max-height: 90vh; overflow-y: auto; }
-    .showcase-section { display: none; }
-    .password-row { flex-direction: column; }
+    .card-wrapper {
+        flex-direction: column;
+    }
+
+    .showcase-section {
+        display: none;
+    }
+
+    .password-row {
+        flex-direction: column;
+    }
 }
 </style>

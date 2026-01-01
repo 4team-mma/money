@@ -1,8 +1,12 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios' // 記得先執行 npm install axios
 
 const router = useRouter()
+
+// API 基本路徑 (請根據你之後 API 專案的實際位址修改，例如 http://localhost:3000)
+const API_BASE_URL = 'http://localhost:3000/api'
 
 // 狀態管理
 const loading = ref(false)
@@ -17,75 +21,95 @@ const newPassword = ref('')
 const confirmPassword = ref('')
 
 /**
- * 功能 1：發送驗證碼
+ * 功能 1：發送驗證碼 (連接 API)
  */
 const sendVerifyCode = async () => {
     if (!email.value) {
         errorMessage.value = '請先輸入電子郵件'
         return
     }
+
     loading.value = true
     errorMessage.value = ''
+
     try {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        if (email.value === 'test@test.com') {
-            throw new Error('此信箱尚未註冊')
-        }
+        // 發送 POST 請求到後端，後端應檢查 email 是否存在並寄信
+        const response = await axios.post(`${API_BASE_URL}/forgot-password/send-otp`, {
+            email: email.value
+        })
+
+        // 假設後端回傳成功時狀態碼為 200
         isEmailChecked.value = true
-        alert('驗證碼已發送至您的信箱')
+        alert('驗證碼已發送至您的信箱，請於 5 分鐘內輸入')
     } catch (err) {
-        errorMessage.value = err.message
+        // 抓取後端回傳的錯誤訊息 (例如: "此信箱尚未註冊")
+        errorMessage.value = err.response?.data?.message || '發送失敗，請稍後再試'
     } finally {
         loading.value = false
     }
 }
 
 /**
- * 功能 2：檢查驗證碼
+ * 功能 2：檢查驗證碼 (連接 API)
  */
 const checkOtp = async () => {
     if (otp.value.length !== 6) {
         errorMessage.value = '請輸入 6 位數驗證碼'
         return
     }
+
     loading.value = true
     errorMessage.value = ''
+
     try {
-        await new Promise(resolve => setTimeout(resolve, 800))
-        if (otp.value === '123456') { 
-            isOtpVerified.value = true
-        } else {
-            throw new Error('驗證碼錯誤')
-        }
+        // 將 email 與 otp 送交後端比對
+        const response = await axios.post(`${API_BASE_URL}/forgot-password/verify-otp`, {
+            email: email.value,
+            otp: otp.value
+        })
+
+        // 比對成功
+        isOtpVerified.value = true
+        alert('驗證成功，請設定新密碼')
     } catch (err) {
-        errorMessage.value = err.message
+        errorMessage.value = err.response?.data?.message || '驗證碼錯誤或已過期'
     } finally {
         loading.value = false
     }
 }
 
 /**
- * 功能 3：最終修改密碼
+ * 功能 3：最終修改密碼 (連接 API)
  */
 const resetPassword = async () => {
     if (!canSubmit.value) return
+
     loading.value = true
+    errorMessage.value = ''
+
     try {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        alert('密碼重設成功！')
-        router.push('/')
+        // 送出新密碼。注意：為了安全，通常會再次附帶 email 與 otp 以供後端最後確認
+        await axios.post(`${API_BASE_URL}/forgot-password/reset`, {
+            email: email.value,
+            otp: otp.value,
+            newPassword: newPassword.value
+        })
+
+        alert('密碼重設成功！請使用新密碼登入')
+        router.push('/') // 重導向回登入頁
     } catch (err) {
-        errorMessage.value = '修改失敗，請稍後再試'
+        errorMessage.value = err.response?.data?.message || '修改失敗，請稍後再試'
     } finally {
         loading.value = false
     }
 }
 
 const canSubmit = computed(() => {
-    return isOtpVerified.value && 
-           newPassword.value && 
-           confirmPassword.value && 
-           newPassword.value === confirmPassword.value
+    return isOtpVerified.value &&
+        newPassword.value &&
+        confirmPassword.value &&
+        newPassword.value === confirmPassword.value &&
+        newPassword.value.length >= 8 // 增加基本長度檢查
 })
 
 const goToLogin = () => router.push('/')
@@ -102,9 +126,9 @@ const goToLogin = () => router.push('/')
                 <div class="form-section">
                     <div class="logo-area">
                         <div class="logo-icon">
-                            <span class="icon">    
+                            <span class="icon">
                                 <img src="../assets/logo.svg" alt="logo" width="48" height="48">
-                                </span>
+                            </span>
                         </div>
                         <h1 class="brand-name">Money MMA</h1>
                     </div>
@@ -119,8 +143,10 @@ const goToLogin = () => router.push('/')
                     <div class="input-block">
                         <label>電子郵件</label>
                         <div class="input-row">
-                            <input v-model="email" type="email" placeholder="your@email.com" :disabled="isEmailChecked" />
-                            <button @click="sendVerifyCode" :disabled="loading || isEmailChecked" class="btn-gradient-small">
+                            <input v-model="email" type="email" placeholder="your@email.com"
+                                :disabled="isEmailChecked" />
+                            <button @click="sendVerifyCode" :disabled="loading || isEmailChecked"
+                                class="btn-gradient-small">
                                 {{ isEmailChecked ? '已寄送' : '發送驗證碼' }}
                             </button>
                         </div>
@@ -130,10 +156,12 @@ const goToLogin = () => router.push('/')
                         <label>驗證碼</label>
                         <div class="input-row">
                             <div class="relative-field">
-                                <input v-model="otp" type="text" maxlength="6" placeholder="6 位數字" :disabled="!isEmailChecked || isOtpVerified" />
+                                <input v-model="otp" type="text" maxlength="6" placeholder="6 位數字"
+                                    :disabled="!isEmailChecked || isOtpVerified" />
                                 <span v-if="isOtpVerified" class="verified-tick">✔</span>
                             </div>
-                            <button @click="checkOtp" :disabled="!isEmailChecked || isOtpVerified || loading" class="btn-gradient-small">
+                            <button @click="checkOtp" :disabled="!isEmailChecked || isOtpVerified || loading"
+                                class="btn-gradient-small">
                                 驗證
                             </button>
                         </div>
@@ -142,15 +170,18 @@ const goToLogin = () => router.push('/')
                     <div class="password-group" :class="{ 'is-locked': !isOtpVerified }">
                         <div class="input-block">
                             <label>新密碼</label>
-                            <input v-model="newPassword" type="password" placeholder="••••••••" :disabled="!isOtpVerified" />
+                            <input v-model="newPassword" type="password" placeholder="••••••••"
+                                :disabled="!isOtpVerified" />
                         </div>
                         <div class="input-block">
                             <label>確認新密碼</label>
-                            <input v-model="confirmPassword" type="password" placeholder="••••••••" :disabled="!isOtpVerified" />
+                            <input v-model="confirmPassword" type="password" placeholder="••••••••"
+                                :disabled="!isOtpVerified" />
                         </div>
                     </div>
 
-                    <button @click="resetPassword" class="login-button" :disabled="!canSubmit || loading" :class="{ 'btn-disabled': !canSubmit }">
+                    <button @click="resetPassword" class="login-button" :disabled="!canSubmit || loading"
+                        :class="{ 'btn-disabled': !canSubmit }">
                         確認修改
                         <span class="arrow">→</span>
                     </button>
@@ -164,7 +195,7 @@ const goToLogin = () => router.push('/')
                     <div class="showcase-content">
                         <h3>安全重設指南</h3>
                         <p>邁向財富自由的第一步是保護帳戶安全。</p>
-                        
+
                         <div class="feature-grid">
                             <div class="feature-card" :class="{ 'active-card': !isEmailChecked }">
                                 <div class="feature-icon">🔍</div>
@@ -206,7 +237,8 @@ const goToLogin = () => router.push('/')
     justify-content: center;
 }
 
-/* 動態背景效果 */.login-page {
+/* 動態背景效果 */
+.login-page {
     min-height: 100vh;
     /* 調整背景漸層，讓它稍微亮一點，對比動態元素 */
     background: linear-gradient(135deg, #E3F2FD 0%, #F0F9FF 100%);
@@ -366,6 +398,7 @@ const goToLogin = () => router.push('/')
     animation-duration: 32s;
     animation-delay: -15s;
 }
+
 /* 卡片容器 - 增加毛玻璃質感 */
 .main-container {
     position: relative;
@@ -409,16 +442,42 @@ const goToLogin = () => router.push('/')
     font-size: 28px;
 }
 
-.brand-name { font-size: 1.875rem; font-weight: 700; color: #1E293B; }
+.brand-name {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: #1E293B;
+}
 
-.header-text h2 { font-size: 1.5rem; font-weight: 600; color: #1E293B; margin-bottom: 0.5rem; }
-.header-text p { color: #64748B; margin-bottom: 1.5rem; }
+.header-text h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1E293B;
+    margin-bottom: 0.5rem;
+}
+
+.header-text p {
+    color: #64748B;
+    margin-bottom: 1.5rem;
+}
 
 /* 輸入框樣式 */
-.input-block { margin-bottom: 1rem; }
-.input-block label { display: block; font-size: 0.875rem; font-weight: 500; color: #1E293B; margin-bottom: 0.5rem; }
+.input-block {
+    margin-bottom: 1rem;
+}
 
-.input-row { display: flex; gap: 10px; }
+.input-block label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1E293B;
+    margin-bottom: 0.5rem;
+}
+
+.input-row {
+    display: flex;
+    gap: 10px;
+}
+
 .input-block input {
     width: 100%;
     height: 48px;
@@ -473,19 +532,32 @@ const goToLogin = () => router.push('/')
     box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
 }
 
-.btn-disabled { background: #cbd5e1; cursor: not-allowed; }
+.btn-disabled {
+    background: #cbd5e1;
+    cursor: not-allowed;
+}
 
 /* 右側展示區域 - 改為淺色系 */
 .showcase-section {
     flex: 1;
-    background: rgba(248, 250, 252, 0.5); /* 輕微偏灰的背景 */
+    background: rgba(248, 250, 252, 0.5);
+    /* 輕微偏灰的背景 */
     padding: 2.5rem;
     display: flex;
     align-items: center;
 }
 
-.showcase-content h3 { font-size: 2rem; font-weight: 700; color: #1E293B; margin-bottom: 1rem; }
-.showcase-content p { color: #64748B; margin-bottom: 2rem; }
+.showcase-content h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1E293B;
+    margin-bottom: 1rem;
+}
+
+.showcase-content p {
+    color: #64748B;
+    margin-bottom: 2rem;
+}
 
 .feature-grid {
     display: grid;
@@ -508,14 +580,44 @@ const goToLogin = () => router.push('/')
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
-.feature-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
-.feature-card h3 { font-size: 1rem; font-weight: 600; color: #1E293B; margin-bottom: 4px; }
-.feature-card p { font-size: 0.8rem; color: #64748B; margin-bottom: 0; }
+.feature-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.feature-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1E293B;
+    margin-bottom: 4px;
+}
+
+.feature-card p {
+    font-size: 0.8rem;
+    color: #64748B;
+    margin-bottom: 0;
+}
 
 /* 鎖定邏輯 */
-.is-locked { opacity: 0.4; pointer-events: none; filter: grayscale(0.5); }
-.relative-field { position: relative; flex: 1; }
-.verified-tick { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #10b981; font-weight: bold; }
+.is-locked {
+    opacity: 0.4;
+    pointer-events: none;
+    filter: grayscale(0.5);
+}
+
+.relative-field {
+    position: relative;
+    flex: 1;
+}
+
+.verified-tick {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #10b981;
+    font-weight: bold;
+}
 
 .error-box {
     background: #fef2f2;
@@ -527,11 +629,26 @@ const goToLogin = () => router.push('/')
     border: 1px solid #fee2e2;
 }
 
-.footer-link { text-align: center; margin-top: 1.5rem; font-size: 0.875rem; color: #64748B; }
-.footer-link a { color: #3B82F6; font-weight: 500; text-decoration: none; }
+.footer-link {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.875rem;
+    color: #64748B;
+}
+
+.footer-link a {
+    color: #3B82F6;
+    font-weight: 500;
+    text-decoration: none;
+}
 
 @media (max-width: 900px) {
-    .card-wrapper { flex-direction: column; }
-    .showcase-section { display: none; }
+    .card-wrapper {
+        flex-direction: column;
+    }
+
+    .showcase-section {
+        display: none;
+    }
 }
 </style>
