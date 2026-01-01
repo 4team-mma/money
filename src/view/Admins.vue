@@ -43,7 +43,7 @@ const adminList = ref([
         job: '冒險團團長', permission: '全系統支配權 (整合建置與 Debug)'
     },
     {
-        uid: '0001', username: 'peiqing_mma', password: '123', name: '沛清',
+        uid: '0001', username: 'peiqing_mma', password: '123', name: '沛青',
         email: 'peiqing@example.com', role: 'admin',
         job: '時光大祭司', permission: '任務成就調度權 (成就任務)'
     },
@@ -396,7 +396,9 @@ onMounted(() => {
                         <div class="m-field"><label>電子郵件</label><input v-model="editForm.email" /></div>
                     </div>
                     <div class="modal-foot">
-                        <button class="btn-cancel" @click="isEditModalOpen = false">取消</button>
+                        <button class="btn-cancel" @click="isEditModalOpen = false" 
+                        >
+                            取消</button>
                         <button class="btn-save" @click="saveAdmin"
                             :style="{ background: currentStyle.primary }">確認更新</button>
                     </div>
@@ -833,6 +835,19 @@ onMounted(() => {
     border-radius: 12px;
     cursor: pointer;
     font-weight: 700;
+}
+.btn-cancel {
+    color: rgb(255, 255, 255);
+    border: none;
+    padding: 12px 25px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 700;
+    background: #78d5f1;
+    /* transform: translateY(-2px); */
+    /* box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2); */
+
+
 }
 
 .job-badge {
