@@ -9,17 +9,17 @@ const formData = ref({
 })
 
 const handleLogin = () => {
-    const { email, password } = formData.value
+    const { email: loginIdentifier, password } = formData.value
+    // 這裡 email 其實是登入識別碼
 
-    // 1. 定義測試帳號
+    // 1. 定義測試帳號 
     const defaultAccount = [
-        { email: 'admin', password: '123', role: 'admin' },
-        { email: 'peiqing_mma', password: '123', role: 'admin' },
-        { email: 'yuyu_mma', password: '123', role: 'admin' },
-        { email: 'julia_mma', password: '123', role: 'admin' },
-        { email: 'user', password: '123', role: 'user' }
+        { username: 'admin', email: 'lee611014007@gmail.com', password: '123', role: 'admin' },
+        { username: 'peiqing_mma', email: 'peiqing@example.com', password: '123', role: 'admin' },
+        { username: 'yuyu_mma', email: 'yuyu@example.com', password: '123', role: 'admin' },
+        { username: 'julia_mma', email: 'julia@example.com', password: '123', role: 'admin' },
+        { username: 'user', email: 'mma.save.money@gmail.com', password: '123', role: 'user' } // 使用者測試帳號
     ];
-    
 
     // 2. 讀取註冊用戶
     const registeredUser = JSON.parse(localStorage.getItem('mma_users')) || [];
@@ -27,26 +27,27 @@ const handleLogin = () => {
     // 3. 合併所有用戶
     const allUsers = [...defaultAccount, ...registeredUser];
 
-    // 4. 比對帳號密碼
-    const user = allUsers.find(u => u.email === email && u.password === password);
+    // 4. 比對：識別碼可以是 username 或 email
+    const user = allUsers.find(u =>
+        (u.email === loginIdentifier || u.username === loginIdentifier) &&
+        u.password === password
+    );
 
     if (user) {
-        // 🌟 關鍵修正：將 username 存入，這樣 admin.vue 才讀得到
-        localStorage.setItem('currentUser', JSON.stringify({ 
-            username: user.username || user.email, 
-            email: user.email, 
-            role: user.role 
+        // 🌟 關鍵修正：確保存入 localStorage 的 email 是資料中的「真實信箱」
+        localStorage.setItem('currentUser', JSON.stringify({
+            username: user.username,
+            email: user.email, // 這裡會存入 lee6110... 或 mma.save...
+            role: user.role
         }));
-        
-        console.log('登入成功:', user.username);
 
         if (user.role === 'admin') {
-            router.push('/admins'); 
+            router.push('/admins');
         } else {
-            router.push('/book');   
+            router.push('/book');
         }
     } else {
-        alert('登入失敗，請檢查您的帳號和密碼。');
+        alert('登入失敗，請檢查您的帳號/信箱或密碼。');
     }
 }
 
@@ -66,9 +67,9 @@ const handleRegister = () => {
                 <div class="form-card">
                     <div class="logo-section">
                         <div class="logo-icon">
-                            <span class="icon">    
+                            <span class="icon">
                                 <img src="../assets/logo.svg" alt="logo" width="48" height="48">
-                                </span>
+                            </span>
                         </div>
                         <h1 class="brand-name">Money MMA</h1>
                     </div>
