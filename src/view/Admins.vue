@@ -2,13 +2,16 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useCategoryStore } from '@/stores/categoryStats'
 import axios from 'axios'
+import AdminsComments from './AdminsComments.vue'
 
 /* ========================
 Router / Store
 ======================== */
 const router = useRouter()
 const userStore = useUserStore()
+const categoryStore = useCategoryStore()
 
 /* ========================
 UI 狀態管理
@@ -18,13 +21,13 @@ const tabs = [
     { id: 'analytics', label: '數據分析', icon: '📊' },
     { id: 'api', label: '模型管理', icon: '🔌' },
     { id: 'users', label: '用戶管理', icon: '👥' },
+    { id: 'feedback', label: '問題回饋', icon: '💬' },
     { id: 'system', label: '系統設定', icon: '⚙️' }
 ]
 
 /* ========================
 管理者名單與身分驗證 (連動登入系統)
 ======================== */
-// 🌟 修正點 1：增加 Try-Catch 保護，防止解析失敗導致全白
 const getInitialAdmin = () => {
     try {
         const saved = localStorage.getItem('currentUser')
@@ -36,17 +39,10 @@ const getInitialAdmin = () => {
 
 const currentLoginAdmin = ref(getInitialAdmin())
 
-// 這是專案預設的管理者清單
-/* ========================
-管理者名單 - 改為從 Store 動態獲取
-======================== */
 const adminList = computed(() => {
     const allUsers = userStore.users || [];
-
-    // 🌟 簡化邏輯：直接過濾 role，並保留 Store 已經處理好的欄位
     return allUsers.filter(u => u.role === 'admin').map(u => ({
-        ...u, // 直接展開 Store 裡面的所有欄位 (包含 uid, name, job 等)
-        // 額外權限欄位目前資料庫沒有，可以繼續留著預設
+        ...u,
         permission: u.permission || '全系統操作權限'
     }));
 });
@@ -66,18 +62,15 @@ const openEditModal = (u) => {
     isEditModalOpen.value = true
 }
 
-// 在 admins.vue 的 saveAdmin 函式中
 const saveAdmin = async () => {
     try {
-        // 🌟 正式連動後端
         await axios.put(`http://localhost:8000/users/${editForm.value.uid}`, {
             username: editForm.value.username,
             name: editForm.value.name,
             email: editForm.value.email,
-            job: editForm.value.job // 傳送修改後的職稱
+            job: editForm.value.job
         });
 
-        // 重新從資料庫抓取最新名單，確保 UI 同步
         await userStore.loadUsers();
 
         isEditModalOpen.value = false;
@@ -88,7 +81,7 @@ const saveAdmin = async () => {
 }
 
 /* ========================
-   Theme System (四種專業配色)
+Theme System (四種專業配色)
 ======================== */
 const themes = {
     mma_light: {
@@ -117,7 +110,6 @@ const themes = {
     }
 }
 
-// 🌟 修正點 2：增加安全回退機制。如果讀取到不支援的舊主題，強制使用 mma_light
 const currentTheme = ref(localStorage.getItem('adminTheme') || 'mma_light')
 const currentStyle = computed(() => {
     return themes[currentTheme.value] || themes.mma_light
@@ -126,13 +118,22 @@ const currentStyle = computed(() => {
 const setTheme = (id) => { currentTheme.value = id; localStorage.setItem('adminTheme', id); }
 
 /* ========================
-   數據連動計算 (Sum Logic)
+數據連動計算 (Sum Logic)
 ======================== */
 const totalTransactionAmount = computed(() => {
-    // 🌟 修正點 3：增加保護，確保 users 存在，防止計算錯誤導致全白
     if (!userStore.users) return 0
-    return userStore.users.reduce((sum, u) => sum + (Number(u.totalSpent) || 0), 0)
+    // 只計算身分為 user 的消費總額
+    return userStore.users
+        .filter(u => u.role === 'user')
+        .reduce((sum, u) => sum + (Number(u.totalSpent) || 0), 0)
 })
+
+// 🌟 新增邏輯：專用於排行榜的過濾列表 (排除 admin)
+const rankingsFilter = (list) => {
+    if (!list) return [];
+    // 過濾出 role 欄位為 'user' 的項目，確保管理員不進入任何排行榜
+    return list.filter(u => u.role === 'user');
+};
 
 const searchQuery = ref('')
 const adminFiltered = computed(() => {
@@ -142,21 +143,15 @@ const adminFiltered = computed(() => {
     )
 })
 const normalUsersFiltered = computed(() => {
-    // 🌟 核心簡化：直接從 store 拿資料，因為 store 已經在 loadUsers 時幫我們去重並合併好了
     const allUsers = userStore.users || [];
-
     return allUsers.filter(u => {
-        // 1. 只顯示一般用戶 (排除 admin)
         const isUser = u.role === 'user';
-
-        // 2. 搜尋邏輯 (同時支援 帳號、名稱、Email 搜尋)
         const search = searchQuery.value.toLowerCase();
         const matchesSearch = (
             (u.username || '').toLowerCase().includes(search) ||
             (u.name || '').toLowerCase().includes(search) ||
             (u.email || '').toLowerCase().includes(search)
         );
-
         return isUser && matchesSearch;
     });
 });
@@ -164,12 +159,11 @@ const normalUsersFiltered = computed(() => {
 const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(val)
 const handleLogout = () => { if (confirm('確定斷開連線並登出系統？')) router.push('/') }
 
-// 確保 Pinia Store 也有讀取本地快取
-onMounted(() => {
-    // 🌟 修正點：統一由 store 的 loadUsers 處理所有來源
+onMounted(async () => {
     if (userStore.loadUsers) {
-        userStore.loadUsers();
+        await userStore.loadUsers();
     }
+    await categoryStore.fetchAllRankings();
 });
 
 </script>
@@ -212,7 +206,7 @@ onMounted(() => {
             <header class="main-header">
                 <div class="breadcrumb">
                     控制中心 / <span :style="{ color: currentStyle.primary }">{{tabs.find(t => t.id === activeTab).label
-                        }}</span>
+                    }}</span>
                 </div>
                 <div class="user-status">
                     <span class="dot-online"></span>
@@ -252,30 +246,145 @@ onMounted(() => {
 
                     <section v-if="activeTab === 'analytics'" class="tab-content">
                         <div class="section-header">
-                            <h3>🏆 財富英雄榜 <small>Top Spenders</small></h3>
+                            <h3>🏆 財富英雄榜 <small>Top Spenders (Users Only)</small></h3>
                         </div>
-                        <div class="table-wrapper">
+                        <div class="table-wrapper mma-main-table">
                             <table class="mma-table">
                                 <thead>
                                     <tr>
                                         <th>排名</th>
-                                        <th>用戶</th>
+                                        <th>帳號</th>
+                                        <th>暱稱</th>
                                         <th>累積金額</th>
                                         <th>次數</th>
                                         <th>單筆平均</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="(u, i) in userStore.topUsers" :key="u.uid">
+                                    <tr v-for="(u, i) in rankingsFilter(userStore.topUsers)" :key="u.uid">
                                         <td><span class="rank-badge" :class="'rank-' + (i + 1)">{{ i + 1 }}</span></td>
+                                        <td class="font-bold opacity-60">{{ u.username }}</td>
                                         <td class="font-bold">{{ u.name }}</td>
-                                        <td class="amount-text" :style="{ color: currentStyle.primary }">{{
-                                            formatCurrency(u.totalSpent) }}</td>
+                                        <td class="amount-text" :style="{ color: currentStyle.primary }">
+                                            {{ formatCurrency(u.totalSpent) }}
+                                        </td>
                                         <td>{{ u.transactions }} 次</td>
                                         <td class="opacity-60">{{ formatCurrency(u.avgSpent) }}</td>
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+
+                        <div class="rankings-sub-grid">
+
+                            <div class="sub-rank-box">
+                                <div class="section-header">
+                                    <h4>💰 各路財神消費榜 <small>(類別支出)</small></h4>
+                                </div>
+                                <div class="table-wrapper">
+                                    <table class="mma-table mini-mode">
+                                        <thead>
+                                            <tr>
+                                                <th>排名</th>
+                                                <th>項目</th>
+                                                <th class="text-right">累積金額</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="(item, index) in categoryStore.allRankings.category_spending"
+                                                :key="index">
+                                                <td><span class="mini-rank">{{ index + 1 }}</span></td>
+                                                <td>{{ item.name }}</td>
+                                                <td class="text-right font-bold">{{ formatCurrency(item.value) }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="sub-rank-box">
+                                <div class="section-header">
+                                    <h4>✍️ 勤勞小蜜蜂獎 <small>(記帳次數)</small></h4>
+                                </div>
+                                <div class="table-wrapper">
+                                    <table class="mma-table mini-mode">
+                                        <thead>
+                                            <tr>
+                                                <th>排名</th>
+                                                <th>帳號</th>
+                                                <th>暱稱</th>
+                                                <th class="text-right">次數</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="(item, index) in rankingsFilter(categoryStore.allRankings.active_bees)"
+                                                :key="index">
+                                                <td><span class="mini-rank">{{ index + 1 }}</span></td>
+                                                <td class="opacity-60">{{ item.username }}</td>
+                                                <td>{{ item.name }}</td>
+                                                <td class="text-right font-bold">{{ item.value }} 次</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="sub-rank-box">
+                                <div class="section-header">
+                                    <h4>🛡️ 金庫大總管 <small>(帳戶總額)</small></h4>
+                                </div>
+                                <div class="table-wrapper">
+                                    <table class="mma-table mini-mode">
+                                        <thead>
+                                            <tr>
+                                                <th>排名</th>
+                                                <th>帳號</th>
+                                                <th>暱稱</th>
+                                                <th class="text-right">總餘額</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="(item, index) in rankingsFilter(categoryStore.allRankings.wealth_masters)"
+                                                :key="index">
+                                                <td><span class="mini-rank">{{ index + 1 }}</span></td>
+                                                <td class="opacity-60">{{ item.username }}</td>
+                                                <td>{{ item.name }}</td>
+                                                <td class="text-right font-bold">{{ formatCurrency(item.value) }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="sub-rank-box">
+                                <div class="section-header">
+                                    <h4>🆙 修仙進度表 <small>(XP 等級)</small></h4>
+                                </div>
+                                <div class="table-wrapper">
+                                    <table class="mma-table mini-mode">
+                                        <thead>
+                                            <tr>
+                                                <th>排名</th>
+                                                <th>帳號</th>
+                                                <th>暱稱</th>
+                                                <th>等級</th>
+                                                <th class="text-right">經驗值</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="(item, index) in rankingsFilter(categoryStore.allRankings.xp_immortals)"
+                                                :key="index">
+                                                <td><span class="mini-rank">{{ index + 1 }}</span></td>
+                                                <td class="opacity-60">{{ item.username }}</td>
+                                                <td>{{ item.name }}</td>
+                                                <td><span class="level-tag">Lv.{{ item.level }}</span></td>
+                                                <td class="text-right font-bold">{{ item.value }} XP</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
                         </div>
                     </section>
 
@@ -334,13 +443,9 @@ onMounted(() => {
                                     <tbody>
                                         <tr v-for="u in normalUsersFiltered" :key="u.uid">
                                             <td><span class="uid-tag user-uid">U-{{ u.uid }}</span></td>
-
                                             <td class="font-bold">{{ u.username }}</td>
-
                                             <td>{{ u.name }}</td>
-
                                             <td>{{ u.email }}</td>
-
                                             <td class="action-btns">
                                                 <button class="btn-mma-action promote"
                                                     :style="{ borderColor: currentStyle.primary, color: currentStyle.primary }">修改</button>
@@ -371,6 +476,9 @@ onMounted(() => {
                             </div>
                         </div>
                     </section>
+                    <section v-if="activeTab === 'feedback'" class="tab-content">
+                        <AdminsComments />
+                    </section>
 
                     <section v-if="activeTab === 'system'" class="tab-content">
                         <div class="section-header">
@@ -389,6 +497,7 @@ onMounted(() => {
                     </section>
                 </div>
             </div>
+
         </main>
 
         <Transition name="fade">
@@ -880,5 +989,104 @@ onMounted(() => {
 .fade-enter-from,
 .fade-leave-to {
     opacity: 0;
+}
+
+/* 💡 新排行榜專用 CSS (維持玻璃擬態風格) */
+.admin-charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+    margin-top: 50px;
+}
+
+.stat-card-mini {
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(15px);
+    border-radius: 20px;
+    padding: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+}
+
+.stat-card-mini h4 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding-bottom: 10px;
+    font-size: 1.1rem;
+}
+
+.rank-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+    font-size: 0.95rem;
+}
+
+.rank-row strong {
+    color: v-bind('currentStyle.primary');
+}
+
+.rankings-sub-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+    margin-top: 50px;
+}
+
+.sub-rank-box {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.sub-rank-box .section-header h4 {
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin-bottom: 15px;
+}
+
+.mma-table.mini-mode {
+    min-width: 100%;
+}
+
+.mma-table.mini-mode th,
+.mma-table.mini-mode td {
+    padding: 12px 10px;
+    font-size: 13px;
+}
+
+.mini-rank {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(100, 116, 139, 0.1);
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+.level-tag {
+    background: #e0f2fe;
+    color: #0369a1;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 800;
+    font-size: 11px;
+}
+
+.no-data {
+    padding: 20px;
+    text-align: center;
+    opacity: 0.5;
+    font-size: 14px;
 }
 </style>

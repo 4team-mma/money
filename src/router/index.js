@@ -17,7 +17,7 @@ import ChartSecondBalance from "../view/ChartSecondBalance.vue"
 import ChartThirdExpense from "../view/ChartThirdExpense.vue"
 import ChartForthIncome from "../view/ChartForthIncome.vue"
 import ForgetPassword from "@/view/ForgetPassword.vue";
-
+import AdminsComments from "@/view/AdminsComments.vue"
 
 
 const routes = [
@@ -110,6 +110,12 @@ const routes = [
     path: "/ForgetPassword",
     component: ForgetPassword,
     name: "ForgetPassword",
+  }
+  ,
+    {
+    path: "/AdminsComments",
+    component: AdminsComments,
+    name: "AdminsComments",
   }
 
 ];
