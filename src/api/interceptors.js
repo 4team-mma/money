@@ -1,9 +1,12 @@
 import service from "./index";
 import { ElMessage } from "element-plus";
 
+
+
 service.interceptors.request.use((config) => {
   // 1. 自動添加 JWT token
-  const token = localStorage.getItem('token'); // 💡 確保登入成功後存入的 key 叫 'token'
+  // 確保 Key 與 Home.vue 存入時的名字一致
+  const token = localStorage.getItem('user_token'); 
   if (token) {
     config.headers["Authorization"] = `Bearer ${token}`;
   }
@@ -28,15 +31,23 @@ service.interceptors.request.use((config) => {
 
 service.interceptors.response.use(
   (response) => {
+    //  攔截器幫你 .data，所以組件拿到的 response 直接就是後端回傳的 JSON
     return response.data;
   },
   (error) => {
+// 增加一個保護邏輯，防止 error.response 是 undefined
+    if (!error.response) {
+      ElMessage.error("無法連線至伺服器，請檢查網路或後端是否啟動");
+      return Promise.reject(error);
+    }
+
     const { status } = error.response;
     switch (status) {
       case 401:
-        ElMessage.error("登入逾期，請重新登入");
-        localStorage.removeItem('token'); // 清除過期 token
-        // window.location.href = '/'; // 視情況跳轉回登入頁
+        ElMessage.error("登入逾期或權限不足，請重新登入");
+        localStorage.removeItem('user_token'); //  清除對應的 Key
+        localStorage.removeItem('currentUser');
+        // window.location.href = '/'; 
         break;
       case 403:
         ElMessage.error("無權限存取");
@@ -44,8 +55,11 @@ service.interceptors.response.use(
       case 404:
         ElMessage.error("請求的資源不存在");
         break;
+      case 500:
+        ElMessage.error("伺服器內部錯誤");
+        break;
       default:
-        ElMessage.error("系統錯誤，請稍後再試");
+        ElMessage.error(error.response.data?.detail || "系統錯誤");
     }
     return Promise.reject(error);
   }
