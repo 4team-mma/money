@@ -1,18 +1,20 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import Nav from '@/components/Nav.vue';
-import axios from 'axios'
+import axios from '@/api/interceptors'
 
 // 💡 存放從 API 抓回來的「活資料」
 const transactions = ref([])
 
 const fetchTransactions = async () => {
     try {
-        // 💡 指向您的 FastAPI 路由
-        const response = await axios.get('http://127.0.0.1:8000/records/')
-        transactions.value = response.data
+        const response = await axios.get('/records/') 
+        
+        
+        // 🌟 修正：因為攔截器已經處理過，所以 response 直接就是陣列資料
+        transactions.value = response 
     } catch (error) {
-        console.error("API 串接失敗，請檢查後端是否啟動:", error)
+        console.error("Dashboard 加載失敗::", error)
     }
 }
 
@@ -184,7 +186,7 @@ const formatNumber = (num) => {
         </div>
         <div class="card-body">
          <div class="transactions-list">
-                <div v-for="t in transactions" :key="t.id" class="transaction-item">
+                <div v-for="(t, index) in transactions" :key="index" class="transaction-item">
                   <div class="transaction-info">
                     <div class="transaction-icon" :class="t.add_type ? 'income' : 'expense'">
                       <span v-if="t.add_class_icon">{{ t.add_class_icon }}</span>
