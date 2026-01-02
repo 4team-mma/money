@@ -16,6 +16,7 @@
     "axios": "^1.13.2",
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
+    "element-plus": "^2.13.0",
     "pinia": "^3.0.4",
     "v-calendar": "^3.1.2",
     "vue": "^3.5.25",
