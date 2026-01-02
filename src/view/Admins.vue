@@ -2,639 +2,883 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import axios from 'axios'
 
 /* ========================
-   Router / Store
+Router / Store
 ======================== */
 const router = useRouter()
 const userStore = useUserStore()
 
 /* ========================
-   UI Tabs
+UI 狀態管理
 ======================== */
 const activeTab = ref('analytics')
-
 const tabs = [
     { id: 'analytics', label: '數據分析', icon: '📊' },
-    { id: 'api', label: 'API 串接', icon: '🔌' },
+    { id: 'api', label: '模型管理', icon: '🔌' },
     { id: 'users', label: '用戶管理', icon: '👥' },
     { id: 'system', label: '系統設定', icon: '⚙️' }
 ]
 
 /* ========================
-   Theme System（補齊）
+管理者名單與身分驗證 (連動登入系統)
+======================== */
+// 🌟 修正點 1：增加 Try-Catch 保護，防止解析失敗導致全白
+const getInitialAdmin = () => {
+    try {
+        const saved = localStorage.getItem('currentUser')
+        return saved ? JSON.parse(saved) : { username: 'admin', email: 'mma.save.money@gmail.com' }
+    } catch (e) {
+        return { username: 'admin', email: 'mma.save.money@gmail.com' }
+    }
+}
+
+const currentLoginAdmin = ref(getInitialAdmin())
+
+// 這是專案預設的管理者清單
+/* ========================
+管理者名單 - 改為從 Store 動態獲取
+======================== */
+const adminList = computed(() => {
+    const allUsers = userStore.users || [];
+
+    // 🌟 簡化邏輯：直接過濾 role，並保留 Store 已經處理好的欄位
+    return allUsers.filter(u => u.role === 'admin').map(u => ({
+        ...u, // 直接展開 Store 裡面的所有欄位 (包含 uid, name, job 等)
+        // 額外權限欄位目前資料庫沒有，可以繼續留著預設
+        permission: u.permission || '全系統操作權限'
+    }));
+});
+
+/* ========================
+編輯 Modal 邏輯
+======================== */
+const isEditModalOpen = ref(false)
+const editForm = ref({ uid: '', username: '', name: '', email: '', job: '' })
+
+const openEditModal = (u) => {
+    if (u.username !== currentLoginAdmin.value.username) {
+        alert('權限限制：您僅能修改自己的個人資訊！')
+        return
+    }
+    editForm.value = { ...u }
+    isEditModalOpen.value = true
+}
+
+// 在 admins.vue 的 saveAdmin 函式中
+const saveAdmin = async () => {
+    try {
+        // 🌟 正式連動後端
+        await axios.put(`http://localhost:8000/users/${editForm.value.uid}`, {
+            username: editForm.value.username,
+            name: editForm.value.name,
+            email: editForm.value.email,
+            job: editForm.value.job // 傳送修改後的職稱
+        });
+
+        // 重新從資料庫抓取最新名單，確保 UI 同步
+        await userStore.loadUsers();
+
+        isEditModalOpen.value = false;
+        alert('職稱已成功永久儲存至資料庫！');
+    } catch (err) {
+        alert('更新失敗：' + (err.response?.data?.detail || '系統錯誤'));
+    }
+}
+
+/* ========================
+   Theme System (四種專業配色)
 ======================== */
 const themes = {
-    classic: {
-        name: '經典藍白',
-        primary: '#2563eb',
-        bg: '#f8fafc',
-        sidebar: '#ffffff',
-        card: '#ffffff',
-        text: '#1e293b',
-        border: '#e2e8f0'
+    mma_light: {
+        name: 'MMA 經典', primary: '#3b82f6',
+        bgGradient: 'linear-gradient(135deg, #EBF4FF 0%, #F0F9FF 100%)',
+        cardBg: 'rgba(255, 255, 255, 0.85)', sidebarBg: 'rgba(255, 255, 255, 0.7)',
+        text: '#1e293b', border: 'rgba(255, 255, 255, 0.5)'
     },
     dark: {
-        name: '深邃星空',
-        primary: '#3b82f6',
-        bg: '#0b0f1a',
-        sidebar: '#111827',
-        card: '#1f2937',
-        text: '#f1f5f9',
-        border: '#374151'
+        name: '極客深邃', primary: '#60a5fa',
+        bgGradient: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+        cardBg: 'rgba(30, 41, 59, 0.8)', sidebarBg: 'rgba(15, 23, 42, 0.7)',
+        text: '#f1f5f9', border: 'rgba(255, 255, 255, 0.1)'
     },
-    ocean: {
-        name: '深海湛藍',
-        primary: '#0ea5e9',
-        bg: '#082f49',
-        sidebar: '#0c4a6e',
-        card: '#115e7a',
-        text: '#f0f9ff',
-        border: '#0e7490'
+    forest: {
+        name: '森林晨曦', primary: '#10b981',
+        bgGradient: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+        cardBg: 'rgba(255, 255, 255, 0.8)', sidebarBg: 'rgba(255, 255, 255, 0.6)',
+        text: '#064e3b', border: 'rgba(16, 185, 129, 0.2)'
+    },
+    sunset: {
+        name: '微醺夕陽', primary: '#f59e0b',
+        bgGradient: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+        cardBg: 'rgba(255, 255, 255, 0.8)', sidebarBg: 'rgba(255, 255, 255, 0.6)',
+        text: '#78350f', border: 'rgba(245, 158, 11, 0.2)'
     }
 }
 
-const currentTheme = ref(localStorage.getItem('adminTheme') || 'classic')
-
+// 🌟 修正點 2：增加安全回退機制。如果讀取到不支援的舊主題，強制使用 mma_light
+const currentTheme = ref(localStorage.getItem('adminTheme') || 'mma_light')
 const currentStyle = computed(() => {
-    return themes[currentTheme.value] || themes.classic
+    return themes[currentTheme.value] || themes.mma_light
 })
 
-const setTheme = (id) => {
-    currentTheme.value = id
-    localStorage.setItem('adminTheme', id)
-}
+const setTheme = (id) => { currentTheme.value = id; localStorage.setItem('adminTheme', id); }
 
 /* ========================
-   API 模擬資料（補齊）
+   數據連動計算 (Sum Logic)
 ======================== */
-const selectedApi = ref(1)
-
-const apiServices = [
-    {
-        id: 1,
-        name: 'Auth Service',
-        desc: '登入與驗證核心模組',
-        successRate: 99.9,
-        latency: 120
-    },
-    {
-        id: 2,
-        name: 'Transaction API',
-        desc: '交易資料寫入與查詢',
-        successRate: 98.7,
-        latency: 180
-    },
-    {
-        id: 3,
-        name: 'Analytics Engine',
-        desc: '消費分析與統計計算',
-        successRate: 97.3,
-        latency: 240
-    }
-]
-
-/* ========================
-   User Data（Pinia）
-======================== */
-const users = computed(() => userStore.users)
-const topUsers = computed(() => userStore.topUsers)
+const totalTransactionAmount = computed(() => {
+    // 🌟 修正點 3：增加保護，確保 users 存在，防止計算錯誤導致全白
+    if (!userStore.users) return 0
+    return userStore.users.reduce((sum, u) => sum + (Number(u.totalSpent) || 0), 0)
+})
 
 const searchQuery = ref('')
-
-const filteredUsers = computed(() => {
-    if (!searchQuery.value) return users.value
-    return users.value.filter(
-        u =>
-            u.name?.includes(searchQuery.value) ||
-            u.email.includes(searchQuery.value)
+const adminFiltered = computed(() => {
+    return adminList.value.filter(a =>
+        (a.name || '').includes(searchQuery.value) ||
+        (a.username || '').includes(searchQuery.value)
     )
 })
+const normalUsersFiltered = computed(() => {
+    // 🌟 核心簡化：直接從 store 拿資料，因為 store 已經在 loadUsers 時幫我們去重並合併好了
+    const allUsers = userStore.users || [];
 
-/* ========================
-   Utils
-======================== */
-const formatCurrency = (val) =>
-    new Intl.NumberFormat('zh-TW', {
-        style: 'currency',
-        currency: 'TWD',
-        minimumFractionDigits: 0
-    }).format(val)
+    return allUsers.filter(u => {
+        // 1. 只顯示一般用戶 (排除 admin)
+        const isUser = u.role === 'user';
 
-const handleLogout = () => {
-    if (confirm('確定斷開管理者連線？')) {
-        router.push('/')
-    }
-}
+        // 2. 搜尋邏輯 (同時支援 帳號、名稱、Email 搜尋)
+        const search = searchQuery.value.toLowerCase();
+        const matchesSearch = (
+            (u.username || '').toLowerCase().includes(search) ||
+            (u.name || '').toLowerCase().includes(search) ||
+            (u.email || '').toLowerCase().includes(search)
+        );
 
-/* ========================
-   Lifecycle
-======================== */
+        return isUser && matchesSearch;
+    });
+});
+
+const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(val)
+const handleLogout = () => { if (confirm('確定斷開連線並登出系統？')) router.push('/') }
+
+// 確保 Pinia Store 也有讀取本地快取
 onMounted(() => {
-    userStore.loadUsers()
-})
+    // 🌟 修正點：統一由 store 的 loadUsers 處理所有來源
+    if (userStore.loadUsers) {
+        userStore.loadUsers();
+    }
+});
+
 </script>
 
 <template>
-    <div class="admin-main-wrapper" :style="{ backgroundColor: currentStyle.bg, color: currentStyle.text }">
+    <div class="admin-layout" :style="{ background: currentStyle.bgGradient, color: currentStyle.text }">
 
-        <aside class="sidebar" :style="{ backgroundColor: currentStyle.sidebar, borderColor: currentStyle.border }">
-            <div class="brand">
-                <div class="logo-icon"> <img src="../assets/logo.svg" alt="logo" width="48" height="48"></div>
-                <div class="brand-text">
-                    <h2 :style="{ color: currentStyle.text }">數位財務系統</h2>
-                    <span :style="{ color: currentStyle.primary }">後台管理</span>
+        <div class="background-effects">
+            <div v-for="n in 8" :key="n" class="effect-circle"></div>
+        </div>
+
+        <aside class="sidebar-glass"
+            :style="{ backgroundColor: currentStyle.sidebarBg, borderColor: currentStyle.border }">
+            <div class="brand-zone">
+                <div class="logo-icon">
+                    <span class="icon">
+                        <img src="../assets/logo.svg" alt="logo" width="48" height="48">
+                    </span>
+                </div>
+                <div class="brand-info">
+                    <h2>Money MMA</h2>
+                    <span class="badge" :style="{ background: currentStyle.primary }">ADMIN PANEL</span>
                 </div>
             </div>
 
-            <nav class="sidebar-nav">
-                <button v-for="t in tabs" :key="t.id" class="nav-item" :class="{ active: activeTab === t.id }"
-                    :style="activeTab === t.id ? { color: currentStyle.primary, background: currentStyle.primary + '10', borderRight: `4px solid ${currentStyle.primary}` } : { color: currentStyle.text + '80' }"
+            <nav class="nav-menu">
+                <button v-for="t in tabs" :key="t.id" class="nav-link" :class="{ 'is-active': activeTab === t.id }"
+                    :style="activeTab === t.id ? { background: currentStyle.primary + '20', color: currentStyle.primary } : {}"
                     @click="activeTab = t.id">
                     <span class="icon">{{ t.icon }}</span> {{ t.label }}
                 </button>
             </nav>
 
-            <div class="sidebar-footer">
-                <button class="logout-btn" @click="handleLogout">登出</button>
+            <div class="sidebar-bottom">
+                <button class="btn-logout" @click="handleLogout">登出系統</button>
             </div>
         </aside>
 
-        <main class="content-area">
-            <header class="top-header"
-                :style="{ background: currentStyle.sidebar, borderBottom: `1px solid ${currentStyle.border}` }">
-                <div class="path" :style="{ color: currentStyle.text + '80' }">
+        <main class="main-content">
+            <header class="main-header">
+                <div class="breadcrumb">
                     控制中心 / <span :style="{ color: currentStyle.primary }">{{tabs.find(t => t.id === activeTab).label
-                    }}</span>
+                        }}</span>
                 </div>
-                <div class="admin-tag">
-                    <span class="pulse-dot"></span> 管理員：online
+                <div class="user-status">
+                    <span class="dot-online"></span>
+                    登入者：<strong>{{ currentLoginAdmin.username }}</strong>
                 </div>
             </header>
 
-            <div class="view-viewport">
+            <div class="scroll-view">
 
-                <div class="stats-row">
-                    <div v-for="s in [
-                        { l: '總用戶量', v: users.length, i: '👥', c: currentStyle.primary },
-                        { l: '總交易數', v: '$12,458,900', i: '💰', c: '#10b981' },
-                        { l: '活躍用戶', v: '120ms', i: '⚡', c: '#f59e0b' }
-                    ]" :key="s.l" class="stat-card"
-                        :style="{ backgroundColor: currentStyle.card, borderColor: currentStyle.border }">
-                        <div class="stat-data">
-                            <span class="label" :style="{ color: currentStyle.text + '80' }">{{ s.l }}</span>
-                            <div class="value" :style="{ color: currentStyle.text }">{{ s.v }}</div>
+                <div class="stats-grid">
+                    <div class="stat-glass-card">
+                        <div class="stat-info">
+                            <span class="stat-label">總註冊用戶</span>
+                            <div class="stat-value">{{ userStore.users ? userStore.users.length : 0 }}</div>
                         </div>
-                        <div class="icon-box-large" :style="{ background: s.c + '15', color: s.c }">{{ s.i }}</div>
+                        <div class="stat-icon-circle" style="background: #3b82f620; color: #3b82f6;">👥</div>
+                    </div>
+                    <div class="stat-glass-card">
+                        <div class="stat-info">
+                            <span class="stat-label">總用戶消費總額</span>
+                            <div class="stat-value" :style="{ color: currentStyle.primary }">{{
+                                formatCurrency(totalTransactionAmount) }}</div>
+                        </div>
+                        <div class="stat-icon-circle" style="background: #10b98120; color: #10b981;">💰</div>
+                    </div>
+                    <div class="stat-glass-card">
+                        <div class="stat-info">
+                            <span class="stat-label">活躍用戶數</span>
+                            <div class="stat-value">尚未串聯</div>
+                        </div>
+                        <div class="stat-icon-circle" style="background: #f59e0b20; color: #f59e0b;">⚡</div>
                     </div>
                 </div>
 
-                <div class="main-panel"
-                    :style="{ backgroundColor: currentStyle.card, borderColor: currentStyle.border }">
+                <div class="content-glass-card"
+                    :style="{ backgroundColor: currentStyle.cardBg, borderColor: currentStyle.border }">
 
-                    <div v-if="activeTab === 'analytics'" class="tab-pane">
-                        <h3 class="pane-title">消費權重即時排行</h3>
-                        <table class="modern-table">
-                            <thead>
-                                <tr
-                                    :style="{ color: currentStyle.text + '80', borderBottom: `2px solid ${currentStyle.primary}20` }">
-                                    <th>排名</th>
-                                    <th>管理權限</th>
-                                    <th>累計流量</th>
-                                    <th>交易次</th>
-                                    <th>均值</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="(u, i) in topUsers" :key="u.uid">
-                                    <td><span class="rank-tag" :style="{ background: currentStyle.primary }">#{{ i + 1
-                                    }}</span></td>
-                                    <td class="bold">{{ u.name }}</td>
-                                    <td class="bold" :style="{ color: currentStyle.primary }">{{
-                                        formatCurrency(u.totalSpent) }}</td>
-                                    <td>{{ u.transactions }}</td>
-                                    <td style="opacity: 0.6">{{ formatCurrency(u.avgSpent) }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <section v-if="activeTab === 'analytics'" class="tab-content">
+                        <div class="section-header">
+                            <h3>🏆 財富英雄榜 <small>Top Spenders</small></h3>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="mma-table">
+                                <thead>
+                                    <tr>
+                                        <th>排名</th>
+                                        <th>用戶</th>
+                                        <th>累積金額</th>
+                                        <th>次數</th>
+                                        <th>單筆平均</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(u, i) in userStore.topUsers" :key="u.uid">
+                                        <td><span class="rank-badge" :class="'rank-' + (i + 1)">{{ i + 1 }}</span></td>
+                                        <td class="font-bold">{{ u.name }}</td>
+                                        <td class="amount-text" :style="{ color: currentStyle.primary }">{{
+                                            formatCurrency(u.totalSpent) }}</td>
+                                        <td>{{ u.transactions }} 次</td>
+                                        <td class="opacity-60">{{ formatCurrency(u.avgSpent) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
 
-                    <div v-if="activeTab === 'api'" class="tab-pane">
-                        <h3 class="pane-title">核心 API 節點狀態</h3>
+                    <section v-if="activeTab === 'users'" class="tab-content">
+                        <div class="search-box">
+                            <input v-model="searchQuery" placeholder="🔍 搜尋名稱、帳號或 UID..." class="mma-input" />
+                        </div>
+
+                        <div class="user-group-div admin-section">
+                            <div class="group-title">🛡️ 管理權限組 ({{ adminFiltered.length }})</div>
+                            <div class="table-wrapper">
+                                <table class="mma-table">
+                                    <thead>
+                                        <tr>
+                                            <th>UID</th>
+                                            <th>帳號</th>
+                                            <th>姓名</th>
+                                            <th>電子郵件</th>
+                                            <th>職位</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="u in adminFiltered" :key="u.uid">
+                                            <td><span class="uid-tag admin-uid">A-{{ u.uid }}</span></td>
+                                            <td class="font-bold">{{ u.username }}</td>
+                                            <td>{{ u.name }}</td>
+                                            <td class="email-cell">{{ u.email }}</td>
+                                            <td><span class="job-badge">{{ u.job }}</span></td>
+                                            <td>
+                                                <button class="btn-mma-action"
+                                                    :class="{ 'is-disabled': u.username !== currentLoginAdmin.username }"
+                                                    @click="openEditModal(u)">
+                                                    {{ u.username === currentLoginAdmin.username ? '修改資訊' : '不可修改' }}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="user-group-div" style="margin-top: 50px;">
+                            <div class="group-title">👤 一般用戶組 ({{ normalUsersFiltered.length }})</div>
+                            <div class="table-wrapper">
+                                <table class="mma-table">
+                                    <thead>
+                                        <tr>
+                                            <th>UID</th>
+                                            <th>帳號</th>
+                                            <th>名稱</th>
+                                            <th>電子郵件</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="u in normalUsersFiltered" :key="u.uid">
+                                            <td><span class="uid-tag user-uid">U-{{ u.uid }}</span></td>
+
+                                            <td class="font-bold">{{ u.username }}</td>
+
+                                            <td>{{ u.name }}</td>
+
+                                            <td>{{ u.email }}</td>
+
+                                            <td class="action-btns">
+                                                <button class="btn-mma-action promote"
+                                                    :style="{ borderColor: currentStyle.primary, color: currentStyle.primary }">修改</button>
+                                                <button class="btn-mma-action delete"
+                                                    @click="userStore.deleteUser(u.uid)">註銷</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section v-if="activeTab === 'api'" class="tab-content">
+                        <div class="section-header">
+                            <h3>🤖 AI 模型控制中心</h3>
+                        </div>
                         <div class="api-grid">
-                            <div v-for="api in apiServices" :key="api.id" class="api-card"
-                                :class="{ selected: selectedApi === api.id }"
-                                :style="{ backgroundColor: currentStyle.bg, borderColor: selectedApi === api.id ? currentStyle.primary : currentStyle.border }"
-                                @click="selectedApi = api.id">
-                                <div class="api-head">
-                                    <span class="name">{{ api.name }}</span>
-                                    <span class="online-tag">ONLINE</span>
-                                </div>
-                                <p class="desc" :style="{ color: currentStyle.text + '70' }">{{ api.desc }}</p>
-                                <div class="api-stats-box">
-                                    <span>成功率: <b :style="{ color: '#10b981' }">{{ api.successRate }}%</b></span>
-                                    <span>延遲: <b>{{ api.latency }}ms</b></span>
-                                </div>
+                            <div class="api-card active" :style="{ borderLeftColor: currentStyle.primary }">
+                                <h4>Gemini-1.5-Pro</h4>
+                                <p>主要邏輯處理與財務建議引擎</p>
+                                <span class="status-tag">運行中 / 24ms</span>
+                            </div>
+                            <div class="api-card">
+                                <h4>Local-Llama-3</h4>
+                                <p>本地端離線數據備援模型</p>
+                                <span class="status-tag standby">待命模式</span>
                             </div>
                         </div>
-                    </div>
+                    </section>
 
-                    <div v-if="activeTab === 'users'" class="tab-pane">
-                        <div class="search-row">
-                            <input v-model="searchQuery" placeholder="🔍 搜尋用戶名稱或 UID..." class="m-input"
-                                :style="{ background: currentStyle.bg, border: `1px solid ${currentStyle.border}`, color: currentStyle.text }">
+                    <section v-if="activeTab === 'system'" class="tab-content">
+                        <div class="section-header">
+                            <h3>🎨 視覺主題設定</h3>
                         </div>
-                        <table class="modern-table">
-                            <thead>
-                                <tr :style="{ color: currentStyle.text + '80' }">
-                                    <th>UID</th>
-                                    <th>管理權限</th>
-                                    <th>電子郵件</th>
-                                    <th>權限等級</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="u in filteredUsers" :key="u.uid">
-                                    <td class="uid-font" :style="{ color: currentStyle.primary }">{{ u.uid }}</td>
-                                    <td class="bold">{{ u.name }}</td>
-                                    <td style="opacity: 0.7">{{ u.email }}</td>
-                                    <td>
-                                        <select v-model="u.role" :disabled="u.email === 'admin'" class="m-select"
-                                            :style="{ background: currentStyle.bg, color: currentStyle.text, borderColor: currentStyle.border }">
-                                            <option value="user">一般使用者</option>
-                                            <option value="admin">管理者</option>
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <button v-if="u.email !== 'admin'" class="btn-del"
-                                            @click="userStore.deleteUser(u.uid)">
-                                            註銷
-                                        </button>
-
-                                        <span v-else class="locked-text">🔒 管理者</span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div v-if="activeTab === 'system'" class="tab-pane">
-                        <h3 class="pane-title">視覺化主題選擇</h3>
-                        <div class="theme-grid">
-                            <div v-for="(style, id) in themes" :key="id" class="theme-card"
-                                :class="{ active: currentTheme === id }"
-                                :style="{ border: currentTheme === id ? `2px solid ${style.primary}` : `1px solid ${currentStyle.border}`, background: currentTheme === id ? style.bg : '' }"
-                                @click="setTheme(id)">
-                                <div class="theme-sample" :style="{ background: style.bg }">
-                                    <div class="sample-side" :style="{ background: style.sidebar }"></div>
-                                    <div class="sample-accent" :style="{ background: style.primary }"></div>
+                        <div class="theme-picker">
+                            <div v-for="(style, id) in themes" :key="id" class="theme-item"
+                                :class="{ 'is-selected': currentTheme === id }" @click="setTheme(id)">
+                                <div class="theme-preview" :style="{ background: style.bgGradient }">
+                                    <div class="preview-sidebar" :style="{ background: style.sidebarBg }"></div>
+                                    <div class="preview-accent" :style="{ background: style.primary }"></div>
                                 </div>
-                                <p class="theme-label" :style="{ color: currentTheme === id ? style.primary : '' }">{{
-                                    style.name }}</p>
+                                <span>{{ style.name }}</span>
                             </div>
                         </div>
-                    </div>
-
+                    </section>
                 </div>
             </div>
         </main>
+
+        <Transition name="fade">
+            <div v-if="isEditModalOpen" class="modal-overlay" @click.self="isEditModalOpen = false">
+                <div class="modal-card">
+                    <div class="modal-head">
+                        <h3>修改個人資訊</h3>
+                        <p>UID: A-{{ editForm.uid }}</p>
+                    </div>
+                    <div class="modal-body">
+                        <div class="m-field"><label>帳號名稱</label><input v-model="editForm.username" /></div>
+                        <div class="m-field"><label>真實姓名</label><input v-model="editForm.name" /></div>
+                        <div class="m-field"><label>電子郵件</label><input v-model="editForm.email" /></div>
+                        <div class="m-field">
+                            <label>職位名稱</label>
+                            <input v-model="editForm.job" placeholder="自行發揮" />
+                        </div>
+                    </div>
+                    <div class="modal-foot">
+                        <button class="btn-cancel" @click="isEditModalOpen = false">
+                            取消</button>
+                        <button class="btn-save" @click="saveAdmin"
+                            :style="{ background: currentStyle.primary }">確認更新</button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
     </div>
 </template>
 
 <style scoped>
-/* 佈局容器：解決所有捲軸與白邊問題 */
-.admin-main-wrapper {
+/* 此處保留您提供的所有 CSS，不進行任何位置調整 */
+.admin-layout {
     display: flex;
     width: 100vw;
     height: 100vh;
     overflow: hidden;
-    transition: 0.4s ease-in-out;
     position: fixed;
     top: 0;
     left: 0;
+    font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
 }
 
-/* 側邊欄 */
-.sidebar {
+.background-effects {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.effect-circle {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.12;
+    animation: floating 20s infinite linear;
+}
+
+@keyframes floating {
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    50% {
+        transform: translate(40px, -40px) scale(1.1);
+    }
+
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+}
+
+.effect-circle:nth-child(odd) {
+    background: #3b82f6;
+    width: 400px;
+    height: 400px;
+}
+
+.effect-circle:nth-child(even) {
+    background: #10b981;
+    width: 300px;
+    height: 300px;
+}
+
+.sidebar-glass {
     width: 260px;
-    height: 100%;
+    backdrop-filter: blur(20px);
+    border-right: 1px solid;
     display: flex;
     flex-direction: column;
-    padding: 32px 0;
-    border-right: 1px solid;
-    flex-shrink: 0;
+    padding: 40px 0;
+    z-index: 10;
 }
 
-.brand {
-    padding: 0 24px;
-    margin-bottom: 48px;
+.brand-zone {
+    padding: 0 30px;
+    margin-bottom: 40px;
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 15px;
 }
 
 .logo-box {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #b1e7eb, #c1cadf);
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    font-weight: 800;
-    font-size: 20px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    font-size: 24px;
 }
 
-.brand-text h2 {
-    font-size: 22px;
-    font-weight: 700;
-    margin: 0;
-    line-height: 1;
+.nav-menu {
+    flex: 1;
+    padding: 0 15px;
 }
 
-.brand-text span {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    margin-top: 4px;
-    display: block;
-}
-
-.nav-item {
+.nav-link {
     width: 100%;
     border: none;
-    background: none;
-    padding: 15px 24px;
+    padding: 14px 20px;
+    border-radius: 12px;
     text-align: left;
     cursor: pointer;
-    font-size: 15px;
-    font-weight: 500;
+    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 12px;
-    transition: 0.2s;
+    transition: 0.3s;
+    background: transparent;
+    color: inherit;
 }
 
-.nav-item.active {
-    font-weight: 700;
+.nav-link.is-active {
+    font-weight: 800;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1);
 }
 
-.sidebar-footer {
-    padding: 24px;
+.sidebar-bottom {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    padding: 0 20px;
     margin-top: auto;
 }
 
-.logout-btn {
+.btn-logout {
     width: 100%;
     padding: 12px;
-    border: 1px solid #fca5a5;
+    background: rgba(239, 68, 68, 0.1);
     color: #ef4444;
-    background: #fff1f2;
+    border: 1.5px solid rgba(239, 68, 68, 0.2);
     border-radius: 10px;
     cursor: pointer;
     font-weight: 700;
+    transition: 0.3s;
 }
 
-/* 右側主內容：自適應寬度 */
-.content-area {
+.btn-logout:hover {
+    background: #ef4444;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
+}
+
+.main-content {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    min-width: 0;
 }
 
-.top-header {
-    height: 64px;
+.main-header {
+    height: 70px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 0 40px;
-    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
 }
 
-.pulse-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #10b981;
-    display: inline-block;
-    margin-right: 8px;
-    box-shadow: 0 0 8px #10b981;
-}
-
-/* 內部滾動視口 */
-.view-viewport {
-    padding: 32px 40px;
-    overflow-y: auto;
+.scroll-view {
     flex: 1;
+    overflow-y: auto;
+    padding: 35px 40px;
 }
 
-/* 統計卡片：Icon 大幅放大 */
-.stats-row {
+.stats-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
-    margin-bottom: 32px;
+    gap: 25px;
+    margin-bottom: 30px;
 }
 
-.stat-card {
+.stat-glass-card {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
     border-radius: 20px;
-    padding: 24px;
+    padding: 22px 25px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border: 1px solid;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .stat-value {
-    font-size: 28px;
+    font-size: 24px;
     font-weight: 800;
-    margin-top: 4px;
-    letter-spacing: -0.5px;
 }
 
-.stat-label {
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.icon-box-large {
-    width: 58px;
-    height: 58px;
+.stat-icon-circle {
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 32px;
+    font-size: 24px;
 }
 
-/* 功能面板 */
-.main-panel {
-    border-radius: 24px;
-    padding: 40px;
-    border: 1px solid;
-    min-height: 500px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
-}
-
-.pane-title {
-    font-size: 20px;
-    font-weight: 700;
-    margin-bottom: 24px;
-}
-
-.pane-title small {
-    font-weight: 400;
-    opacity: 0.5;
-    font-size: 13px;
-    margin-left: 8px;
-}
-
-/* 表格細節 */
-.modern-table {
+.table-wrapper {
     width: 100%;
+    overflow-x: auto;
+    border-radius: 12px;
+    padding-bottom: 8px;
+}
+
+.mma-table {
+    width: 100%;
+    min-width: 1000px;
     border-collapse: collapse;
 }
 
-.modern-table th {
+.mma-table th {
     text-align: left;
-    padding: 12px 16px;
+    padding: 20px 15px;
     border-bottom: 2px solid rgba(0, 0, 0, 0.05);
-    font-size: 13px;
-}
-
-.modern-table td {
-    padding: 18px 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+    color: #64748b;
     font-size: 14px;
 }
 
-.rank-tag {
-    color: white;
-    padding: 2px 10px;
-    border-radius: 6px;
-    font-weight: 800;
+.mma-table td {
+    padding: 20px 15px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.02);
+    vertical-align: middle;
+}
+
+.uid-tag {
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
-}
-
-.uid-font {
-    font-family: 'Courier New', monospace;
     font-weight: 700;
+    background: white;
+    border: 1.5px solid;
+    white-space: nowrap;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
 }
 
-.bold {
-    font-weight: 600;
+.admin-uid {
+    border-color: #cbd5e1;
+    color: #475569;
 }
 
-/* API 與主題選擇 */
-.api-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 20px;
+.user-uid {
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #3b82f6;
 }
 
-.api-card {
-    padding: 24px;
-    border: 2px solid;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: 0.3s;
-}
-
-.api-stats-box {
+.rank-badge {
+    width: 28px;
+    height: 28px;
     display: flex;
-    justify-content: space-between;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: white;
+    font-weight: 900;
     font-size: 12px;
-    padding: 10px;
+}
+
+.rank-1 {
+    background: #fbbf24;
+    box-shadow: 0 0 15px rgba(251, 191, 36, 0.6);
+}
+
+.rank-2 {
+    background: #94a3b8;
+}
+
+.rank-3 {
+    background: #b45309;
+}
+
+.btn-mma-action {
+    background: white;
+    border: 1.5px solid #3b82f6;
+    color: #3b82f6;
+    padding: 6px 16px;
     border-radius: 10px;
-    margin-top: 15px;
-    background: rgba(0, 0, 0, 0.03);
+    cursor: pointer;
+    font-weight: 500;
+    transition: 0.2s;
+    white-space: nowrap;
 }
 
-.theme-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 16px;
+.btn-mma-action:hover:not(.is-disabled) {
+    background: #3b82f6;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);
 }
 
-.theme-card {
-    padding: 14px;
-    border-radius: 20px;
+.btn-mma-action.delete {
+    border-color: #ef4444;
+    color: #ef4444;
+    margin-left: 8px;
+}
+
+.btn-mma-action.delete:hover {
+    background: #ef4444;
+    color: white;
+}
+
+.is-disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    border-color: #cbd5e1;
+    color: #94a3b8;
+    filter: grayscale(1);
+}
+
+.theme-picker {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 25px;
+}
+
+.theme-item {
     cursor: pointer;
     text-align: center;
     transition: 0.3s;
-    background: rgba(0, 0, 0, 0.02);
 }
 
-.theme-sample {
-    height: 70px;
-    border-radius: 12px;
+.theme-preview {
+    width: 140px;
+    height: 90px;
+    border-radius: 15px;
     position: relative;
     overflow: hidden;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    margin-bottom: 10px;
+    border: 3px solid transparent;
+    transition: 0.3s;
 }
 
-.sample-side {
-    width: 22px;
+.preview-sidebar {
+    width: 35px;
     height: 100%;
     position: absolute;
     left: 0;
-}
-
-.sample-accent {
-    width: 10px;
-    height: 10px;
-    position: absolute;
-    bottom: 8px;
-    right: 8px;
-    border-radius: 50%;
-}
-
-/* 其他組件 */
-.m-input {
-    padding: 12px 18px;
-    border-radius: 12px;
-    border: 1px solid;
-    outline: none;
-    width: 340px;
-    margin-bottom: 24px;
-    font-size: 14px;
-}
-
-.m-select {
-    padding: 6px 12px;
-    border-radius: 8px;
-    border: 1px solid;
-    cursor: pointer;
-    font-size: 13px;
-    outline: none;
-}
-
-.btn-del {
-    color: #ef4444;
-    border: 1px solid #ef4444;
-    background: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 700;
-    font-size: 13px;
-}
-
-.locked-text {
-    font-size: 11px;
-    font-weight: 800;
     opacity: 0.5;
 }
 
-.online-text {
+.preview-accent {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+}
+
+.theme-item.is-selected .theme-preview {
+    border-color: #3b82f6;
+    transform: scale(1.08);
+    box-shadow: 0 12px 25px rgba(59, 130, 246, 0.3);
+}
+
+.content-glass-card {
+    border-radius: 24px;
+    padding: 40px;
+    border: 1px solid;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.05);
+    min-height: 650px;
+}
+
+.group-title {
+    font-size: 19px;
     font-weight: 700;
-    color: #10b981;
+    margin-bottom: 25px;
+    padding-left: 12px;
+    border-left: 6px solid #3b82f6;
+}
+
+.mma-input {
+    width: 400px;
+    padding: 14px 22px;
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+    outline: none;
+    transition: 0.3s;
+    margin-bottom: 35px;
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-card {
+    width: 440px;
+    background: white;
+    padding: 40px;
+    border-radius: 28px;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+}
+
+.m-field {
+    margin-bottom: 25px;
+}
+
+.m-field label {
+    display: block;
     font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #475569;
+}
+
+.m-field input {
+    width: 100%;
+    padding: 12px 18px;
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+    outline: none;
+}
+
+.modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 35px;
+}
+
+.btn-save {
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.btn-cancel {
+    color: rgb(255, 255, 255);
+    border: none;
+    padding: 12px 25px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 700;
+    background: #78d5f1;
+    /* transform: translateY(-2px); */
+    /* box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2); */
+
+
+}
+
+.job-badge {
+    background: #eff6ff;
+    color: #1d4ed8;
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
 }
 </style>

@@ -16,6 +16,7 @@ import ChartFirstNetWorth from "../view/ChartFirstNetworth.vue"
 import ChartSecondBalance from "../view/ChartSecondBalance.vue"
 import ChartThirdExpense from "../view/ChartThirdExpense.vue"
 import ChartForthIncome from "../view/ChartForthIncome.vue"
+import ForgetPassword from "@/view/ForgetPassword.vue";
 
 
 
@@ -104,6 +105,11 @@ const routes = [
     path: "/ChartForthIncome",
     component: ChartForthIncome,
     name: "ChartForthIncome",
+  },
+    {
+    path: "/ForgetPassword",
+    component: ForgetPassword,
+    name: "ForgetPassword",
   }
 
 ];
