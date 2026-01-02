@@ -21,9 +21,13 @@ const handleLogin = async () => {
             password: password
         });
 
-        if (response.data && response.data.user) {
+        if (response.data && response.data.access_token) {
             const user = response.data.user;
+            const token = response.data.access_token; // 拿到後端回傳的通行證
+
+            // 1. 存入 localStorage (供全域與攔截器使用)
             localStorage.setItem('currentUser', JSON.stringify(user));
+            localStorage.setItem('user_token', token); // 💡 存下通行證
             
             // 跳轉邏輯
             if (user.role === 'admin') {

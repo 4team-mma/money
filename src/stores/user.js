@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import axios from "axios"; // 🌟 記得匯入 axios
+import axios from "axios";
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -9,7 +9,29 @@ export const useUserStore = defineStore("user", {
   }),
 
   getters: {
-    // 🌟 保持不變，但增加預設值保護防止報錯
+    // 🛡️ 自動產出帶有 A-xx 編號的管理員列表
+    formattedAdmins: (state) => {
+      return state.users
+        .filter((u) => u.role === "admin")
+        .map((u, index) => ({
+          ...u,
+          // 生成 A-01, A-02 格式
+          displayUid: `A-${(index + 1).toString().padStart(2, "0")}`,
+        }));
+    },
+
+    // 👤 自動產出帶有 U-xx 編號的一般用戶列表
+    formattedNormalUsers: (state) => {
+      return state.users
+        .filter((u) => u.role === "user")
+        .map((u, index) => ({
+          ...u,
+          // 生成 U-01, U-02 格式
+          displayUid: `U-${(index + 1).toString().padStart(2, "0")}`,
+        }));
+    },
+
+    // 📊 財富排行榜邏輯
     topUsers: (state) =>
       state.users
         .filter((u) => u.role !== "admin")
@@ -29,30 +51,27 @@ export const useUserStore = defineStore("user", {
     },
 
     /**
-     * 🌟 修改為非同步版本：優先讀取資料庫
+     * 🌟 載入用戶：優先資料庫，失敗則回退本地
      */
     async loadUsers() {
       try {
         console.log("正在從資料庫獲取用戶名單...");
         const response = await axios.get(`${API_BASE_URL}/users/`);
         
-        // 1. 真修：將資料庫欄位映射到前端需要的格式 (如 user_id -> uid)
         this.users = response.data.map(u => ({
-          uid: u.user_id, //  這裡將後端的 user_id 轉為前端習慣的 uid
+          uid: u.user_id, // 資料庫原始 ID
           username: u.username,
           name: u.name,
           email: u.email,
           role: u.role,
-          job: u.job || "一般用戶", // 
+          job: u.job || "一般用戶",
           statusText: "正常",
-          // 以下資料庫目前可能還沒有，我們先給測試值
           totalSpent: u.totalSpent || (u.role === 'user' ? 45800 : 0), 
           transactions: u.transactions || (u.role === 'user' ? 15 : 0),
         }));
         
         console.log("資料庫載入成功！");
       } catch (err) {
-        // 2. 備援：API 失敗時，回退到你原本的測試帳號與 LocalStorage
         console.warn("API 連線失敗，啟動本地備援模式");
         
         const defaultAccount = [
@@ -88,17 +107,15 @@ export const useUserStore = defineStore("user", {
     },
 
     /**
-     * 🌟 註銷功能也建議未來可以「真刪」資料庫
+     * 註銷用戶功能
      */
     async deleteUser(uid) {
       if (confirm('確定要註銷此用戶嗎？(此操作不可逆)')) {
         try {
-          // 如果是資料庫的 UID (數字字串)，則呼叫 API 刪除 (假設路徑是 DELETE /users/{id})
           await axios.delete(`${API_BASE_URL}/users/${uid}`);
-          await this.loadUsers(); // 重新整理列表
+          await this.loadUsers(); 
           alert('用戶已從資料庫刪除');
         } catch (err) {
-          // 如果 API 失敗，僅在本地過濾 (你原本的邏輯)
           this.users = this.users.filter((u) => u.uid !== uid);
           const updatedLocal = this.users.filter(u => u.role === 'user' && !['0000', '0001'].includes(u.uid));
           localStorage.setItem("mma_users", JSON.stringify(updatedLocal));
