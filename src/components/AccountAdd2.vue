@@ -66,7 +66,7 @@ const submit = () => {
         <div class="add_acc_background acc_modal_content " @click.stop>
             <!-- 上面的@click.stop代表小框框內停止喧染 -->
             <div class="acc_head">
-                <H3 class="acc_button_word">新增帳戶</H3>
+                <h3 class="acc_button_word">新增帳戶</h3>
                 <button @click="showAddDialog = false" class="btn-icon">✕</button>
             </div>
             <hr>

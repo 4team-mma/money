@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useCategoryStore } from '@/stores/categoryStats'
-import axios from 'axios'
+import api from '@/api'
 import AdminsComments from './AdminsComments.vue'
 
 /* ========================
@@ -57,7 +57,7 @@ const openEditModal = (u) => {
 
 const saveAdmin = async () => {
     try {
-        await axios.put(`http://localhost:8000/users/${editForm.value.uid}`, {
+        await api.put(`/users/${editForm.value.uid}`, {
             username: editForm.value.username,
             name: editForm.value.name,
             email: editForm.value.email,
@@ -147,7 +147,19 @@ const normalUsersFiltered = computed(() => {
 const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(val)
 const handleLogout = () => { if (confirm('確定斷開連線並登出系統？')) router.push('/') }
 
+// Admins.vue 的 onMounted
 onMounted(async () => {
+    // 🌟 1. 先從本地儲存確認身份
+    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+
+    // 🌟 2. 如果不是管理員，直接踢走，不准執行下方的 API 請求
+    if (user.role !== 'admin') {
+        alert('警告：您無權訪問管理後台');
+        router.push('/book');
+        return;
+    }
+
+    // 只有管理員才會執行到這裡
     if (userStore.loadUsers) await userStore.loadUsers();
     await categoryStore.fetchAllRankings();
 });
@@ -319,7 +331,8 @@ onMounted(async () => {
                         </div>
                     </section>
 
-                    <section v-if="activeTab === 'api'" class="tab-content"><div class="section-header"><h3>🤖 模型控制中心</h3></div></section>
+                    <section v-if="activeTab === 'api'" class="tab-content"><div class="section-header"><h3>🤖 模型控制中心</h3></div><div><p>開發中...</p></div>
+                    </section>
                     <section v-if="activeTab === 'feedback'" class="tab-content"><AdminsComments /></section>
                     <section v-if="activeTab === 'system'" class="tab-content">
                         <div class="section-header"><h3>🎨 視覺主題設定</h3></div>

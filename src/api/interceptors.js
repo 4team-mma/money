@@ -1,4 +1,4 @@
-import service from "./index";
+import service from "./service";
 import { ElMessage } from "element-plus";
 
 

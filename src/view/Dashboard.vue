@@ -1,18 +1,17 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import Nav from '@/components/Nav.vue';
-import axios from '@/api/interceptors'
+import api from '@/api'
 
 // 💡 存放從 API 抓回來的「活資料」
 const transactions = ref([])
 
 const fetchTransactions = async () => {
     try {
-        const response = await axios.get('/records/') 
-        
-        
-        // 🌟 修正：因為攔截器已經處理過，所以 response 直接就是陣列資料
+        const response = await api.get('/records/') 
+                
         transactions.value = response 
+        console.log("抓取到的交易紀錄：", transactions.value);
     } catch (error) {
         console.error("Dashboard 加載失敗::", error)
     }

@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import axios from "axios";
+import api from "@/api";
 
 export const useCategoryStore = defineStore("categoryStats", {
     state: () => ({
@@ -18,7 +18,7 @@ export const useCategoryStore = defineStore("categoryStats", {
             this.loading = true;
             try {
                 // 呼叫更新後的綜合排行 API
-                const response = await axios.get("http://localhost:8000/admin/stats/rankings");
+                const response = await api.get("/admin/stats/rankings");
 
                 // 針對「各路財神」類別消費榜進行 Emoji 美化處理
                 const emojiMap = {
@@ -27,7 +27,7 @@ export const useCategoryStore = defineStore("categoryStats", {
                     食: "🍱", 衣: "👕", 住: "🏠", 行: "🚌"
                 };
 
-                const data = response.data;
+                const data = response;
 
                 // 加工處理類別名稱
                 data.category_spending = data.category_spending.map((item) => ({

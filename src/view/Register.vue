@@ -1,8 +1,12 @@
 <script setup>
-import { reactive } from 'vue'
+import { reactive,ref } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '@/api'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
+const loading = ref(false) // 防止重複點擊
+
 const formData = reactive({
     username: '', // 
     name: '',
@@ -12,52 +16,49 @@ const formData = reactive({
     agreeTerms: false
 })
 
-const handleRegister = () => {
+const handleRegister = async () => {
     // 1. 驗證密碼一致性
     if (formData.password !== formData.confirmPassword) {
-        alert('密碼不一致，請重新輸入')
+        ElMessage.warning('密碼不一致，請重新輸入')
         return
     }
-
-    // 2. 取得現有列表
-    const savedUsers = JSON.parse(localStorage.getItem('mma_users') || '[]');
-
-    // 3. 檢查重複性 (檢查 Email 或 帳號 是否已存在)
-    const isDuplicate = savedUsers.find(u =>
-        u.email === formData.email || u.username === formData.username
-    );
-
-    if (isDuplicate) {
-        alert('此帳號或 Email 已被註冊');
-        return;
+    if (!formData.agreeTerms) {
+            ElMessage.warning('請勾選同意條款')
+            return
     }
+    loading.value = true
 
-    // 4. 建立新用戶 (確保欄位與 Store 對齊)
-    const newUser = {
-        uid: String(savedUsers.length + 2).padStart(4, "0"), // 生成 U-000x 格式的編號
-        username: formData.username, //  儲存帳號
-        name: formData.name,         // 儲存顯示名稱
-        email: formData.email,       // 儲存信箱
-        password: formData.password,
-        role: 'user',                // 預設為一般用戶
-        totalSpent: 0,
-        transactions: 0,
-        registeredDate: new Date().toLocaleDateString(),
-        status: 'active',
-        statusText: '正常'
-    };
+try {
+        // 🌟 2. 呼叫後端 API 註冊接口
+        // 最終發出：POST http://localhost:8000/api/auth/register
+        const res =await api.post('/auth/register', {
+            username: formData.username,
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+            confirm_password: formData.confirmPassword // 這裡必須用下底線
+        });
+        console.log('註冊成功回傳：', res);
 
-    // 5. 儲存並跳轉
-    savedUsers.push(newUser);
-    localStorage.setItem('mma_users', JSON.stringify(savedUsers));
+        // 🌟 3. 因為攔截器已經處理過 .data，所以這裡直接判斷回傳訊息
+        // 你的 auth.py 回傳的是 {"msg": "註冊成功"}
+        ElMessage.success('註冊成功！歡迎加入 Money MMA');
+        
+        // 清除舊的本地離線資料（選做，為了確保之後讀取都是資料庫的資料）
+        localStorage.removeItem('mma_users');
 
-    alert('註冊成功，請使用帳號或信箱登入！');
-    router.push('/'); // 回登入頁
+        router.push('/'); // 跳轉回登入頁
+    } catch (err) {
+        // 🌟 4. 錯誤處理：如果 Email 已被註冊，後端會拋出 400 錯誤
+        // 攔截器 interceptors.js 會自動彈出 ElMessage.error(detail)
+        console.error('註冊流程中斷：', err);
+    } finally {
+        loading.value = false
+    }
 }
 
-const goToLogin = () => {
-    router.push('/')
-}
+const goToLogin = () => router.push('/')
+
 </script>
 
 <template>
@@ -177,325 +178,7 @@ const goToLogin = () => {
 </template>
 
 <style scoped>
-/* 保持你原本的所有 CSS 樣式 ... */
-.register-page {
-    min-height: 100vh;
-    background: linear-gradient(135deg, #EBF4FF 0%, #F0F9FF 100%);
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
-}
+@import '../assets/css/register.css';
 
-.background-effects {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    overflow: hidden;
-}
 
-.effect-circle {
-    position: absolute;
-    border-radius: 50%;
-    mix-blend-mode: multiply;
-    filter: blur(4px);
-    animation: floating infinite linear;
-}
-
-@keyframes floating {
-    0% {
-        transform: translate(0, 0) rotate(0deg);
-    }
-
-    33% {
-        transform: translate(40px, -60px) rotate(120deg);
-    }
-
-    66% {
-        transform: translate(-30px, 30px) rotate(240deg);
-    }
-
-    100% {
-        transform: translate(0, 0) rotate(360deg);
-    }
-}
-
-.effect-circle:nth-child(1) {
-    width: 400px;
-    height: 400px;
-    background: rgba(59, 130, 246, 0.12);
-    top: -10%;
-    left: -10%;
-    animation-duration: 25s;
-}
-
-.effect-circle:nth-child(2) {
-    width: 300px;
-    height: 300px;
-    background: rgba(12, 165, 226, 0.15);
-    top: 20%;
-    right: -5%;
-    animation-duration: 30s;
-}
-
-.effect-circle:nth-child(3) {
-    width: 150px;
-    height: 150px;
-    background: rgba(30, 64, 175, 0.1);
-    bottom: 15%;
-    left: 10%;
-    animation-duration: 20s;
-}
-
-.effect-circle:nth-child(4) {
-    width: 350px;
-    height: 350px;
-    background: rgba(167, 243, 208, 0.15);
-    bottom: -10%;
-    right: 25%;
-    animation-duration: 35s;
-}
-
-.main-container {
-    position: relative;
-    z-index: 10;
-    width: 100%;
-    max-width: 1050px;
-    padding: 2rem;
-}
-
-.card-wrapper {
-    display: flex;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(10px);
-    border-radius: 16px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.5);
-}
-
-.form-section {
-    flex: 1.1;
-    padding: 2.5rem;
-}
-
-.logo-area {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
-}
-
-.logo-icon {
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #b1e7eb, #c1cadf);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-}
-
-.brand-name {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: #1E293B;
-}
-
-.header-text h2 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #1E293B;
-    margin-bottom: 4px;
-}
-
-.header-text p {
-    color: #64748B;
-    margin-bottom: 1.5rem;
-    font-size: 0.95rem;
-}
-
-.register-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: 1;
-}
-
-.form-group label {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #1E293B;
-}
-
-.password-row {
-    display: flex;
-    gap: 1rem;
-}
-
-input[type="text"],
-input[type="email"],
-input[type="password"] {
-    height: 44px;
-    padding: 0 1rem;
-    border: 2px solid #E2E8F0;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    transition: all 0.2s;
-    background: rgba(255, 255, 255, 0.8);
-}
-
-input:focus {
-    outline: none;
-    border-color: #3B82F6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    background: #fff;
-}
-
-.checkbox-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.85rem;
-    color: #64748B;
-}
-
-.checkbox-group input {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-}
-
-.submit-button {
-    height: 46px;
-    background: linear-gradient(135deg, #0ca5e2, #4896fc);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    transition: all 0.2s;
-    margin-top: 5px;
-}
-
-.submit-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
-}
-
-.divider {
-    display: flex;
-    align-items: center;
-    margin: 1.2rem 0;
-    color: #CBD5E1;
-    font-size: 0.8rem;
-}
-
-.divider::before,
-.divider::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: #E2E8F0;
-}
-
-.divider span {
-    padding: 0 10px;
-}
-
-.btn-social {
-    width: 100%;
-    height: 42px;
-    background: white;
-    border: 2px solid #E2E8F0;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    font-weight: 500;
-    color: #475569;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.login-link {
-    text-align: center;
-    margin-top: 1.2rem;
-    font-size: 0.875rem;
-    color: #64748B;
-}
-
-.login-link a {
-    color: #3B82F6;
-    font-weight: 600;
-    text-decoration: none;
-}
-
-.showcase-section {
-    flex: 0.9;
-    background: rgba(248, 250, 252, 0.5);
-    padding: 2.5rem;
-    display: flex;
-    align-items: center;
-}
-
-.showcase-header h3 {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: #1E293B;
-    margin-bottom: 0.5rem;
-}
-
-.showcase-header p {
-    color: #64748B;
-    margin-bottom: 2rem;
-}
-
-.feature-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-}
-
-.feature-card {
-    padding: 1.2rem;
-    background: white;
-    border: 2px solid #E2E8F0;
-    border-radius: 12px;
-    transition: all 0.3s;
-}
-
-.feature-card:hover {
-    border-color: #3B82F6;
-    transform: translateY(-3px);
-}
-
-@media (max-width: 900px) {
-    .card-wrapper {
-        flex-direction: column;
-    }
-
-    .showcase-section {
-        display: none;
-    }
-
-    .password-row {
-        flex-direction: column;
-    }
-}
 </style>
