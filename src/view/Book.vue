@@ -1,9 +1,41 @@
 <script setup>
-    import Nav from "@/components/Nav.vue";
-
-    import { Calendar } from "v-calendar";
     import "v-calendar/style.css";
-    import { ref, computed } from "vue";
+    import Nav from "@/components/Nav.vue";
+    import axios from '@/api/interceptors';
+    import { Calendar } from "v-calendar";
+    import { ref, computed, onMounted } from "vue";
+
+    // 存放從 API 抓回來的「活資料」
+    const transactions = ref([]);
+
+    // 輔助函數：將 API 資料轉換為應用程式格式
+    const mapApiToAppTransactions = (apiTransactions) => {
+        return apiTransactions.map(apiItem => {
+            return {
+                id: apiItem.add_id, // 欄位名稱對應
+                userId: apiItem.user_id,
+                date: apiItem.add_date,
+                amount: Number(apiItem.add_amount),
+                type: apiItem.add_type,
+                addClass: apiItem.add_class,
+                icon: apiItem.add_class_icon,
+                accountId: apiItem.account_id,
+                addMember: apiItem.add_member,
+                // 確保需要用的欄位都正確對應
+            };
+        });
+    };
+
+    const fetchTransactions = async () => {
+        try {
+            const response = await axios.get('/records/');
+            // 在賦值前進行資料轉換(假設 response 已經是 API 返回的陣列)
+            const mappedData = mapApiToAppTransactions(response);
+            transactions.value = mappedData; // 將轉換後的資料賦值給響應式變數
+        } catch (error) {
+            console.error("交易記錄 加載失敗:", error);
+        }
+    }
 
     // 修正日期為本地時間 yyyy-mm-dd
     const today = new Date()
@@ -20,14 +52,13 @@
     const calendar = ref(null);
     function moveToday() {
         calendar.value.move(today);
+        selectedDate.value = today;
     }
 
-    // 初始事件（測試資料）
-    const mockTransactions = ref([
-        { id: 1, date: "2025-12-05", name: "薪水", amount: 85000.0, type: "income" },
-        { id: 2, date: "2025-12-23", name: "健身", amount: -1250.0, type: "expense" },
-        { id: 3, date: "2025-12-05", name: "繳費", amount: -1280.0, type: "expense" },
-    ]);
+    onMounted(() => {
+        moveToday();
+        fetchTransactions();
+    });
 
     const selectDate = (day) => {
         selectedDate.value = day.date
@@ -41,7 +72,7 @@
 
     // 選擇日期的事件清單
     const selectedDateTransactions = computed(() => {
-        return mockTransactions.value.filter((e) => {
+        return transactions.value.filter((e) => {
             if (e.repeat == undefined) {
                 return e.date === selectedDate.value;
             }
@@ -61,26 +92,26 @@
 
     // v-calendar attributes (含重複事件)
     const calendarAttributes = computed(() => {
-        const attr = mockTransactions.value.map((e) => ({
+        const attr = transactions.value.map((e) => ({
             dates:
                 e.repeat === "weekly"
                     ? {
-                          repeat: {
-                              weekdays:
-                                  new Date(e.date).getDay() + 1 === 0
-                                      ? 7
-                                      : new Date(e.date).getDay() + 1,
-                          },
-                      }
+                        repeat: {
+                            weekdays:
+                                new Date(e.date).getDay() + 1 === 0
+                                    ? 7
+                                    : new Date(e.date).getDay() + 1,
+                        },
+                    }
                     : e.repeat === "monthly"
                     ? { repeat: { days: new Date(e.date).getDate() } }
                     : new Date(e.date),
             dot: {
                 color:
-                    e.type === "income" ? "green" : e.type === "expense" ? "red" : "blue",
+                    e.type ? "green" : "red",
             },
             popover: {
-                label: `${e.name} NT$ ${formatNumber(e.amount)}`,
+                label: `${e.addClass} NT$ ${formatNumber(e.amount)}`,
             },
         }));
 
@@ -94,23 +125,44 @@
         return attr;
     });
 
+    // 輔助函數：檢查日期是否在目標月份
+    const isSameMonthAndYear = (transactionDate, selectedDate) => {
+        const d1 = new Date(transactionDate);
+        const d2 = new Date(selectedDate);
+        
+        return d1.getFullYear() === d2.getFullYear() &&
+            d1.getMonth() === d2.getMonth();
+    };
+
+    // 計算該月總收入
     const monthlyIncome = computed(() =>
-        mockTransactions.value
-            .filter((t) => t.type === "income")
+        transactions.value
+            .filter((t) => {
+                // 條件 A: t.type 必須為 true (代表收入)
+                const isIncome = t.type === true; 
+                // 條件 B: 交易日期與當前選中的日期同月同年
+                const isInSelectedMonth = isSameMonthAndYear(t.date, selectedDate.value);
+                return isIncome && isInSelectedMonth;
+            })
             .reduce((sum, t) => sum + t.amount, 0)
     );
 
-    const monthlyExpense = computed(() =>
-        Math.abs(
-            mockTransactions.value
-                .filter((t) => t.type === "expense")
-                .reduce((sum, t) => sum + t.amount, 0)
-        )
+    // 計算該月的總支出
+    const monthlyExpenses = computed(() =>
+        transactions.value
+            .filter((t) => {
+                // 條件 A: t.type 必須為 false (代表支出)
+                const isExpense = t.type === false; 
+                // 條件 B: 交易日期與當前選中的日期同月同年
+                const isInSelectedMonth = isSameMonthAndYear(t.date, selectedDate.value);
+                return isExpense && isInSelectedMonth;
+            })
+            .reduce((sum, t) => sum + t.amount, 0)
     );
 
-    const monthlyBalance = computed(() =>
-        mockTransactions.value.reduce((sum, t) => sum + t.amount, 0)
-    );
+    const monthlyBalance = computed(() => {
+        return monthlyIncome.value - monthlyExpenses.value;
+    });
 
     const formatNumber = (num) => {
         return num ? num.toLocaleString() : 0
@@ -149,16 +201,28 @@
                         v-if="selectedDateTransactions.length > 0"
                         class="transactions-scroll"
                     >
-                        <div
-                            v-for="(t, i) in selectedDateTransactions"
-                            :key="t.id"
-                            class="transaction-item"
-                        >
-                            <span>{{ t.name }}</span>
-                            <span :class="{ income: t.amount > 0, expense: t.amount < 0 }">
-                                {{ t.amount > 0 ? "+" : "" }}NT$
-                                {{ formatNumber(Math.abs(t.amount)) }}
-                            </span>
+                        <div v-for="(t, index) in selectedDateTransactions" :key="index" class="transaction-item">
+                            <div class="transaction-info">
+                                <div class="transaction-icon" :class="t.type ? 'income' : 'expense'">
+                                    <span v-if="t.icon">{{ t.icon }}</span>
+                                    <svg v-else-if="t.type" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                                    </svg>
+                                    <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="transaction-name">{{ t.addClass }}</div>
+                                    <div class="transaction-category">{{ t.addMember }}</div>
+                                </div>
+                            </div>
+                            <div class="transaction-details">
+                                <div class="transaction-amount" :class="{ income: t.type }">
+                                    {{ t.type ? '+' : '-' }}NT$ {{ formatNumber(t.amount) }}
+                                </div>
+                                <div class="transaction-account-name">{{ t.accountId }}現金</div>
+                            </div>
                         </div>
                     </div>
                     <div v-else-if="selectedDate" class="empty-state">
@@ -172,19 +236,19 @@
             <div class="summary-card">
                 <div class="summary-grid">
                     <div class="summary-item">
-                        <div class="summary-label">本月收入</div>
+                        <div class="summary-label">{{ new Date(selectedDate).getFullYear() }}年{{ new Date(selectedDate).getMonth()+1 }}月收入</div>
                         <div class="summary-value income">
                             NT$ {{ formatNumber(monthlyIncome) }}
                         </div>
                     </div>
                     <div class="summary-item">
-                        <div class="summary-label">本月支出</div>
+                        <div class="summary-label">{{ new Date(selectedDate).getFullYear() }}年{{ new Date(selectedDate).getMonth()+1 }}月支出</div>
                         <div class="summary-value expense">
-                            NT$ {{ formatNumber(monthlyExpense) }}
+                            NT$ {{ formatNumber(monthlyExpenses) }}
                         </div>
                     </div>
                     <div class="summary-item">
-                        <div class="summary-label">本月結餘</div>
+                        <div class="summary-label">{{ new Date(selectedDate).getFullYear() }}年{{ new Date(selectedDate).getMonth()+1 }}月結餘</div>
                         <div class="summary-value balance">
                             NT$ {{ formatNumber(monthlyBalance) }}
                         </div>
@@ -242,16 +306,82 @@
     .transaction-item {
         display: flex;
         justify-content: space-between;
-        padding: 8px 0;
-        border-bottom: 1px solid #e5e7eb;
+        align-items: center;
+        padding: 12px;
+        border-radius: 10px;
+        transition: background 0.2s;
     }
 
-    .transaction-item .income {
+    .transaction-item:hover {
+        background: #f8fafc;
+    }
+
+    .transaction-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .transaction-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .transaction-icon.income {
+        background: rgba(16, 185, 129, 0.1);
+    }
+
+    .transaction-icon.expense {
+        background: rgba(239, 68, 68, 0.1);
+    }
+
+    .transaction-icon svg {
+        width: 16px;
+        height: 16px;
+        stroke-width: 2;
+        fill: none;
+    }
+
+    .transaction-icon.income svg {
+        stroke: #10b981;
+    }
+
+    .transaction-icon.expense svg {
+        stroke: #ef4444;
+    }
+
+    .transaction-name {
+        font-size: 14px;
+        font-weight: 500;
+        color: #1e293b;
+    }
+
+    .transaction-category {
+        font-size: 12px;
+        color: #94a3b8;
+    }
+
+    .transaction-details {
+        text-align: right;
+    }
+
+    .transaction-amount {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .transaction-amount.income {
         color: #10b981;
     }
 
-    .transaction-item .expense {
-        color: #ef4444;
+    .transaction-account-name {
+        font-size: 12px;
+        color: #94a3b8;
     }
 
     .empty-state {
