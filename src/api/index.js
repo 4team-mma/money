@@ -1,8 +1,5 @@
-import axios from "axios";
+// src/api/index.js
 
-const service = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api",
-  timeout: 10_000
-});
+import service from './interceptors'; // 引入已經加工好的完全體
 
-export default service;
+export default service; // 再次對外導出

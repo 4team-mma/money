@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
-import axios from "axios";
+import api from "@/api";
 
-const API_BASE_URL = 'http://localhost:8000';
+
 
 export const useUserStore = defineStore("user", {
   state: () => ({
@@ -56,9 +56,9 @@ export const useUserStore = defineStore("user", {
     async loadUsers() {
       try {
         console.log("正在從資料庫獲取用戶名單...");
-        const response = await axios.get(`${API_BASE_URL}/users/`);
+        const response = await api.get('/users/');
         
-        this.users = response.data.map(u => ({
+        this.users = response.map(u => ({
           uid: u.user_id, // 資料庫原始 ID
           username: u.username,
           name: u.name,
@@ -112,7 +112,7 @@ export const useUserStore = defineStore("user", {
     async deleteUser(uid) {
       if (confirm('確定要註銷此用戶嗎？(此操作不可逆)')) {
         try {
-          await axios.delete(`${API_BASE_URL}/users/${uid}`);
+          await api.delete(`/users/${uid}`);
           await this.loadUsers(); 
           alert('用戶已從資料庫刪除');
         } catch (err) {
