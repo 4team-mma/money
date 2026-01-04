@@ -24,6 +24,8 @@ const colors = ['#ef4444', '#3b82f6','#004B97', '#22c55e', '#f97316', '#a855f7',
 // 1. 找出所有「被選中」的完整標籤物件
 const selectedItems = computed(() => {
     return categoryItems.value.filter(i => selectedIds.value.includes(i.id))
+    
+
 })
 
 // 2. 計算主頁面按鈕要顯示的文字
@@ -33,6 +35,7 @@ const displayText = computed(() => {
 })
 
 /* ---------- 方法 ---------- */
+const emit = defineEmits(['update:modelValue'])
 const toggleTag = (id) => {
     const index = selectedIds.value.indexOf(id)
     if (index > -1) {
@@ -40,6 +43,8 @@ const toggleTag = (id) => {
     } else {
         selectedIds.value.push(id)
     }
+    // 🌟 每次切換都要傳送最新選中的列表給父組件
+    emit('update:modelValue', selectedItems.value)
 }
 
 const addNewItem = () => {
@@ -49,6 +54,8 @@ const addNewItem = () => {
     selectedIds.value.push(newItem.id)
     newAdd.value = ''
     showAdd.value = false
+    // 🌟 每次切換都要傳送最新選中的列表給父組件
+    emit('update:modelValue', selectedItems.value)
 }
 </script>
 

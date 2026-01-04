@@ -8,13 +8,14 @@ const showAdd = ref(false)
 const categoryItems = ref([
     { id: 1, itemName: '工資', icon: '💰' },
     { id: 2, itemName: '獎金', icon: '🏦' },
-    { id: 3, itemName: '投資', icon: '💳' },
+    { id: 3, itemName: '投資', icon: '🐷' },
 ])
 
 const selectedCategory = ref(categoryItems.value[0])
 const newAdd = ref('')
 const newIcon = ref('💰')
-const iconOptions = ['💰','💳','🏦','📈','📉','🧾','📱','🪙','🏃']
+const iconOptions = ['💰', '💳', '💵','🏦', '📈', '📉', '🧾', '📱', '🪙', '🏃',
+    "🐵", "🐶", "🐷", "🐻", "🐨", "🐮", "🦁", "🐯", "🐰", "🐭", "🦉", "🐸"]
 
 /* ---------- 操作 ---------- */
 const selectCategory = (item) => {

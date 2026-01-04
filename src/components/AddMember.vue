@@ -4,18 +4,20 @@ import { ref } from 'vue'
 const showModal = ref(false)
 const showAdd = ref(false)
 
+
 const categoryItems = ref([
     { id: 1, itemName: '自己' },
     { id: 2, itemName: '父母' },
     { id: 3, itemName: '孩子' },
 ])
-
 const selectedCategory = ref(categoryItems.value[0])
 const newAdd = ref('')
 
+const emit = defineEmits(['update:modelValue'])
 const selectCategory = (item) => {
     selectedCategory.value = item
     showModal.value = false
+    emit('update:modelValue', item) 
 }
 
 const addNewItem = () => {
@@ -30,7 +32,10 @@ const addNewItem = () => {
 
 const removeItem = (id) => {
     categoryItems.value = categoryItems.value.filter(i => i.id !== id)
-    if (selectedCategory.value?.id === id) selectedCategory.value = categoryItems.value[0] || null
+    if (selectedCategory.value?.id === id) {
+        selectedCategory.value = categoryItems.value[0] || null
+        emit('update:modelValue', selectedCategory.value)
+    }
 }
 </script>
 

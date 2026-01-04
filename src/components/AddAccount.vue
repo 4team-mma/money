@@ -3,21 +3,25 @@ import { ref } from 'vue'
 
 const showModal = ref(false)
 const showAdd = ref(false)
-
+const emit = defineEmits(['update:modelValue'])
 const categoryItems = ref([
-    { id: 1, itemName: '現金', icon: '💰' },
-    { id: 2, itemName: '銀行', icon: '🏦' },
+    { id: 1, itemName: '銀行', icon: '🏦' },
+    { id: 2, itemName: '現金', icon: '💰' },
     { id: 3, itemName: '信用卡', icon: '💳' },
+    { id: 4, itemName: '投資', icon: '🐷' },
 ])
 
 const selectedCategory = ref(categoryItems.value[0])
 const newAdd = ref('')
 const newIcon = ref('💰')
-const iconOptions = ['💰', '💳', '🏦', '📈', '📉', '🧾', '📱', '🪙', '🏃']
+const iconOptions = ['💰', '💳', '💵','🏦', '📈', '📉', '🧾', '📱', '🪙', '🏃',
+    "🐵", "🐶", "🐷", "🐻", "🐨", "🐮", "🦁", "🐯", "🐰", "🐭", "🦉", "🐸"
+]
 
 const selectCategory = (item) => {
     selectedCategory.value = item
     showModal.value = false
+    emit('update:modelValue', item)
 }
 
 const addNewItem = () => {
@@ -28,6 +32,7 @@ const addNewItem = () => {
     newAdd.value = ''
     showAdd.value = false
     showModal.value = false
+    emit('update:modelValue', newItem)
 }
 
 const removeItem = (id) => {

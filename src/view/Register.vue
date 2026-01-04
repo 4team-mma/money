@@ -38,7 +38,7 @@ try {
             password: formData.password,
             confirm_password: formData.confirmPassword // 這裡必須用下底線
         });
-        console.log('註冊成功回傳：', res);
+        //console.log('註冊成功回傳：', res);
 
         // 🌟 3. 因為攔截器已經處理過 .data，所以這裡直接判斷回傳訊息
         // 你的 auth.py 回傳的是 {"msg": "註冊成功"}
