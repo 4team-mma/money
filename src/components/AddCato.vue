@@ -4,6 +4,17 @@ import { ref } from 'vue'
 const showModal = ref(false)
 const showAdd = ref(false)
 
+const props = defineProps(['modelValue']) //接收父組件傳來的對象
+const emit = defineEmits(['update:modeValue'])
+
+const selectCategory = (item) => {
+    selectedCategory.value = item
+    showModal.value = false
+    // 💡 關鍵：把選中的結果傳回父組件
+    emit('update:modelValue', item) 
+}
+
+
 const categoryItems = ref([
     { id: 1, itemName: '飲食', icon: '🍔' },
     { id: 2, itemName: '交通', icon: '🚗' },
@@ -20,10 +31,7 @@ const iconOptions = [
     '🎨', '🎵', '🏃', '🛍️', '🏖️', '🍕', '🍩', '☕', '🥗', '🍎'
 ]
 
-const selectCategory = (item) => {
-    selectedCategory.value = item
-    showModal.value = false
-}
+
 
 const addNewItem = () => {
     if (!newAdd.value.trim()) return
