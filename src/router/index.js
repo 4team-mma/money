@@ -18,7 +18,7 @@ import ChartThirdExpense from "../view/ChartThirdExpense.vue"
 import ChartForthIncome from "../view/ChartForthIncome.vue"
 import ForgetPassword from "@/view/ForgetPassword.vue";
 import AdminsComments from "@/view/AdminsComments.vue"
-
+import Feedback from "@/view/Feedback.vue";
 
 const routes = [
   {
@@ -70,6 +70,11 @@ const routes = [
     path: "/AddTrans",
     component: AddTrans,
     name: AddTrans,
+  },
+  {
+    path: "/Feedback",
+    component: Feedback,
+    name: "Feedback",
   },
   {
     path: "/Settings",

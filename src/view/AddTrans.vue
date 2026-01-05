@@ -10,6 +10,7 @@ import 'v-calendar/style.css';
 import { ref } from 'vue';
 const date = ref(new Date());
 
+
 </script>
 
 <template>
@@ -64,18 +65,13 @@ const date = ref(new Date());
                 </div>
 
                 <div class="form-group">
-                    <label>上傳附件 (選填)</label>
-                    <input type="file" />
-                </div>
-
-                <div class="form-group">
                     <label>備註</label>
                     <textarea placeholder="轉帳說明（選填）"></textarea>
                 </div>
 
                 <div class="actions">
                     <button class="btn-primary">確認轉帳</button>
-                    <button class="btn-secondary">取消</button>
+                    <button class="btn-secondary">再記一筆</button>
                 </div>
             </div>
         </div>

@@ -5,12 +5,20 @@ import Add_cato_inn from '@/components/AddCatoInn.vue'
 import Add_account from '@/components/AddAccount.vue'
 import Add_member from '@/components/AddMember.vue'
 import Add_tag from '@/components/AddTag.vue'
+import { useAddRecord } from '@/composables/useAddRecord'
+
 //月曆部分
 import { DatePicker } from 'v-calendar';
 import 'v-calendar/style.css';
 import { ref } from 'vue';
-const date = ref(new Date());
 
+const date = ref(new Date());
+// 傳入 true (收入)
+const { 
+    form, handleCatoUpdate, handleAccountUpdate, 
+    handleMemberUpdate, handleTagUpdate, handleSave, 
+    handleSaveNext, formatNote 
+} = useAddRecord(true)
 </script>
 
 <template>
@@ -65,18 +73,18 @@ const date = ref(new Date());
                 </div>
 
                 <div class="form-group">
-                    <label>上傳附件</label>
-                    <input type="file" />
-                </div>
-
-                <div class="form-group">
-                    <label>備註</label>
-                    <textarea placeholder="收入說明（選填）"></textarea>
+                    <div style="">
+                        <label>備註  </label>
+                        <button @click="formatNote"  class="btn btn-info"
+                        style="margin-left: 20px;"
+                        >自動整理</button>
+                    </div>
+                    <textarea v-model="form.add_note" placeholder="補充說明（選填）"></textarea>                   
                 </div>
 
                 <div class="actions">
-                    <button class="btn-primary">儲存收入</button>
-                    <button class="btn-secondary">再記一筆</button>
+                    <button @click="handleSave" class="btn-primary">儲存收入</button>
+                    <button @click="handleSaveNext" class="btn-secondary">再記一筆</button>
                 </div>
             </div>
         </div>
