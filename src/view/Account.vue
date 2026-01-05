@@ -83,7 +83,7 @@ const addAccount = (account) => {
                     </div>
                         
             
-                <div class="world_right">NT$ {{ acc.balance }}</div>
+                <div class="world_right"> {{ acc.currency }} {{ acc.balance }}</div>
             </div>    
             
         </div>

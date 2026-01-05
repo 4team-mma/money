@@ -16,15 +16,15 @@ const selectedType = ref(accountTypes.value[0].value)
 
 
 const currencys = ref([
-    { value: 'TWD', label: '新台幣 (TWD)' },
-    { value: 'USD', label: '美元 (USD)' },
-    { value: 'EUR', label: '歐元 (EUR)' },
-    { value: 'JPY', label: '日圓 (JPY)' }
+    { value: 'NT $', label: '新台幣 (TWD)' },
+    { value: 'USD $', label: '美元 (USD)' },
+    { value: 'EUR €', label: '歐元 (EUR)' },
+    { value: 'JPY ¥', label: '日圓 (JPY)' }
 ])
 const selectedCurrency = ref(currencys.value[0].value)
 
 
-const icons = ref(["🐵", "🐶", "🐷", "🐻", "🐨", "🐮", "🦁", "🐯", "🐰", "🐭", "🦉", "🐸"])
+const icons = ref(['💰', '💳', '💵','🏦', '📈', '📉', '🧾', '📱', '🪙', '🏃',"🐵", "🐶", "🐷", "🐻", "🐨", "🐮", "🦁", "🐯", "🐰", "🐭", "🦉", "🐸"])
 const selectedIcon = ref(icons.value[0])
 
 
@@ -108,7 +108,7 @@ const submit = () => {
                     <button
                         v-for="(icon, index) in icons" 
                         :key="index" class="acc_button_color" 
-                        :class="{ 'is-selected': selectedIcon === icon }"
+                        :class="{ active: selectedIcon === icon }"
                         @click="selectedIcon = icon"
                         >
                         <span class="emoji">{{ icon }}</span>
@@ -155,9 +155,10 @@ const submit = () => {
         backdrop-filter: blur(4px);
         display: flex;
         justify-content: center;
-        align-items: center;
+        /* align-items: center; */
         z-index: 2000;
         padding: 20px;
+        
     }
 
 .add_acc_background {
@@ -184,6 +185,9 @@ const submit = () => {
     overflow: hidden;
     padding: 35px;
     z-index: 2100;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: hwb(0 100% 0% / 0) hwb(0 100% 0% / 0);
 }
 
     .btn-icon {
@@ -213,11 +217,15 @@ const submit = () => {
         background: none;
         border: none;
         cursor: pointer;
-        margin: 5px;
+        margin: 8px;
+        border-radius: 8px;
+        transition: 0.2s;
     }
 
-    .is-selected {
-    transform: scale(1.5);
+    .acc_button_color.active {
+    outline: 2px solid #1e293b;
+    outline-offset: 1px;
+    background: #efefef;
     }
 
     .submit_box_button:active {
