@@ -24,7 +24,7 @@ MMA App 是一個基於 Vue 3、Vite 的開發中的前端專案，整合 Elemen
 ![vite-plugin-vue-devtools](https://img.shields.io/badge/vite--plugin--vue--devtools-8.0.5-646cff?logo=vite)
 
 [團隊開發流程（非常重要）](docs/git-workflow.md) |
-[專案結構說明](docs/ARCHITECTURE.md) |
+[專案結構說明](docs/architecture.md) |
 [專案使用套件說明](docs/dependencies.md) |
 [專案怎麼從 npm 改成 pnpm](docs/migration-npm-to-pnpm.md)
 
