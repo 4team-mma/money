@@ -16,15 +16,15 @@ const selectedType = ref(accountTypes.value[0].value)
 
 
 const currencys = ref([
-    { value: 'TWD', label: '新台幣 (TWD)' },
-    { value: 'USD', label: '美元 (USD)' },
-    { value: 'EUR', label: '歐元 (EUR)' },
-    { value: 'JPY', label: '日圓 (JPY)' }
+    { value: 'NT $', label: '新台幣 (TWD)' },
+    { value: 'USD $', label: '美元 (USD)' },
+    { value: 'EUR €', label: '歐元 (EUR)' },
+    { value: 'JPY ¥', label: '日圓 (JPY)' }
 ])
 const selectedCurrency = ref(currencys.value[0].value)
 
 
-const icons = ref(["🐵", "🐶", "🐷", "🐻", "🐨", "🐮", "🦁", "🐯", "🐰", "🐭", "🦉", "🐸"])
+const icons = ref(['💰', '💳', '💵','🏦', '📈', '📉', '🧾', '📱', '🪙', '🏃',"🐵", "🐶", "🐷", "🐻", "🐨", "🐮", "🦁", "🐯", "🐰", "🐭", "🦉", "🐸"])
 const selectedIcon = ref(icons.value[0])
 
 
@@ -61,9 +61,9 @@ const submit = () => {
 
 <template>
     <button @click="showAddDialog = true" class="add_account_button "><i class="bi bi-plus">新增帳戶</i></button>
-    <div v-if="showAddDialog" class="acc_modal_overlay " @click="showAddDialog = false" >
+    <div v-if="showAddDialog" class="acc_modal_overlay" @click="showAddDialog = false" >
         <!-- 上面的@click="showAddDialog = false代表按背景跳出 -->
-        <div class="add_acc_background acc_modal_content " @click.stop>
+        <div class="add_acc_background acc_modal_content" @click.stop>
             <!-- 上面的@click.stop代表小框框內停止喧染 -->
             <div class="acc_head">
                 <h3 class="acc_button_word">新增帳戶</h3>
@@ -107,9 +107,10 @@ const submit = () => {
                 <div>
                     <button
                         v-for="(icon, index) in icons" 
-                        :key="index" class="acc_button_color" 
-                        :class="{ 'is-selected': selectedIcon === icon }"
+                         
+                        :class="{ active: selectedIcon === icon }"
                         @click="selectedIcon = icon"
+                        :key="index" class="acc_button_color"
                         >
                         <span class="emoji">{{ icon }}</span>
                     </button>
@@ -153,10 +154,17 @@ const submit = () => {
         backdrop-filter: blur(4px);
         display: flex;
         justify-content: center;
-        align-items: center;
         z-index: 2000;
         padding: 20px;
     }
+
+    .drag-bar {
+    width: 40px;
+    height: 5px;
+    background: #cbd5e1;
+    border-radius: 10px;
+    margin: 8px auto;
+}
 
 .add_acc_background {
     min-height: 100vh;
@@ -182,6 +190,9 @@ const submit = () => {
     overflow: hidden;
     padding: 35px;
     z-index: 2100;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: hwb(0 100% 0% / 0) hwb(0 100% 0% / 0);
 }
 
     .btn-icon {
@@ -207,17 +218,21 @@ const submit = () => {
         color: #626367;
     }
 
+
+
     .acc_button_color {
         background: none;
         border: none;
         cursor: pointer;
-        margin: 5px;
+        margin: 8px;
+        border-radius: 8px;
+        transition: 0.2s;
     }
 
-    .is-selected {
-    outline: 2px none;
-    outline-offset: 10px;
-    transform: scale(1.5);
+    .acc_button_color.active {
+    outline: 2px solid #1e293b;
+    outline-offset: 1px;
+    background: #efefef;
     }
 
     .submit_box_button:active {
