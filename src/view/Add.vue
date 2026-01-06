@@ -78,7 +78,7 @@ const {
                 </div>
 
                 <div class="actions">
-                    <button @click="handleSave" class="btn-primary">儲存支出</button>
+                    <button  @click="handleSave" class="btn-primary">儲存支出</button>
                     <button @click="handleSaveNext" class="btn-secondary">再記一筆</button>
                 </div>
             </div>

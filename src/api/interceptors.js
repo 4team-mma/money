@@ -47,7 +47,7 @@ service.interceptors.response.use(
         ElMessage.error("登入逾期或權限不足，請重新登入");
         localStorage.removeItem('user_token'); //  清除對應的 Key
         localStorage.removeItem('currentUser');
-        // window.location.href = '/'; 
+        router.push('/')
         break;
       case 403:
         ElMessage.error("無權限存取");

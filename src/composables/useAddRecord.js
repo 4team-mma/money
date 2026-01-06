@@ -1,11 +1,14 @@
-import { reactive } from 'vue'
+import { reactive,ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api'
 import { ElMessage } from 'element-plus'
+import Loading from 'element-plus/es/components/loading/src/service'
 
 // initialType: false 為支出, true 為收入
 export function useAddRecord(initialType = false) {
     const router = useRouter()
+
+    const isSubmitting =ref(false)
 
     const form = reactive({
         add_date: new Date(),
@@ -40,9 +43,14 @@ export function useAddRecord(initialType = false) {
             return false;
         }
 
+        const d = form.add_date;
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0'); // 月份從0開始，要+1
+        const day = String(d.getDate()).padStart(2, '0');
+        const safeDateString = `${year}-${month}-${day}`;
         const payload = {
             ...form,
-            add_date: form.add_date.toISOString().split('T')[0],
+            add_date: safeDateString,
             add_amount: parseFloat(form.add_amount)
         }
 
@@ -51,6 +59,9 @@ export function useAddRecord(initialType = false) {
     }
 
     const handleSave = async () => {
+        //鎖定按鈕,如果在發送中就不執行後面程式碼
+        if (isSubmitting.value) return;
+        isSubmitting.value = true;
         try {
             if (await submitData()) {
                 ElMessage.success('儲存成功！');
@@ -58,10 +69,15 @@ export function useAddRecord(initialType = false) {
             }
         } catch (err) {
             ElMessage.error('儲存失敗：' + (err.response?.data?.detail || '連線異常'));
+        }finally {
+            // 請求結束（無論成功失敗）都要解鎖，除非已經跳轉頁面
+            isSubmitting.value = false;
         }
     }
 
     const handleSaveNext = async () => {
+        if (isSubmitting.value) return;
+        isSubmitting.value = true;
         try {
             if (await submitData()) {
                 ElMessage.success('已儲存，請繼續下一筆');
@@ -69,6 +85,10 @@ export function useAddRecord(initialType = false) {
                 form.add_note = ''
             }
         } catch (err) { ElMessage.error('儲存失敗'); }
+        finally {
+            // 同上
+            isSubmitting.value = false;
+        }
     }
 
     const formatNote = () => {
@@ -87,7 +107,7 @@ export function useAddRecord(initialType = false) {
         ElMessage.success('排版已優化');
     }
 
-    // 回傳組件需要用的變數與方法
+    // 回傳 上面所有定義的內容
     return {
         form,
         handleCatoUpdate,
@@ -96,6 +116,7 @@ export function useAddRecord(initialType = false) {
         handleTagUpdate,
         handleSave,
         handleSaveNext,
+        isSubmitting,
         formatNote
     }
 }
