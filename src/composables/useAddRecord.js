@@ -13,7 +13,7 @@ export function useAddRecord(initialType = false) {
         add_type: initialType,
         add_class: initialType ? '薪資' : '飲食', // 根據類型給預設類別
         add_class_icon: initialType ? '💰' : '🍔',
-        account_id: null,
+        account_id: 1,
         add_member: '自己',
         add_tag: '一般',
         add_note: ''

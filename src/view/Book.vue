@@ -10,9 +10,14 @@
 
     // 輔助函數：將 API 資料轉換為應用程式格式
     const mapApiToAppTransactions = (apiTransactions) => {
+        if (!Array.isArray(apiTransactions)) {
+        console.error("mapApiToAppTransactions 接收到的不是陣列:", apiTransactions);
+        return [];
+    }
+
         return apiTransactions.map(apiItem => {
             return {
-                id: apiItem.add_id, // 欄位名稱對應
+                id: apiItem.id, // 欄位名稱對應
                 userId: apiItem.user_id,
                 date: apiItem.add_date,
                 amount: Number(apiItem.add_amount),
@@ -29,9 +34,18 @@
     const fetchTransactions = async () => {
         try {
             const response = await axios.get('/records/');
+
             // 在賦值前進行資料轉換(假設 response 已經是 API 返回的陣列)
-            const mappedData = mapApiToAppTransactions(response);
-            transactions.value = mappedData; // 將轉換後的資料賦值給響應式變數
+        // 後端現在回傳的是 { success: true, data: [...], pagination: {...} }
+        // 所以我們要取 response.data 才是原本的陣列
+        const apiData = response.data; 
+
+        if (apiData && Array.isArray(apiData)) {
+            const mappedData = mapApiToAppTransactions(apiData);
+            transactions.value = mappedData;
+        } else {
+            console.error("API 回傳格式異常:", response);
+        }
         } catch (error) {
             console.error("交易記錄 加載失敗:", error);
         }
