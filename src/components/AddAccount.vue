@@ -39,6 +39,7 @@ const removeItem = (id) => {
     categoryItems.value = categoryItems.value.filter(item => item.id !== id)
     if (selectedCategory.value?.id === id) selectedCategory.value = categoryItems.value[0] || null
 }
+
 </script>
 
 <template>
