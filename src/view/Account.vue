@@ -1,5 +1,3 @@
-0
-
 <script setup>
 import { ref } from 'vue';
 import Nav from '@/components/Nav.vue';

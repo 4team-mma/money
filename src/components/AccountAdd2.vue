@@ -1,8 +1,7 @@
-2
-
 <script setup>
 
 import { ref } from 'vue'
+
 
 const showAddDialog = ref(false)
 
@@ -72,13 +71,13 @@ const submit = () => {
             <hr>
             <div>
                 <h4 class="acc_button_word_small">帳戶名稱:</h4>
-                <input type="text" placeholder="例如：玉山銀行" v-model="newAdd">
+                <input type="text" placeholder="例如：玉山銀行" v-model="newAdd" class="textarea">
             </div>
             <br>
             <div>
                 <label class="acc_button_word_small">帳戶類型:</label>
                 <div>
-                    <select v-model="selectedType">
+                    <select v-model="selectedType" class="textarea">
                         <option v-for="type in accountTypes" :key="type.value" :value="type.value">
                             {{ type.label }}
                         </option>
@@ -89,7 +88,7 @@ const submit = () => {
             <div>
                 <label class="acc_button_word_small">貨幣:</label>
                 <div>
-                    <select v-model="selectedCurrency">
+                    <select v-model="selectedCurrency" class="textarea">
                         <option v-for="currency in currencys" :key="currency.value" :value="currency.value">
                             {{ currency.label }}
                         </option>
@@ -99,8 +98,13 @@ const submit = () => {
             <br>
             <div>
                 <h4 class="acc_button_word_small">初始餘額:</h4>
-                <input type="number" placeholder="0" v-model.number="initialBalance">
+                <input type="number" placeholder="0" v-model.number="initialBalance" class="textarea">
             </div>
+            <br>
+                <h4 class="acc_button_word_small">是否計入資產:</h4>
+                <span class="form-check form-switch ">
+                    <input class="form-check-input" type="checkbox" role="switch" id="switchCheckDefault" >
+                </span>
             <br>
             <div>
                 <label class="acc_button_word_small">圖示:</label>
@@ -127,6 +131,25 @@ const submit = () => {
 
 <style scoped>
 @import '../assets/css/add.css';
+
+.form-switch .form-check-input {
+    --bs-form-switch-bg: url(data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='rgba%280, 0, 0, 0.25%29'/%3e%3c/svg%3e);
+    width: 4em;
+    margin-left: -2.5em;
+    background-image: var(--bs-form-switch-bg);
+    background-position: left center;
+    border-radius: 2em;
+    transition: background-position .15s ease-in-out;
+    padding: 15px;
+}
+
+.textarea {
+        min-height: 3px;
+        padding: 3px;
+        border-radius: 12px;
+        border: 2px solid #e2e8f0;
+        resize: vertical;
+    }
 
     .acc_head3{
         display: flex;
