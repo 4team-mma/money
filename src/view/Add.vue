@@ -69,7 +69,7 @@ const {
 
                 <div class="form-group">
                     <div style="">
-                        <label>備註  </label>
+                        <label>備註:  </label>
                         <button @click="formatNote"  class="btn btn-info"
                         style="margin-left: 20px;"
                         >自動整理</button>
