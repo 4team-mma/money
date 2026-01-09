@@ -17,7 +17,7 @@ const mapApiToAppTransactions = (apiTransactions) => {
 
     return apiTransactions.map(apiItem => {
         return {
-            id: apiItem.id, // 欄位名稱對應
+            id: apiItem.add_id, // 欄位名稱對應
             userId: apiItem.user_id,
             date: apiItem.add_date,
             amount: Number(apiItem.add_amount),
