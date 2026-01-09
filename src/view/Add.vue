@@ -13,7 +13,7 @@ import 'v-calendar/style.css';
 
 // 調用 Composable，傳入 false (支出)
 const { 
-    form, handleCatoUpdate, handleAccountUpdate, 
+    form, handleCatoUpdate, 
     handleMemberUpdate, handleTagUpdate, handleSave, 
     handleSaveNext, formatNote 
 } = useAddRecord(false)
@@ -51,7 +51,7 @@ const {
 
                     <div class="form-group">
                         <label>帳戶</label>
-                        <Add_account @update:model-value="handleAccountUpdate" />
+                        <Add_account v-model:account="form.account" />
                     </div>
 
                     <div class="form-group">

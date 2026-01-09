@@ -5,15 +5,7 @@ const showModal = ref(false)
 const showAdd = ref(false)
 
 const props = defineProps(['modelValue']) //接收父組件傳來的對象
-const emit = defineEmits(['update:modeValue'])
-
-const selectCategory = (item) => {
-    selectedCategory.value = item
-    showModal.value = false
-    // 💡 關鍵：把選中的結果傳回父組件
-    emit('update:modelValue', item) 
-}
-
+const emit = defineEmits(['update:modelValue'])
 
 const categoryItems = ref([
     { id: 1, itemName: '飲食', icon: '🍔' },
@@ -31,19 +23,34 @@ const iconOptions = [
     '🎨', '🎵', '🏃', '🛍️', '🏖️', '🍕', '🍩', '☕', '🥗', '🍎'
 ]
 
-
+const selectCategory = (item) => {
+    selectedCategory.value = item
+    showModal.value = false
+    // 💡 關鍵：把選中的結果傳回父組件
+    emit('update:modelValue', item)
+}
 
 const addNewItem = () => {
     if (!newAdd.value.trim()) return
     const newItem = { id: Date.now(), itemName: newAdd.value, icon: newIcon.value }
     categoryItems.value.push(newItem)
+
+    // 💡 修正：選中新項目的同時，必須發送事件通知父組件同步更新 form 資料
     selectedCategory.value = newItem
-    newAdd.value = ''; showAdd.value = false; showModal.value = false;
+    emit('update:modelValue', newItem)
+
+    newAdd.value = '';
+    showAdd.value = false;
+    showModal.value = false;
 }
 
 const removeItem = (id) => {
     categoryItems.value = categoryItems.value.filter(item => item.id !== id)
-    if (selectedCategory.value?.id === id) selectedCategory.value = categoryItems.value[0] || null
+    if (selectedCategory.value?.id === id) {
+        const fallback = categoryItems.value[0] || null
+        selectedCategory.value = fallback
+        emit('update:modelValue', fallback)
+    }
 }
 </script>
 

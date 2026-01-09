@@ -16,7 +16,7 @@ export function useAddRecord(initialType = false) {
         add_type: initialType,
         add_class: initialType ? '薪資' : '飲食', // 根據類型給預設類別
         add_class_icon: initialType ? '💰' : '🍔',
-        account_id: 1,
+        account_id: null, // // 整個帳戶物件
         add_member: '自己',
         add_tag: '一般',
         add_note: ''
@@ -27,7 +27,9 @@ export function useAddRecord(initialType = false) {
         form.add_class = item.itemName
         form.add_class_icon = item.icon
     }
-    const handleAccountUpdate = (item) => { form.account_id = item.id }
+    const handleAccountUpdate = (item) => { 
+        console.log('account selected:', item)
+        form.account_id = item.account_id }
     const handleMemberUpdate = (item) => { form.add_member = item.itemName }
     const handleTagUpdate = (items) => {
         form.add_tag = items.map(i => i.itemName).join(', ')
@@ -38,7 +40,7 @@ export function useAddRecord(initialType = false) {
             ElMessage.warning('請輸入有效的金額');
             return false;
         }
-        if (!form.account_id) {
+        if (!form.account?.account_id) {
             ElMessage.warning('請選擇帳戶');
             return false;
         }
@@ -50,6 +52,7 @@ export function useAddRecord(initialType = false) {
         const safeDateString = `${year}-${month}-${day}`;
         const payload = {
             ...form,
+            account_id: form.account?.account_id,
             add_date: safeDateString,
             add_amount: parseFloat(form.add_amount)
         }

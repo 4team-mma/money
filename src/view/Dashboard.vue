@@ -238,7 +238,7 @@ const formatNumber = (num) => {
           <div v-if="transactions.length === 0" class="no-data">
         找不到相關紀錄</div>
 
-        <div v-for="t in transactions" :key="t.id" class="transaction-item">
+        <div v-for="t in transactions" :key="t.add_id" class="transaction-item">
         <div class="transaction-info">
           <div class="transaction-icon" :class="t.add_type ? 'income' : 'expense'">
             <span v-if="t.add_class_icon">{{ t.add_class_icon }}</span>
