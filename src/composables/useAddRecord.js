@@ -24,6 +24,7 @@ export function useAddRecord(initialType = false) {
 
     // 同步子組件資料的方法
     const handleCatoUpdate = (item) => {
+        console.log('類別已更新:', item)
         form.add_class = item.itemName
         form.add_class_icon = item.icon
     }
@@ -32,7 +33,8 @@ export function useAddRecord(initialType = false) {
         form.account_id = item.account_id }
     const handleMemberUpdate = (item) => { form.add_member = item.itemName }
     const handleTagUpdate = (items) => {
-        form.add_tag = items.map(i => i.itemName).join(', ')
+        // 這裡的 items 就是 AddTag.vue emit 出來的 selectedItems.value (陣列)
+        form.add_tag = items.map(i => i.itemName).join(', ') // 轉成 "旅遊, 必要"
     }
 
     const submitData = async () => {
