@@ -28,10 +28,8 @@ const iconOptions = [
 ]
 
 onMounted(async () => {
+    // 每次進入頁面都重新整理帳戶清單，確保拿到最新
     await accountStore.loadAccounts()
-    if (!selectedCategory.value && categoryItems.value.length > 0) {
-        selectedCategory.value = categoryItems.value[0]
-    }
 })
 
 const selectCategory = (item) => {
@@ -68,14 +66,16 @@ const addNewItem = async () => {
     }
 }
 
-const removeItem = (account_id) => {
-    accountStore.$patch((state) => {
-        state.accounts = state.accounts.filter(item => item.account_id !== account_id)
-    })
-    if (selectedCategory.value?.account_id === account_id) {
-        selectedCategory.value = categoryItems.value[0] ?? null
+const removeItem = async (account_id) => {
+    if (confirm('確定要刪除此帳戶嗎？')) {
+        const success = await accountStore.deleteAccount(account_id);
+        if (success && selectedCategory.value?.account_id === account_id) {
+            selectedCategory.value = categoryItems.value[0] ?? null;
+        }
     }
 }
+
+
 
 watch(selectedCategory, (val) => {
     emit('update:account', val)

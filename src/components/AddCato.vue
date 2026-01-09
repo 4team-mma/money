@@ -1,5 +1,7 @@
 <script setup>
 import { ref } from 'vue'
+import { useCategoryStore } from '@/stores/useCategoryStore'
+import { storeToRefs } from 'pinia'
 
 const showModal = ref(false)
 const showAdd = ref(false)
@@ -7,14 +9,12 @@ const showAdd = ref(false)
 const props = defineProps(['modelValue']) //接收父組件傳來的對象
 const emit = defineEmits(['update:modelValue'])
 
-const categoryItems = ref([
-    { id: 1, itemName: '飲食', icon: '🍔' },
-    { id: 2, itemName: '交通', icon: '🚗' },
-    { id: 3, itemName: '居家', icon: '🏠' },
-    { id: 4, itemName: '娛樂', icon: '🎮' }
-])
-
+const categoryStore = useCategoryStore()
+// 使用 storeToRefs 保持響應式連結
+const { categories: categoryItems } = storeToRefs(categoryStore)
+// ... selectedCategory 初始化改為從 store 拿 ...
 const selectedCategory = ref(categoryItems.value[0])
+
 const newAdd = ref('')
 const newIcon = ref('🍔')
 
@@ -33,6 +33,7 @@ const selectCategory = (item) => {
 const addNewItem = () => {
     if (!newAdd.value.trim()) return
     const newItem = { id: Date.now(), itemName: newAdd.value, icon: newIcon.value }
+    // ✅ 改為存入 Store
     categoryItems.value.push(newItem)
 
     // 💡 修正：選中新項目的同時，必須發送事件通知父組件同步更新 form 資料
