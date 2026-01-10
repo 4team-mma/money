@@ -6,7 +6,10 @@ import { storeToRefs } from 'pinia'
 const showModal = ref(false)
 const showAdd = ref(false)
 
-const props = defineProps(['modelValue']) //接收父組件傳來的對象
+const props = defineProps({
+    modelValue: Object,
+    account: Object // 父子連結部分
+}) //接收父組件傳來的對象
 const emit = defineEmits(['update:modelValue'])
 
 const categoryStore = useCategoryStore()

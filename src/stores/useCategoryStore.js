@@ -9,6 +9,12 @@ export const useCategoryStore = defineStore("category", {
     { id: 3, itemName: "居家", icon: "🏠" },
     { id: 4, itemName: "娛樂", icon: "🎮" },
     ],
+    // 🌟 新增：專屬收入類別
+    incomeCategories: [
+    { id: 1, itemName: "工資", icon: "💰" },
+    { id: 2, itemName: "獎金", icon: "🏦" },
+    { id: 3, itemName: "投資", icon: "🐷" },
+    ],
     members: [
     { id: 1, itemName: "自己" },
     { id: 2, itemName: "父母" },
@@ -32,6 +38,11 @@ export const useCategoryStore = defineStore("category", {
     },addCustomTag(newItem) {
         this.tags.push(newItem);
     },
+    
+    //  新增：處理自定義收入類別的 Action
+    addCustomIncomeCategory(newItem) {
+        this.incomeCategories.push(newItem);
+    }
 
 
     },

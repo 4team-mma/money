@@ -2,7 +2,6 @@ import { reactive,ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api'
 import { ElMessage } from 'element-plus'
-import Loading from 'element-plus/es/components/loading/src/service'
 
 // initialType: false 為支出, true 為收入
 export function useAddRecord(initialType = false) {
@@ -16,7 +15,8 @@ export function useAddRecord(initialType = false) {
         add_type: initialType,
         add_class: initialType ? '薪資' : '飲食', // 根據類型給預設類別
         add_class_icon: initialType ? '💰' : '🍔',
-        account_id: null, // // 整個帳戶物件
+        account_id: null,        // 目標帳戶 (轉入 / 支出 / 收入)
+        source_account_id: null, // 來源帳戶 (僅轉帳使用)
         add_member: '自己',
         add_tag: '一般',
         add_note: ''

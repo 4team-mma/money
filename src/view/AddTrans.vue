@@ -4,12 +4,22 @@ import Add_bar from '@/components/AddBar.vue'
 import Add_account from '@/components/AddAccount.vue'
 import Add_member from '@/components/AddMember.vue'
 import Add_tag from '@/components/AddTag.vue'
-//月曆部分
+import { useAddRecord } from '@/composables/useAddRecord'
+
 import { DatePicker } from 'v-calendar';
 import 'v-calendar/style.css';
-import { ref } from 'vue';
-const date = ref(new Date());
 
+// 🌟 啟用轉帳模式
+const { 
+    form, 
+    handleSourceAccountUpdate, 
+    handleTargetAccountUpdate,
+    handleMemberUpdate, 
+    handleTagUpdate, 
+    handleSave, 
+    handleSaveNext,
+    formatNote
+} = useAddRecord('transfer')
 
 </script>
 
@@ -21,57 +31,54 @@ const date = ref(new Date());
             <div class="card">
                 <div class="header">
                     <h2>新增轉帳</h2>
-                 <DatePicker v-model="date">
-                            <template #default="{ togglePopover, inputValue, inputEvents }">
-                            <div >
-                            <button  @click="() => togglePopover()" style="border:0">🗓
-                          
-                            </button>
-                            <input
-                            :value="inputValue"
-                            v-on="inputEvents"
-            
-                            />
+                    <DatePicker v-model="form.add_date" mode="date" :popover="{ visibility: 'click' }" :transition="'none'">
+                        <template #default="{ togglePopover, inputValue, inputEvents }">
+                            <div class="date-input-container">
+                                <button type="button" @click="togglePopover" style="border:0; cursor:pointer">🗓</button>
+                                <input :value="inputValue || ''" v-on="inputEvents" readonly class="date-display-input" />
                             </div>
-                            </template>
-                        </DatePicker>
+                        </template>
+                    </DatePicker>
                 </div>
 
                 <div class="form-group">
                     <label>轉帳金額</label>
-                    <input type="number" placeholder="NT$ 0" class="amount-input" />
+                    <input v-model.number="form.add_amount" type="number" placeholder="NT$ 0" class="amount-input" />
                 </div>
 
                 <div class="grid">
                     <div class="form-group">
                         <label>從 (轉出帳戶)</label>
-                        <Add_account />
+                        <Add_account @update:account="handleSourceAccountUpdate" />
                     </div>
 
                     <div class="form-group">
                         <label>到 (轉入帳戶)</label>
-                        <Add_account />
+                        <Add_account @update:account="handleTargetAccountUpdate" />
                     </div>
 
                     <div class="form-group">
                         <label>成員</label>
-                        <Add_member />
+                        <Add_member @update:model-value="handleMemberUpdate" />
                     </div>
 
                     <div class="form-group">
                         <label>標籤</label>
-                        <Add_tag />
+                        <Add_tag @update:model-value="handleTagUpdate" />
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>備註</label>
-                    <textarea placeholder="轉帳說明（選填）"></textarea>
+                    <div>
+                        <label>備註 </label>
+                        <button @click="formatNote" class="btn btn-info" style="margin-left: 20px;">自動整理</button>
+                    </div>
+                    <textarea v-model="form.add_note" placeholder="轉帳說明（選填）"></textarea>
                 </div>
 
                 <div class="actions">
-                    <button class="btn-primary">確認轉帳</button>
-                    <button class="btn-secondary">再記一筆</button>
+                    <button @click="handleSave" class="btn-primary">確認轉帳</button>
+                    <button @click="handleSaveNext" class="btn-secondary">再記一筆</button>
                 </div>
             </div>
         </div>
