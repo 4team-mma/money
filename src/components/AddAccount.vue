@@ -3,21 +3,18 @@ import { ref, watch, onMounted } from 'vue'
 import { useAccountStore } from '@/stores/useAccountStore'
 import { storeToRefs } from 'pinia'
 
-const props = defineProps({
-    account: {
-        type: Object,
-        default: null
-    }
-})
+const props = defineProps(['account']) 
+const emit = defineEmits(['update:account']) // 維持與 Add.vue 一致的事件名
 
-const emit = defineEmits(['update:account'])
+
 
 const accountStore = useAccountStore()
 const { accounts: categoryItems, loading } = storeToRefs(accountStore)
 
 const showModal = ref(false)
 const showAdd = ref(false)
-
+const initialBalance = ref(0)
+const excludeFromAssets = ref(false)
 const selectedCategory = ref(props.account)
 
 const newAdd = ref('')
@@ -28,13 +25,18 @@ const iconOptions = [
 ]
 
 onMounted(async () => {
-    // 每次進入頁面都重新整理帳戶清單，確保拿到最新
-    await accountStore.loadAccounts()
+await accountStore.loadAccounts()
+    // 初始化時自動選中第一筆
+    if (categoryItems.value.length > 0 && !selectedCategory.value) {
+        selectedCategory.value = categoryItems.value[0]
+        emit('update:account', selectedCategory.value)
+    }
 })
 
 const selectCategory = (item) => {
     selectedCategory.value = item
     showModal.value = false
+    emit('update:account', item) // 這裡要跟 props 的名稱對齊
 }
 
 /**
@@ -46,12 +48,14 @@ const addNewItem = async () => {
     // 準備要送給後端的 payload
     const payload = {
         account_name: newAdd.value,
-        icon_id: newIcon.value,
+        account_icon: newIcon.value,
         account_type: 'cash',        // 預設類型
-        initial_balance: 0,          // 初始餘額
-        exclude_from_assets: false
+        initial_balance: initialBalance.value || 0,
+        exclude_from_assets: false,
+        currency: 'TWD'
     }
-
+    console.log("正在發送資料:", payload)
+    
     // 調用 store 方法
     const success = await accountStore.addAccount(payload)
 
