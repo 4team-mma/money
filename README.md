@@ -15,7 +15,7 @@ MMA App 是一個基於 Vue 3、Vite 的開發中的前端專案，整合 Elemen
 ![Element Plus](https://img.shields.io/badge/Element_Plus-2.13.0-409eff?logo=element)
 ![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3.8-7952b3?logo=bootstrap)
 ![Bootstrap Icons](https://img.shields.io/badge/Bootstrap_Icons-1.13.1-7952b3?logo=bootstrap)
-![V-Calendar](https://img.shields.io/badge/V--Calendar-3.1.2-00bfa5?logo=calendar)
+![V-Calendar](https://img.shields.io/badge/V--Calendar-3.0.1-00bfa5?logo=calendar)
 ![@popperjs/core](https://img.shields.io/badge/@popperjs/core-2.11.8-ff6f61?logo=popper)
 ![Axios](https://img.shields.io/badge/Axios-1.13.2-5a29e4?logo=axios)
 <br>開發工具：
@@ -26,7 +26,8 @@ MMA App 是一個基於 Vue 3、Vite 的開發中的前端專案，整合 Elemen
 [團隊開發流程（非常重要）](docs/git-workflow.md) |
 [專案結構說明](docs/architecture.md) |
 [專案使用套件說明](docs/dependencies.md) |
-[專案怎麼從 npm 改成 pnpm](docs/migration-npm-to-pnpm.md)
+[專案怎麼從 npm 改成 pnpm](docs/migration-npm-to-pnpm.md) |
+[專案套件調整說明：v-calendar 降級至 v3.0.1](docs/FIX-v-calendar-dayIndex-error.md)
 
 ## 命名規則
 componment命名：
@@ -84,7 +85,7 @@ pnpm add pinia
 pnpm install element-plus
 
 # 安裝 v-calendar 套件
-pnpm install v-calendar@next @popperjs/core
+pnpm install v-calendar@3.0.1 @popperjs/core
 ```
 - 這是在安裝專案需要用到的套件
 - 通常只在「第一次」或「套件有變更」時需要執行

@@ -20,7 +20,7 @@ CSS 框架，提供響應式設計與基本樣式。
 * ![Bootstrap Icons](https://img.shields.io/badge/Bootstrap_Icons-1.13.1-7952b3?logo=bootstrap)  
 Bootstrap 官方圖示套件，方便在專案中使用 SVG Icons。
 
-* ![V-Calendar](https://img.shields.io/badge/V--Calendar-3.1.2-00bfa5?logo=calendar)  
+* ![V-Calendar](https://img.shields.io/badge/V--Calendar-3.0.1-00bfa5?logo=calendar)  
 Vue 的日曆與日期選擇元件，適用於排程或日期選擇功能。
 
 * ![@popperjs/core](https://img.shields.io/badge/@popperjs/core-2.11.8-ff6f61?logo=popper)  
