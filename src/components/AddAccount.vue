@@ -3,10 +3,13 @@ import { ref, watch, onMounted } from 'vue'
 import { useAccountStore } from '@/stores/useAccountStore'
 import { storeToRefs } from 'pinia'
 
-const props = defineProps(['account']) 
-const emit = defineEmits(['update:account']) // 維持與 Add.vue 一致的事件名
 
 
+const emit = defineEmits(['update:modelValue', 'update:account'])
+const props = defineProps({
+    modelValue: Object,
+    account: Object // 👈 補上這個聲明，警告就會消失
+})
 
 const accountStore = useAccountStore()
 const { accounts: categoryItems, loading } = storeToRefs(accountStore)

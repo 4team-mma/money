@@ -28,7 +28,7 @@ const displayText = computed(() => {
     return selectedItems.value.map(i => i.itemName).join(', ')
 })
 
-/* ---------- 方法 ---------- */
+/* ---------- 父子方法 ---------- */
 const emit = defineEmits(['update:modelValue'])
 const toggleTag = (id) => {
     const index = selectedIds.value.indexOf(id)

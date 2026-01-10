@@ -7,18 +7,16 @@ import Add_member from '@/components/AddMember.vue'
 import Add_tag from '@/components/AddTag.vue'
 import { useAddRecord } from '@/composables/useAddRecord'
 
-//月曆部分
-import { DatePicker } from 'v-calendar';
-import 'v-calendar/style.css';
-import { ref } from 'vue';
+import { DatePicker } from 'v-calendar'
+import 'v-calendar/style.css'
 
-const date = ref(new Date());
-// 傳入 true (收入)
+// 🌟 修正：傳入 true 代表收入模式
 const { 
-    form, handleCatoUpdate, handleAccountUpdate, 
+    form, handleCatoUpdate, handleAccountUpdate,
     handleMemberUpdate, handleTagUpdate, handleSave, 
     handleSaveNext, formatNote 
 } = useAddRecord(true)
+
 </script>
 
 <template>
@@ -29,57 +27,46 @@ const {
             <div class="card">
                 <div class="header">
                     <h2>新增收入</h2>
-                       <DatePicker v-model="date">
-                            <template #default="{ togglePopover, inputValue, inputEvents }">
-                            <div >
-                            <button  @click="() => togglePopover()" style="border:0">🗓
-                          
-                            </button>
-                            <input
-                            :value="inputValue"
-                            v-on="inputEvents"
-                          
-                            />
+                    <DatePicker v-model="form.add_date" mode="date" :popover="{ visibility: 'click' }" :transition="'none'">
+                        <template #default="{ togglePopover, inputValue, inputEvents }">
+                            <div class="date-input-container">
+                                <button type="button" @click="togglePopover" style="border:0; cursor:pointer">🗓</button>
+                                <input :value="inputValue || ''" v-on="inputEvents" readonly class="date-display-input" />
                             </div>
-                            </template>
-                        </DatePicker>
+                        </template>
+                    </DatePicker>
                 </div>
 
                 <div class="form-group">
                     <label>收入金額</label>
-                    <input type="number" placeholder="NT$ 0" class="amount-input" />
+                    <input v-model.number="form.add_amount" type="number" placeholder="NT$ 0" class="amount-input" />
                 </div>
 
                 <div class="grid">
                     <div class="form-group">
-                        <label>類別</label>
-                        <Add_cato_inn />
+                        <label>收入類別</label>
+                        <Add_cato_inn @update:model-value="handleCatoUpdate" />
                     </div>
 
                     <div class="form-group">
-                        <label>帳戶</label>
-                        <Add_account />
+                        <label>帳戶 (存入)</label>
+                        <Add_account v-model:account="form.account" @update:model-value="handleAccountUpdate" />
                     </div>
 
                     <div class="form-group">
                         <label>成員</label>
-                        <Add_member />
+                        <Add_member @update:model-value="handleMemberUpdate" />
                     </div>
 
                     <div class="form-group">
                         <label>標籤</label>
-                        <Add_tag />
+                        <Add_tag @update:model-value="handleTagUpdate" />
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <div style="">
-                        <label>備註  </label>
-                        <button @click="formatNote"  class="btn btn-info"
-                        style="margin-left: 20px;"
-                        >自動整理</button>
-                    </div>
-                    <textarea v-model="form.add_note" placeholder="補充說明（選填）"></textarea>                   
+                    <label>備註</label>
+                    <textarea v-model="form.add_note" placeholder="補充說明（選填）"></textarea>
                 </div>
 
                 <div class="actions">

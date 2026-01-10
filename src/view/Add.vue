@@ -12,10 +12,10 @@ import { DatePicker } from 'v-calendar';
 import 'v-calendar/style.css';
 
 // 調用 Composable，傳入 false (支出)
-const { 
-    form, handleCatoUpdate, 
-    handleMemberUpdate, handleTagUpdate, handleSave, 
-    handleSaveNext, formatNote 
+const {
+    form, handleCatoUpdate,
+    handleMemberUpdate, handleTagUpdate, handleSave,
+    handleSaveNext, formatNote
 } = useAddRecord(false)
 
 </script>
@@ -28,11 +28,14 @@ const {
             <div class="card">
                 <div class="header">
                     <h2>新增支出</h2>
-                    <DatePicker v-model="form.add_date">
+                    <DatePicker v-model="form.add_date" mode="date" :popover="{ visibility: 'click' }"
+                        :transition="'none'">
                         <template #default="{ togglePopover, inputValue, inputEvents }">
-                            <div>
-                                <button @click="togglePopover" style="border:0; cursor:pointer">🗓</button>
-                                <input :value="inputValue" v-on="inputEvents" readonly class="date-display-input" />
+                            <div class="date-input-container">
+                                <button type="button" @click="togglePopover"
+                                    style="border:0; cursor:pointer">🗓</button>
+                                <input :value="inputValue || ''" v-on="inputEvents" readonly
+                                    class="date-display-input" />
                             </div>
                         </template>
                     </DatePicker>
@@ -45,7 +48,7 @@ const {
 
                 <div class="grid">
                     <div class="form-group">
-                        <label>類別</label>
+                        <label>消費類別</label>
                         <Add_cato @update:model-value="handleCatoUpdate" />
                     </div>
 
@@ -69,16 +72,14 @@ const {
 
                 <div class="form-group">
                     <div style="">
-                        <label>備註:  </label>
-                        <button @click="formatNote"  class="btn btn-info"
-                        style="margin-left: 20px;"
-                        >自動整理</button>
+                        <label>備註: </label>
+                        <button @click="formatNote" class="btn btn-info" style="margin-left: 20px;">自動整理</button>
                     </div>
-                    <textarea v-model="form.add_note" placeholder="補充說明（選填）"></textarea>                   
+                    <textarea v-model="form.add_note" placeholder="補充說明（選填）"></textarea>
                 </div>
 
                 <div class="actions">
-                    <button  @click="handleSave" class="btn-primary">儲存支出</button>
+                    <button @click="handleSave" class="btn-primary">儲存支出</button>
                     <button @click="handleSaveNext" class="btn-secondary">再記一筆</button>
                 </div>
             </div>
