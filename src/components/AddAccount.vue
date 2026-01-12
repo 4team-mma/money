@@ -8,7 +8,7 @@ import { storeToRefs } from 'pinia'
 const emit = defineEmits(['update:modelValue', 'update:account'])
 const props = defineProps({
     modelValue: Object,
-    account: Object // 👈 補上這個聲明，警告就會消失
+    account: Object // 父子連結部分
 })
 
 const accountStore = useAccountStore()
