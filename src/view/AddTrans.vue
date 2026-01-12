@@ -9,11 +9,11 @@ import { useAddRecord } from '@/composables/useAddRecord'
 import { DatePicker } from 'v-calendar';
 import 'v-calendar/style.css';
 
-// 🌟 啟用轉帳模式
+// 🌟 傳入 'transfer'
 const { 
     form, 
-    handleSourceAccountUpdate, 
-    handleTargetAccountUpdate,
+    handleSourceUpdate, // 轉出
+    handleAccountUpdate, // 轉入 (沿用原本的 handleAccountUpdate)
     handleMemberUpdate, 
     handleTagUpdate, 
     handleSave, 
@@ -49,12 +49,12 @@ const {
                 <div class="grid">
                     <div class="form-group">
                         <label>從 (轉出帳戶)</label>
-                        <Add_account @update:account="handleSourceAccountUpdate" />
+                        <Add_account @update:account="handleSourceUpdate" />
                     </div>
 
                     <div class="form-group">
                         <label>到 (轉入帳戶)</label>
-                        <Add_account @update:account="handleTargetAccountUpdate" />
+                        <Add_account @update:account="handleAccountUpdate" />
                     </div>
 
                     <div class="form-group">
