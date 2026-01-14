@@ -7,7 +7,7 @@ import { createTransfer } from '@/api/transfer'
 export function useAddRecord(initialType = false) {
     const router = useRouter()
     const isSubmitting = ref(false)
-
+// add_id跟user_id不傳,一個是自動遞增,一個是安全性考量
     const form = reactive({
         add_date: new Date(),
         add_amount: null,

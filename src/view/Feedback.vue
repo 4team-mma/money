@@ -5,6 +5,8 @@
     import api from '@/api';
     import { submitFeedbackApi } from '@/api/feedback';
     import profile from './Settings.vue';
+    import { getProfile } from '@/api/user';
+
 
 // 給一個空值(form)，建立按鈕函數[ 把東西放在裡面並命名(postData)，呼叫 API，清空 ]
     const success = ref(false)
@@ -24,7 +26,7 @@ const fetchUserData = async () => {
     try {
         // 這裡調用你後端獲取個人資料的 API
         // 假設回傳格式是 { data: { username: "你的名字" } }
-        const response = await userApi.getProfile(); 
+        const response = await getProfile(); 
         
         if (response && response.username) {
             form.name = response.username;
@@ -146,15 +148,6 @@ const handleFormSubmit = async () => {
         <p v-if="success" class="success">感謝你的回饋！我們會持續改善 🙌</p>
         <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
     </div>
-
-
-
-
-
-
-
-
-
         </Nav>
     </template>
 
