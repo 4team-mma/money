@@ -1,0 +1,13 @@
+# 強制所有文字檔案都使用 LF 換行 (不管在 Windows 還是 Mac)
+* text=auto eol=lf
+
+# 針對特定不需要轉換的檔案 (如圖片) 設定為二進位
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.mov binary
+*.mp4 binary
+*.mp3 binary
+*.flv binary

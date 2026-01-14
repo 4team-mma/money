@@ -1,18 +1,55 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import Nav from '@/components/Nav.vue';
-import axios from 'axios'
+import api from '@/api'
 
 // 💡 存放從 API 抓回來的「活資料」
 const transactions = ref([])
+const pagination = ref({
+    current_page: 1,
+    total_pages: 1,
+    total_rows: 0
+})
+const searchQuery = ref('')
+const isLoading = ref(false)
 
-const fetchTransactions = async () => {
+// 💡 抓取資料函式 (支援分頁與搜尋)
+const fetchTransactions = async (page = 1) => {
+    isLoading.value = true
     try {
-        // 💡 指向您的 FastAPI 路由
-        const response = await axios.get('http://127.0.0.1:8000/records/')
-        transactions.value = response.data
+        // 呼叫我們之前在 records.py 寫好的分頁 API
+        // 路徑範例: /records/?page=1&page_size=10&search=便當
+        const response = await api.get('/records/', {
+            params: {
+                page: page,
+                page_size: 10,
+                search: searchQuery.value
+            }
+        }) 
+        
+        // 根據後端回傳的結構：{ success: true, data: [...], pagination: {...} }
+        transactions.value = response.data 
+        pagination.value = response.pagination
     } catch (error) {
-        console.error("API 串接失敗，請檢查後端是否啟動:", error)
+        console.error("Dashboard 加載失敗::", error)
+    } finally {
+        isLoading.value = false
+    }
+}
+
+// 💡 監聽搜尋輸入 (延遲 500ms 觸發，避免頻繁請求)
+let searchTimer = null
+const handleSearch = () => {
+    clearTimeout(searchTimer)
+    searchTimer = setTimeout(() => {
+        fetchTransactions(1) // 搜尋時回到第一頁
+    }, 500)
+}
+
+// 💡 切換頁碼
+const goToPage = (page) => {
+    if (page >= 1 && page <= pagination.value.total_pages) {
+        fetchTransactions(page)
     }
 }
 
@@ -180,32 +217,73 @@ const formatNumber = (num) => {
       <div class="card transactions-card">
         <div class="card-inner-header">
           <h3 class="card-inner-title">最近交易</h3>
-          <p class="card-description">最新的收支紀錄</p>
+          <p class="card-description">您可以搜尋備註、類別或成員~</p>
+          
+          <div class="search-box">
+      <input 
+        v-model="searchQuery" 
+        @input="handleSearch"
+        type="text" 
+        placeholder="搜尋紀錄..." 
+        class="search-input"
+      />
+    </div>  
         </div>
+        <h3><p class="card-description">最新的收支紀錄:</p></h3>
+
         <div class="card-body">
-         <div class="transactions-list">
-                <div v-for="t in transactions" :key="t.id" class="transaction-item">
-                  <div class="transaction-info">
-                    <div class="transaction-icon" :class="t.add_type ? 'income' : 'expense'">
-                      <span v-if="t.add_class_icon">{{ t.add_class_icon }}</span>
-                      <svg v-else-if="t.add_type" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline></svg>
-                      <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline></svg>
-                    </div>
-                    <div>
-                      <div class="transaction-name">{{ t.add_note || '無備註' }}</div>
-                      <div class="transaction-category">{{ t.add_class }}</div>
-                    </div>
-                  </div>
-                  <div class="transaction-details">
-                    <div class="transaction-amount" :class="{ income: t.add_type }">
-                      {{ t.add_type ? '+' : '-' }}NT$ {{ formatNumber(t.add_amount*1) }}
-                    </div>
-                    <div class="transaction-date">{{ t.add_date }}</div>
-                  </div>
-                </div>
-              </div>
-              <button class="btn-outline">查看所有交易</button>
+          <div v-if="isLoading" class="loading-state">載入中...</div>
+          <div v-else class="transactions-list"></div>
+        <div class="transactions-list">
+          <div v-if="transactions.length === 0" class="no-data">
+        找不到相關紀錄</div>
+
+        <div v-for="t in transactions" :key="t.add_id" class="transaction-item">
+        <div class="transaction-info">
+          <div class="transaction-icon" :class="t.add_type ? 'income' : 'expense'">
+            <span v-if="t.add_class_icon">{{ t.add_class_icon }}</span>
+            <span v-else>{{ t.add_type ? '💰' : '💸' }}</span>
+          </div>
+          <div>
+            <div class="transaction-name">{{ t.add_note || '無備註' }}</div>
+            <div class="transaction-category">
+              <span class="tag">{{ t.add_class }}</span>
+              <span class="member-tag" v-if="t.add_member">→ {{ t.add_member }}</span>
             </div>
+          </div>
+        </div>
+        <div class="transaction-details">
+          <div class="transaction-amount" :class="{ income: t.add_type }">
+            {{ t.add_type ? '+' : '-' }}NT$ {{ formatNumber(t.add_amount) }}
+          </div>
+          <div class="transaction-date">{{ t.add_date }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pagination-container" v-if="pagination.total_pages > 1">
+      <button 
+        @click="goToPage(pagination.current_page - 1)" 
+        :disabled="pagination.current_page === 1"
+        class="page-btn"
+      >
+        上一頁
+      </button>
+      
+      <span class="page-info">
+        第 {{ pagination.current_page }} / {{ pagination.total_pages }} 頁
+      </span>
+
+      <button 
+        @click="goToPage(pagination.current_page + 1)" 
+        :disabled="pagination.current_page === pagination.total_pages"
+        class="page-btn"
+      >
+        下一頁
+      </button>
+    </div>
+  </div>
+  
       </div>
 
       <div class="card">

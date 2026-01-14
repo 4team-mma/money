@@ -7,8 +7,8 @@
   <div class="out">
   <div class="btn-group t-btn-group" role="group" aria-label="Basic outlined example">
     <RouterLink  class="btn btn-outline-primary" to="/Add">支出</RouterLink>
-    <RouterLink class="btn btn-outline-primary" to="/Inn">收入</RouterLink>
-    <RouterLink class="btn btn-outline-primary" to="/Trans">轉帳</RouterLink>
+    <RouterLink class="btn btn-outline-primary" to="/AddIncome">收入</RouterLink>
+    <RouterLink class="btn btn-outline-primary" to="/AddTrans">轉帳</RouterLink>
   </div>
 </div>
 

@@ -5,11 +5,17 @@ import Add_cato_inn from '@/components/AddCatoInn.vue'
 import Add_account from '@/components/AddAccount.vue'
 import Add_member from '@/components/AddMember.vue'
 import Add_tag from '@/components/AddTag.vue'
-//月曆部分
-import { DatePicker } from 'v-calendar';
-import 'v-calendar/style.css';
-import { ref } from 'vue';
-const date = ref(new Date());
+import { useAddRecord } from '@/composables/useAddRecord'
+
+import { DatePicker } from 'v-calendar'
+import 'v-calendar/style.css'
+
+// 🌟 修正：傳入 true 代表收入模式
+const { 
+    form, handleCatoUpdate, handleAccountUpdate,
+    handleMemberUpdate, handleTagUpdate, handleSave, 
+    handleSaveNext, formatNote 
+} = useAddRecord(true)
 
 </script>
 
@@ -21,62 +27,51 @@ const date = ref(new Date());
             <div class="card">
                 <div class="header">
                     <h2>新增收入</h2>
-                       <DatePicker v-model="date">
-                            <template #default="{ togglePopover, inputValue, inputEvents }">
-                            <div class="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
-                            <button class="flex justify-center items-center px-2 bg-accent-100 hover:bg-accent-200 text-accent-700 border-r border-gray-300 dark:bg-gray-700 dark:text-accent-300 dark:border-gray-600 dark:hover:bg-gray-600" @click="() => togglePopover()">
-                            <i class="bi bi-calendar"></i>
-                            </button>
-                            <input
-                            :value="inputValue"
-                            v-on="inputEvents"
-                            class="flex-grow px-2 py-1 bg-white dark:bg-gray-700"
-                            />
+                    <DatePicker v-model="form.add_date" mode="date" :popover="{ visibility: 'click' }" :transition="'none'">
+                        <template #default="{ togglePopover, inputValue, inputEvents }">
+                            <div class="date-input-container">
+                                <button type="button" @click="togglePopover" style="border:0; cursor:pointer">🗓</button>
+                                <input :value="inputValue || ''" v-on="inputEvents" readonly class="date-display-input" />
                             </div>
-                            </template>
-                        </DatePicker>
+                        </template>
+                    </DatePicker>
                 </div>
 
                 <div class="form-group">
                     <label>收入金額</label>
-                    <input type="number" placeholder="NT$ 0" class="amount-input" />
+                    <input v-model.number="form.add_amount" type="number" placeholder="NT$ 0" class="amount-input" />
                 </div>
 
                 <div class="grid">
                     <div class="form-group">
-                        <label>類別</label>
-                        <Add_cato_inn />
+                        <label>收入類別</label>
+                        <Add_cato_inn @update:model-value="handleCatoUpdate" />
                     </div>
 
                     <div class="form-group">
-                        <label>帳戶</label>
-                        <Add_account />
+                        <label>帳戶 (存入)</label>
+                        <Add_account v-model:account="form.account" @update:model-value="handleAccountUpdate" />
                     </div>
 
                     <div class="form-group">
                         <label>成員</label>
-                        <Add_member />
+                        <Add_member @update:model-value="handleMemberUpdate" />
                     </div>
 
                     <div class="form-group">
                         <label>標籤</label>
-                        <Add_tag />
+                        <Add_tag @update:model-value="handleTagUpdate" />
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>上傳附件</label>
-                    <input type="file" />
-                </div>
-
-                <div class="form-group">
                     <label>備註</label>
-                    <textarea placeholder="收入說明（選填）"></textarea>
+                    <textarea v-model="form.add_note" placeholder="補充說明（選填）"></textarea>
                 </div>
 
                 <div class="actions">
-                    <button class="btn-primary">儲存收入</button>
-                    <button class="btn-secondary">再記一筆</button>
+                    <button @click="handleSave" class="btn-primary">儲存收入</button>
+                    <button @click="handleSaveNext" class="btn-secondary">再記一筆</button>
                 </div>
             </div>
         </div>

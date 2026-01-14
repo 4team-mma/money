@@ -35,4 +35,13 @@ body {
     width: 100%;
     min-height: 100vh;
 }
+/* 防止 Element Plus 的圖示爆走 */
+.el-message__icon {
+    font-size: 20px !important; /* 強制固定大小 */
+    width: 20px !important;
+}
+.el-message {
+    min-width: 300px !important; /* 確保彈窗寬度正常 */
+}
+
 </style>

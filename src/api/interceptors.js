@@ -1,9 +1,12 @@
-import service from "./index";
+import service from "./service";
 import { ElMessage } from "element-plus";
+
+
 
 service.interceptors.request.use((config) => {
   // 1. 自動添加 JWT token
-  const token = localStorage.getItem('token'); // 💡 確保登入成功後存入的 key 叫 'token'
+  // 確保 Key 與 Home.vue 存入時的名字一致
+  const token = localStorage.getItem('user_token'); 
   if (token) {
     config.headers["Authorization"] = `Bearer ${token}`;
   }
@@ -26,26 +29,57 @@ service.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
+/**
+ * 回應攔截器
+ * 統一處理回應資料和錯誤
+ */
 service.interceptors.response.use(
   (response) => {
+    //  請求成功，攔截器幫你 .data，所以組件拿到的 response 直接就是後端回傳的 JSON
     return response.data;
   },
   (error) => {
-    const { status } = error.response;
-    switch (status) {
-      case 401:
-        ElMessage.error("登入逾期，請重新登入");
-        localStorage.removeItem('token'); // 清除過期 token
-        // window.location.href = '/'; // 視情況跳轉回登入頁
-        break;
-      case 403:
-        ElMessage.error("無權限存取");
-        break;
-      case 404:
-        ElMessage.error("請求的資源不存在");
-        break;
-      default:
-        ElMessage.error("系統錯誤，請稍後再試");
+    // 請求失敗，判斷錯誤類型
+    if (error.response) {
+      // 1. 伺服器有回應，但狀態碼非 2xx (如 401, 404, 500)
+      const { status } = error.response;
+      switch (status) {
+        case 401:
+          // 顯示後端傳來的 "帳號或密碼錯誤"
+          ElMessage.error(error.response.data.detail || '登入逾期或權限不足，請重新登入');
+          localStorage.removeItem('user_token'); //  清除對應的 Key
+          localStorage.removeItem('currentUser');
+          router.push('/') // 跳回登入頁
+          break;
+        case 403:
+          ElMessage.error("無權限存取");
+          break;
+        case 404:
+          ElMessage.error("請求的資源不存在");
+          break;
+        case 422:
+          ElMessage.error("請求格式正確，但是由於含有語意錯誤，無法回應");
+          break;
+        case 429:
+          ElMessage.error("請求過於頻繁，請稍後再試");
+          break;
+        case 500:
+          ElMessage.error("伺服器內部錯誤");
+          break;
+        case 502:
+        case 503:
+        case 504:
+          ElMessage.error("服務暫時不可用，請稍後再試");
+          break;
+        default:
+          ElMessage.error(error.response.data?.detail || "系統錯誤");
+      }
+    } else if (error.request) {
+      // 2. 請求已發出，但「沒收到回應」(例如網路斷線、伺服器停機)
+      ElMessage.error('無法連線到伺服器，請檢查網路或稍後再試');
+    } else {
+      // 3. 設定請求時發生錯誤 (例如設定錯誤)
+      ElMessage.error('請求設定異常');
     }
     return Promise.reject(error);
   }

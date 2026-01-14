@@ -1,17 +1,23 @@
 <script setup>
 import { ref } from 'vue'
+import { useCategoryStore } from '@/stores/useCategoryStore'
+import { storeToRefs } from 'pinia'
 
 const showModal = ref(false)
 const showAdd = ref(false)
 
-const categoryItems = ref([
-    { id: 1, itemName: '飲食', icon: '🍔' },
-    { id: 2, itemName: '交通', icon: '🚗' },
-    { id: 3, itemName: '居家', icon: '🏠' },
-    { id: 4, itemName: '娛樂', icon: '🎮' }
-])
+const props = defineProps({
+    modelValue: Object,
+    account: Object // 父子連結部分
+}) //接收父組件傳來的對象
+const emit = defineEmits(['update:modelValue'])
 
+const categoryStore = useCategoryStore()
+// 使用 storeToRefs 保持響應式連結
+const { categories: categoryItems } = storeToRefs(categoryStore)
+// ... selectedCategory 初始化改為從 store 拿 ...
 const selectedCategory = ref(categoryItems.value[0])
+
 const newAdd = ref('')
 const newIcon = ref('🍔')
 
@@ -23,19 +29,32 @@ const iconOptions = [
 const selectCategory = (item) => {
     selectedCategory.value = item
     showModal.value = false
+    // 💡 關鍵：把選中的結果傳回父組件
+    emit('update:modelValue', item)
 }
 
 const addNewItem = () => {
     if (!newAdd.value.trim()) return
     const newItem = { id: Date.now(), itemName: newAdd.value, icon: newIcon.value }
+    // ✅ 改為存入 Store
     categoryItems.value.push(newItem)
+
+    // 💡 修正：選中新項目的同時，必須發送事件通知父組件同步更新 form 資料
     selectedCategory.value = newItem
-    newAdd.value = ''; showAdd.value = false; showModal.value = false;
+    emit('update:modelValue', newItem)
+
+    newAdd.value = '';
+    showAdd.value = false;
+    showModal.value = false;
 }
 
 const removeItem = (id) => {
     categoryItems.value = categoryItems.value.filter(item => item.id !== id)
-    if (selectedCategory.value?.id === id) selectedCategory.value = categoryItems.value[0] || null
+    if (selectedCategory.value?.id === id) {
+        const fallback = categoryItems.value[0] || null
+        selectedCategory.value = fallback
+        emit('update:modelValue', fallback)
+    }
 }
 </script>
 

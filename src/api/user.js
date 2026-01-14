@@ -1,4 +1,7 @@
-import axios from '@/utils/axios'
+import api from '@/api'
 
-export const fetchMembers = () => axios.get('/members')
-export const deleteMember = (user_id) => axios.delete(`/members/${user_id}`)
+export const fetchMembers = () => api.get('/members')
+export const deleteMember = (user_id) => api.delete(`/members/${user_id}`)
+
+
+

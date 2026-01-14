@@ -15,8 +15,10 @@ import Register from "@/view/Register.vue";
 import ChartSecondBalance from "../view/ChartSecondBalance.vue"
 import ChartThirdExpense from "../view/ChartThirdExpense.vue"
 import ChartForthIncome from "../view/ChartForthIncome.vue"
-
-
+import ForgetPassword from "@/view/ForgetPassword.vue";
+import AdminsComments from "@/view/AdminsComments.vue"
+import Feedback from "@/view/Feedback.vue";
+import AdminMain from "@/view/AdminMain.vue";
 
 const routes = [
   {
@@ -70,6 +72,11 @@ const routes = [
     name: AddTrans,
   },
   {
+    path: "/Feedback",
+    component: Feedback,
+    name: "Feedback",
+  },
+  {
     path: "/Settings",
     component: Settings,
     name: "Settings",
@@ -98,6 +105,22 @@ const routes = [
     path: "/ChartForthIncome",
     component: ChartForthIncome,
     name: "ChartForthIncome",
+  },
+    {
+    path: "/ForgetPassword",
+    component: ForgetPassword,
+    name: "ForgetPassword",
+  }
+  ,
+    {
+    path: "/AdminsComments",
+    component: AdminsComments,
+    name: "AdminsComments",
+  } ,
+    {
+    path: "/AdminMain",
+    component: AdminMain,
+    name: "AdminMain",
   }
 
 ];

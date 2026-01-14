@@ -1,17 +1,13 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { useCategoryStore } from '@/stores/useCategoryStore'
+import { storeToRefs } from 'pinia'
 
 /* ---------- 狀態控制 ---------- */
 const showModal = ref(false)
 const showAdd = ref(false)
-
-const categoryItems = ref([
-    { id: 1, itemName: '一般', color: '#004B97' },
-    { id: 2, itemName: '旅遊', color: '#22c55e' },
-    { id: 3, itemName: '必要', color: '#3b82f6' },
-    { id: 4, itemName: '衝動', color: '#ef4444' },
-])
-
+const categoryStore = useCategoryStore()
+const { tags: categoryItems } = storeToRefs(categoryStore) // 2. 連結 Store 資料
 const selectedIds = ref([1])
 const newAdd = ref('')
 const newColor = ref('#ef4444')
@@ -32,7 +28,8 @@ const displayText = computed(() => {
     return selectedItems.value.map(i => i.itemName).join(', ')
 })
 
-/* ---------- 方法 ---------- */
+/* ---------- 父子方法 ---------- */
+const emit = defineEmits(['update:modelValue'])
 const toggleTag = (id) => {
     const index = selectedIds.value.indexOf(id)
     if (index > -1) {
@@ -40,16 +37,35 @@ const toggleTag = (id) => {
     } else {
         selectedIds.value.push(id)
     }
+    //  每次切換都要傳送最新選中的列表給父組件
+    emit('update:modelValue', selectedItems.value)
 }
 
 const addNewItem = () => {
     if (!newAdd.value.trim()) return
+
     const newItem = { id: Date.now(), itemName: newAdd.value, color: newColor.value }
-    categoryItems.value.push(newItem)
+
+// 3. 呼叫 Store 新增標籤，使其持久化
+    categoryStore.addCustomTag(newItem)
+// 4. 將新標籤加入選中狀態
     selectedIds.value.push(newItem.id)
     newAdd.value = ''
     showAdd.value = false
+    //  每次切換都要傳送最新選中的列表給父組件
+    emit('update:modelValue', selectedItems.value)
 }
+// 如果需要刪除功能，也要同步修改 Store
+const removeItem = (id) => {
+    categoryStore.$patch((state) => {
+        state.tags = state.tags.filter(i => i.id !== id)
+    })
+    // 移除選中狀態
+    selectedIds.value = selectedIds.value.filter(sid => sid !== id)
+    emit('update:modelValue', selectedItems.value)
+}
+
+
 </script>
 
 <template>
