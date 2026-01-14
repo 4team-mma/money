@@ -38,7 +38,7 @@ const budgets = ref([
             </div>
         </div>
         <!-- overview 小卡 -->
-        <div div class="dashboard-page-layout" style="display: flex"  min height:100vh >
+        <div div class="dashboard-page-layout" style="display: flex" min height:100vh>
             <!-- 本月收入 -->
             <div class=dashboard-page-layout style="flex: 1;">
                 <div class="overview-grid_1">
@@ -136,36 +136,43 @@ h2 {
 }
 
 .overview-grid_1 {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 15px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;/* 接受滾輪 */
+    scroll-behavior: smooth;/* 滑動更順 */
+    padding: 0 clamp(16px, 4vw, 40px);
+    scrollbar-width: none;
+}
+
+.stat-card {
+    flex: 0 0 230px;
 }
 
 .card-title {
-  font-size: 10px;
-  font-weight: 500;
-  color: #64748b;
+    font-size: 10px;
+    font-weight: 500;
+    color: #64748b;
 }
 
 .card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
 }
 
 .card-content .amount {
-  font-size: 20px;
-  font-weight: 700;
-  color: #000000;
-  margin-bottom: 4px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #000000;
+    margin-bottom: 4px;
 }
 
 .change-text_1 {
-  font-size: 11px;
-  color: #64748b;
-  margin: 0;
+    font-size: 11px;
+    color: #64748b;
+    margin: 0;
 }
-
-
 </style>

@@ -196,10 +196,10 @@ const averagePerMonth = computed(() => {
                 <!-- 支出_文字 -->
                 <table class="money-table">
                     <colgroup>
-                        <col style="width: 100px;"> <!-- 排序（窄） -->
-                        <col style="width: 350px;"> <!-- 類別 -->
-                        <col style="width: 350px;"> <!-- 金額 -->
-                        <col style="width: auto;"> <!-- 比例（吃剩下的） -->
+                        <col style="width: 10%;"> <!-- 排序（窄） -->
+                        <col style="width: 45%;"> <!-- 類別 -->
+                        <col style="width: 25%;"> <!-- 金額 -->
+                        <col style="width: 20%;"> <!-- 比例（吃剩下的） -->
                     </colgroup>
                     <thead>
                         <tr>
