@@ -12,7 +12,6 @@ import Dashboard from "@/view/Dashboard.vue";
 import Settings from "../view/Settings.vue";
 import Admins from "@/view/Admins.vue";
 import Register from "@/view/Register.vue";
-import ChartFirstNetWorth from "../view/ChartFirstNetworth.vue"
 import ChartSecondBalance from "../view/ChartSecondBalance.vue"
 import ChartThirdExpense from "../view/ChartThirdExpense.vue"
 import ChartForthIncome from "../view/ChartForthIncome.vue"
@@ -90,11 +89,6 @@ const routes = [
     path: "/Register",
     component: Register,
     name: "Register",
-  },
-    {
-    path: "/ChartFirstNetWorth",
-    component: ChartFirstNetWorth,
-    name: "ChartFirstNetWorth",
   },
     {
     path: "/ChartSecondBalance",

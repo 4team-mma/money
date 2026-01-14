@@ -31,7 +31,7 @@ const budgets = ref([
         <!-- 跳頁設定 -->
         <div class="PageTurn">
             <div class="btn-group t-btn-group" role="group" aria-label="Basic outlined example">
-                <RouterLink class="btn btn-outline-primary" to="/ChartFirstNetworth">淨資產趨勢</RouterLink>
+                <RouterLink class="btn btn-outline-primary" to="/Chart">淨資產趨勢</RouterLink>
                 <RouterLink class="btn btn-outline-primary" to="/ChartSecondBalance">收支趨勢</RouterLink>
                 <RouterLink class="btn btn-outline-primary" to="/ChartThirdExpense">支出分析</RouterLink>
                 <RouterLink class="btn btn-outline-primary" to="/ChartForthIncome">收入分析</RouterLink>
@@ -138,7 +138,7 @@ h2 {
 .overview-grid_1 {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 20px;
+    gap: 15px;
 }
 
 .card-title {
