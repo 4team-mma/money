@@ -1,11 +1,10 @@
 <script setup>
 import Nav from '@/components/Nav.vue';
 import Chart_Preface from '@/components/ChartPreface.vue';
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 
 // 顯示當天日期
-import { computed } from 'vue'
 const today = computed(() => {
     const now = new Date()
 
@@ -21,6 +20,129 @@ const today = computed(() => {
 // 繪製淨資產分析_折線圖
 const dailyChartRef = ref(null)
 
+// 表格連動下拉選單設定
+// 下拉選單控制，預設月
+const period = ref('month')
+// 自訂區間
+const startDate = ref(null) // '2025-02-01'
+const endDate = ref(null)   // '2025-04-30'
+
+// 假資料
+const rawExpenseData = [
+    { id: 1, date: '2025-05-03', category: '飲食', amount: 1200 },
+    { id: 2, date: '2025-05-10', category: '飲食', amount: 3500 },
+    { id: 3, date: '2025-01-07', category: '學習深造', amount: 2680 },
+    { id: 4, date: '2026-01-08', category: '美容/美髮', amount: 2000 },
+    { id: 5, date: '2026-01-10', category: '教育', amount: 1292 },
+    { id: 6, date: '2026-01-11', category: '醫療保健', amount: 700 }
+]
+
+
+// 根據 period 切換資料
+const filteredExpenseData = computed(() => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth()
+
+    if (period.value === 'month') {
+        const start = new Date(year, month, 1)
+        const end = new Date(year, month + 1, 0)
+        return rawExpenseData.filter(r => {
+            const d = new Date(r.date)
+            return d >= start && d <= end
+        })
+    }
+
+    if (period.value === 'year') {
+        const start = new Date(year, 0, 1)
+        const end = new Date(year, 11, 31)
+        return rawExpenseData.filter(r => {
+            const d = new Date(r.date)
+            return d >= start && d <= end
+        })
+    }
+
+    if (period.value === 'custom') {
+        if (!startDate.value || !endDate.value) return []
+        const start = new Date(startDate.value)
+        const end = new Date(endDate.value)
+        return rawExpenseData.filter(r => {
+            const d = new Date(r.date)
+            return d >= start && d <= end
+        })
+    }
+
+    return []
+})
+
+const categoryTableData = computed(() => {
+    const map = {}
+    let total = 0
+
+    filteredExpenseData.value.forEach(item => {
+        if (!map[item.category]) {
+            map[item.category] = {
+                category: item.category,
+                amount: 0
+            }
+        }
+        map[item.category].amount += item.amount
+        total += item.amount
+    })
+
+    return Object.values(map)
+        .sort((a, b) => b.amount - a.amount)
+        .map((item, index) => ({
+            id: index + 1,
+            category: item.category,
+            amount: item.amount,
+            ratio: total ? (item.amount / total) * 100 : 0
+        }))
+})
+
+// 合計金額
+const totalAmount = computed(() => {
+    return filteredExpenseData.value.reduce(
+        (sum, item) => sum + item.amount,
+        0
+    )
+})
+
+// 平均每天花費_計算天數
+const periodDays = computed(() => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth()
+
+    if (period.value === 'month') {
+        // 當月天數
+        return new Date(year, month + 1, 0).getDate()
+    }
+
+    if (period.value === 'year') {
+        // 判斷是否閏年
+        const isLeap =
+            (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
+        return isLeap ? 366 : 365
+    }
+
+    if (period.value === 'custom') {
+        if (!startDate.value || !endDate.value) return 0
+        const start = new Date(startDate.value)
+        const end = new Date(endDate.value)
+        return (
+            Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1
+        )
+    }
+
+    return 0
+})
+
+// 平均每天花費_計算平均一天花費
+const averagePerDay = computed(() => {
+    if (periodDays.value === 0) return 0
+    return Math.round(totalAmount.value / periodDays.value)
+})
 
 
 </script>
@@ -39,15 +161,26 @@ const dailyChartRef = ref(null)
                 <!-- 支出分析圖表_(圓餅圖支出項目分析) -->
                 <div class="charts-grid">
                     <div class="chart-card">
-                        <div class="chart-header">
-                            <p class="chart-description">切換年/月/期間</p>
+                        <div class="chart-header chart-description">
+                            <!-- 下拉選單 -->
+                            <span>檢視期間：</span>
+                            <select class="my-select" v-model="period">
+                                <option value="month">當月</option>
+                                <option value="year">當年</option>
+                                <option value="custom">自訂</option>
+                            </select>
+                            <div v-if="period === 'custom'">
+                                <input type="date" v-model="startDate" class="custom-select" />
+                                <span style="margin: 0 6px;">～</span>
+                                <input type="date" v-model="endDate" class="custom-select" />
+                            </div>
                         </div>
                         <div class="chart-wrapper">
                             <canvas ref="dailyChartRef"></canvas>
                         </div>
                         <div class="summary">
-                            <div>合計：NT$52,340</div>
-                            <div>平均每天：NT$18,346</div>
+                            <div>合計：NT${{ totalAmount.toLocaleString() }}</div>
+                            <div>平均每天：NT${{ averagePerDay.toLocaleString() }}</div>
                         </div>
                     </div>
                 </div>
@@ -68,35 +201,11 @@ const dailyChartRef = ref(null)
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>1</td>
-                            <td>飲食</td>
-                            <td>NT$8,935</td>
-                            <td>21.1%</td>
-                        </tr>
-                        <tr>
-                            <td>2</td>
-                            <td>學習深造</td>
-                            <td>NT$2,680</td>
-                            <td>10.3%</td>
-                        </tr>
-                        <tr>
-                            <td>3</td>
-                            <td>美容/美髮</td>
-                            <td>NT$2,000</td>
-                            <td>10.0%</td>
-                        </tr>
-                        <tr>
-                            <td>4</td>
-                            <td>教育</td>
-                            <td>NT$1,292</td>
-                            <td>8.2%</td>
-                        </tr>
-                        <tr>
-                            <td>5</td>
-                            <td>醫療保健</td>
-                            <td>NT$700</td>
-                            <td>5.2%</td>
+                        <tr v-for="row in categoryTableData" :key="row.category">
+                            <td>{{ row.id }}</td>
+                            <td>{{ row.category }}</td>
+                            <td>NT${{ row.amount.toLocaleString() }}</td>
+                            <td>{{ row.ratio.toFixed(1) }}%</td>
                         </tr>
                     </tbody>
                 </table>
@@ -245,5 +354,39 @@ h2 {
     margin: 0 auto;
     background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%);
     min-height: 100vh;
+}
+
+/* 下拉選單格式 */
+.my-select {
+    width: 5em;
+    /* 約 3 個中文字 */
+    padding: 1px 0px 1px 0px;
+    border: 0.5px solid #94a3b8;
+    /* 邊框顏色 */
+    border-radius: 6px;
+    /* 框內背景色 */
+    background-color: #ffffff;
+    /* 文字設定 */
+    font-size: 13px;
+    color: #94a3b8;
+    text-align: center;
+}
+
+.custom-select {
+    width: 10em;
+    padding: 1px 0px 1px 0px;
+    border: 0.5px solid #94a3b8;
+    border-radius: 6px;
+    background-color: #ffffff;
+    font-size: 13px;
+    color: #94a3b8;
+    text-align: center;
+    letter-spacing: 0.15em;
+    margin-top: 5pt;
+}
+
+.custom-select:focus {
+    border-color: #94a3b8;
+    outline: none;
 }
 </style>

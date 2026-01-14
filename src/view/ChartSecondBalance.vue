@@ -1,7 +1,7 @@
 <script setup>
 import Nav from '@/components/Nav.vue';
 import Chart_Preface from '@/components/ChartPreface.vue';
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 
 
@@ -20,7 +20,6 @@ const budgets = ref([
 ])
 
 // 顯示當天日期
-import { computed } from 'vue'
 const today = computed(() => {
     const now = new Date()
 
@@ -37,6 +36,122 @@ const today = computed(() => {
 const dailyChartRef = ref(null)
 
 
+// 表格連動下拉選單設定
+// 下拉選單控制，預設月
+const period = ref('month')
+// 自訂區間
+const startDate = ref(null) // '2025-02-01'
+const endDate = ref(null)   // '2025-04-30'
+
+// 月資料
+const monthlyData = [
+    {
+        id: 1,
+        date: '2025-05-01',
+        period: '2025年5月',
+        income: 40000,
+        expense: 20456,
+        diff: 12532,
+        total: 56279
+    },
+    {
+        id: 2,
+        date: '2025-04-01',
+        period: '2025年4月',
+        income: 39000,
+        expense: 17428,
+        diff: 10532,
+        total: 53795
+    },
+    {
+        id: 3,
+        date: '2025-03-01',
+        period: '2025年3月',
+        income: 39000,
+        expense: 16488,
+        diff: 15342,
+        total: 34859
+    },
+    {
+        id: 4,
+        date: '2025-02-01',
+        period: '2025年2月',
+        income: 39000,
+        expense: 18778,
+        diff: 13532,
+        total: 33426
+    },
+    {
+        id: 5,
+        date: '2025-01-01',
+        period: '2025年1月',
+        income: 39000,
+        expense: 16468,
+        diff: 18532,
+        total: 35797
+    }
+]
+
+
+
+// 年資料
+const yearlyData = [
+    {
+        id: 1,
+        period: '2025年',
+        income: 480000,
+        expense: 356000,
+        diff: 124000,
+        total: 5635830
+    },
+    {
+        id: 2,
+        period: '2024年',
+        income: 468000,
+        expense: 500450,
+        diff: -32450,
+        total: 5401230
+    },
+    {
+        id: 3,
+        period: '2023年',
+        income: 495000,
+        expense: 449700,
+        diff: 45300,
+        total: 5723450
+    }
+]
+
+
+// 根據 period 切換資料
+const tableData = computed(() => {
+    if (period.value === 'month') {
+        return monthlyData
+            .slice() // 避免改到原始資料（好習慣）
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+    }
+
+    if (period.value === 'year') {
+        return yearlyData
+    }
+
+    if (period.value === 'custom') {
+        if (!startDate.value || !endDate.value) return []
+
+        const start = new Date(startDate.value)
+        const end = new Date(endDate.value)
+
+        return monthlyData
+            .filter(row => {
+                const rowDate = new Date(row.date)
+                return rowDate >= start && rowDate <= end
+            })
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+    }
+
+    return []
+})
+
 
 </script>
 <template>
@@ -52,19 +167,30 @@ const dailyChartRef = ref(null)
                 <!-- 收支趨勢_(支出/收入/總收支) -->
                 <div class="charts-grid">
                     <div class="chart-card">
-                        <div class="chart-header">
-                            <p class="chart-description">切換年/月/期間</p>
+                        <div class="chart-header chart-description">
+                            <!-- 下拉選單 -->
+                            <span>檢視期間單位：</span>
+                            <select class="my-select" v-model="period">
+                                <option value="month">月</option>
+                                <option value="year">年</option>
+                                <option value="custom">自訂</option>
+                            </select>
+                            <div v-if="period === 'custom'">
+                                <input type="date" v-model="startDate" class="custom-select" />
+                                <span style="margin: 0 6px;">～</span>
+                                <input type="date" v-model="endDate" class="custom-select" />
+                            </div>
                         </div>
                         <div class="chart-wrapper">
                             <canvas ref="dailyChartRef"></canvas>
                         </div>
                     </div>
                 </div>
-                <!-- 收支趨勢_文字 -->
+                <!-- 收支趨勢_表格 -->
                 <table class="money-table">
                     <thead>
                         <tr>
-                            <th>月份</th>
+                            <th>期間</th>
                             <th>收入</th>
                             <th>支出</th>
                             <th>本期收支</th>
@@ -72,42 +198,41 @@ const dailyChartRef = ref(null)
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>2025年5月</td>
-                            <td>NT$40,000</td>
-                            <td>NT$20,456</td>
-                            <td>+12,532</td>
-                            <td>NT$56,279</td>
-                        </tr>
-                        <tr>
-                            <td>2025年4月</td>
-                            <td>NT$39,000</td>
-                            <td>NT$17,428</td>
-                            <td>+10,532</td>
-                            <td>NT$53,795</td>
-                        </tr>
-                        <tr>
-                            <td>2025年3月</td>
-                            <td>NT$39,000</td>
-                            <td>NT$16,488</td>
-                            <td>+15,342</td>
-                            <td>NT$34,859</td>
-                        </tr>
-                        <tr>
-                            <td>2025年2月</td>
-                            <td>NT$39,000</td>
-                            <td>NT$18,778</td>
-                            <td>+13,532</td>
-                            <td>NT$33,426</td>
-                        </tr>
-                        <tr>
-                            <td>2025年1月</td>
-                            <td>NT$39,000</td>
-                            <td>NT$16,468</td>
-                            <td>+18,532</td>
-                            <td>NT$35,797</td>
+                        <tr v-for="row in tableData" :key="row.id">
+                            <!-- 月份 -->
+                            <td>{{ row.period ?? '-' }}</td>
+
+                            <!-- 收入 -->
+                            <td>
+                                {{ typeof row.income === 'number'
+                                    ? 'NT$' + row.income.toLocaleString()
+                                    : '-' }}
+                            </td>
+
+                            <!-- 支出 -->
+                            <td>
+                                {{ typeof row.expense === 'number'
+                                    ? 'NT$' + row.expense.toLocaleString()
+                                    : '-' }}
+                            </td>
+
+                            <!-- 本期收支 -->
+                            <td>
+                                <span v-if="row.diff === null || row.diff === undefined">-</span>
+                                <span v-else :style="{ color: row.diff >= 0 ? '#3b82f6' : '#ef4444' }">
+                                    {{ row.diff > 0 ? '+' : '' }}{{ row.diff.toLocaleString() }}
+                                </span>
+                            </td>
+
+                            <!-- 總資產 -->
+                            <td>
+                                {{ typeof row.total === 'number'
+                                    ? 'NT$' + row.total.toLocaleString()
+                                    : '-' }}
+                            </td>
                         </tr>
                     </tbody>
+
                 </table>
             </div>
         </div>
@@ -142,7 +267,7 @@ h2 {
 
 .charts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120x, 1fr)); 
+    grid-template-columns: repeat(auto-fit, minmax(120x, 1fr));
 }
 
 .chart-card {
@@ -174,6 +299,42 @@ h2 {
     width: 100%;
     height: 350px;
 }
+
+/* 下拉選單格式 */
+.my-select {
+    width: 5em;
+    /* 約 3 個中文字 */
+    padding: 1px 0px 1px 0px;
+    border: 0.5px solid #94a3b8;
+    /* 邊框顏色 */
+    border-radius: 6px;
+    /* 框內背景色 */
+    background-color: #ffffff;
+    /* 文字設定 */
+    font-size: 13px;
+    color: #94a3b8;
+    text-align: center;
+}
+
+.custom-select {
+    width: 10em;
+    padding: 1px 0px 1px 0px;
+    border: 0.5px solid #94a3b8;
+    border-radius: 6px;
+    background-color: #ffffff;
+    font-size: 13px;
+    color: #94a3b8;
+    text-align: center;
+    letter-spacing: 0.15em;
+    margin-top: 5pt;
+}
+
+.custom-select:focus {
+    border-color: #94a3b8;
+    outline: none;
+}
+
+
 
 
 /* 文字趨勢_日期的格式 */

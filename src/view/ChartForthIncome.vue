@@ -1,11 +1,10 @@
 <script setup>
 import Nav from '@/components/Nav.vue';
 import Chart_Preface from '@/components/ChartPreface.vue';
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 
 // 顯示當天日期
-import { computed } from 'vue'
 const today = computed(() => {
     const now = new Date()
 
@@ -20,6 +19,132 @@ const today = computed(() => {
 })
 // 繪製淨資產分析_折線圖
 const dailyChartRef = ref(null)
+
+// 表格連動下拉選單設定
+// 下拉選單控制，預設月
+const period = ref('month')
+// 自訂區間
+const startDate = ref(null) // '2025-02-01'
+const endDate = ref(null)   // '2025-04-30'
+
+// 假資料
+const rawIncomeData = [
+    { id: 1, date: '2025-01-05', category: '薪資收入', amount: 48000 },
+    { id: 2, date: '2025-05-10', category: '兼職收入', amount: 8500 },
+    { id: 3, date: '2025-05-20', category: '投資利息', amount: 3200 },
+    { id: 4, date: '2026-01-01', category: '薪資收入', amount: 52000 },
+    { id: 5, date: '2026-01-08', category: '獎金', amount: 12000 },
+    { id: 6, date: '2026-01-15', category: '其他收入', amount: 3000 }
+]
+
+// 根據 period 切換資料
+const filteredExpenseData = computed(() => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth()
+
+    if (period.value === 'month') {
+        const start = new Date(year, month, 1)
+        const end = new Date(year, month + 1, 0)
+        return rawIncomeData.filter(r => {
+            const d = new Date(r.date)
+            return d >= start && d <= end
+        })
+    }
+
+    if (period.value === 'year') {
+        const start = new Date(year, 0, 1)
+        const end = new Date(year, 11, 31)
+        return rawIncomeData.filter(r => {
+            const d = new Date(r.date)
+            return d >= start && d <= end
+        })
+    }
+
+    if (period.value === 'custom') {
+        if (!startDate.value || !endDate.value) return []
+        const start = new Date(startDate.value)
+        const end = new Date(endDate.value)
+        return rawIncomeData.filter(r => {
+            const d = new Date(r.date)
+            return d >= start && d <= end
+        })
+    }
+
+    return []
+})
+
+const categoryTableData = computed(() => {
+    const map = {}
+    let total = 0
+
+    filteredExpenseData.value.forEach(item => {
+        if (!map[item.category]) {
+            map[item.category] = {
+                category: item.category,
+                amount: 0
+            }
+        }
+        map[item.category].amount += item.amount
+        total += item.amount
+    })
+
+    return Object.values(map)
+        .sort((a, b) => b.amount - a.amount)
+        .map((item, index) => ({
+            id: index + 1,
+            category: item.category,
+            amount: item.amount,
+            ratio: total ? (item.amount / total) * 100 : 0
+        }))
+})
+
+// 合計金額
+const totalAmount = computed(() => {
+    return filteredExpenseData.value.reduce(
+        (sum, item) => sum + item.amount,
+        0
+    )
+})
+
+// 計算期間等效月數（平均每月用）
+const periodMonths = computed(() => {
+    if (period.value === 'month') {
+        // 當月 → 1 個月（但後面會被擋掉）
+        return 1
+    }
+
+    if (period.value === 'year') {
+        return 12
+    }
+
+    if (period.value === 'custom') {
+        if (!startDate.value || !endDate.value) return 0
+
+        const start = new Date(startDate.value)
+        const end = new Date(endDate.value)
+
+        const diffDays =
+            Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1
+
+        // 1 個月 ≈ 30.44 天
+        return diffDays / 30.44
+    }
+
+    return 0
+})
+
+// 平均每月收入（期間需 >= 2 個月）
+const averagePerMonth = computed(() => {
+    if (periodMonths.value < 2) {
+        return null // 前端顯示 "-"
+    }
+
+    return Math.round(
+        totalAmount.value / periodMonths.value
+    )
+})
+
 
 
 
@@ -39,15 +164,32 @@ const dailyChartRef = ref(null)
                 <!-- 支出分析圖表_(圓餅圖支出項目分析) -->
                 <div class="charts-grid">
                     <div class="chart-card">
-                        <div class="chart-header">
-                            <p class="chart-description">切換年/月/期間</p>
+                        <div class="chart-header chart-description">
+                            <!-- 下拉選單 -->
+                            <span>檢視期間：</span>
+                            <select class="my-select" v-model="period">
+                                <option value="month">當月</option>
+                                <option value="year">當年</option>
+                                <option value="custom">自訂</option>
+                            </select>
+                            <div v-if="period === 'custom'">
+                                <input type="date" v-model="startDate" class="custom-select" />
+                                <span style="margin: 0 6px;">～</span>
+                                <input type="date" v-model="endDate" class="custom-select" />
+                            </div>
                         </div>
                         <div class="chart-wrapper">
                             <canvas ref="dailyChartRef"></canvas>
                         </div>
                         <div class="summary">
-                            <div>合計：NT$58,000</div>
-                            <div>平均每月：NT$53,000</div>
+                            <div>合計：NT${{ totalAmount.toLocaleString() }}</div>
+                            <div>
+                                平均每月：
+                                <span v-if="averagePerMonth === null">-</span>
+                                <span v-else>
+                                    NT${{ averagePerMonth.toLocaleString() }}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -249,4 +391,37 @@ h2 {
     min-height: 100vh;
 }
 
+/* 下拉選單格式 */
+.my-select {
+    width: 5em;
+    /* 約 3 個中文字 */
+    padding: 1px 0px 1px 0px;
+    border: 0.5px solid #94a3b8;
+    /* 邊框顏色 */
+    border-radius: 6px;
+    /* 框內背景色 */
+    background-color: #ffffff;
+    /* 文字設定 */
+    font-size: 13px;
+    color: #94a3b8;
+    text-align: center;
+}
+
+.custom-select {
+    width: 10em;
+    padding: 1px 0px 1px 0px;
+    border: 0.5px solid #94a3b8;
+    border-radius: 6px;
+    background-color: #ffffff;
+    font-size: 13px;
+    color: #94a3b8;
+    text-align: center;
+    letter-spacing: 0.15em;
+    margin-top: 5pt;
+}
+
+.custom-select:focus {
+    border-color: #94a3b8;
+    outline: none;
+}
 </style>
