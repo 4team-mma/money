@@ -1,8 +1,15 @@
-    <script setup>
+<script setup>
     import Nav from '@/components/Nav.vue';
-    import { reactive, ref } from 'vue'
+    import { reactive, ref ,onMounted} from 'vue';
+    import axios from 'axios';
+    import api from '@/api';
+    import { submitFeedbackApi } from '@/api/feedback';
+    import profile from './Settings.vue';
 
+// 給一個空值(form)，建立按鈕函數[ 把東西放在裡面並命名(postData)，呼叫 API，清空 ]
     const success = ref(false)
+    const errorMessage = ref('')
+
 
     const form = reactive({
     name : '',
@@ -12,18 +19,64 @@
 
     })
 
-    const submitFeedback = () => {
-    console.log('回饋資料：', { ...form })
-
-    success.value = true
-
-    // 提交後重置表單Reset
-    form.name = ''
-    form.type = ''
-    form.page = ''
-    form.message = ''
-    
+// 💡 新增：從後端獲取使用者名稱的函數
+const fetchUserData = async () => {
+    try {
+        // 這裡調用你後端獲取個人資料的 API
+        // 假設回傳格式是 { data: { username: "你的名字" } }
+        const response = await userApi.getProfile(); 
+        
+        if (response && response.username) {
+            form.name = response.username;
+        } else if (response.data && response.data.username) {
+            form.name = response.data.username;
+        }
+    } catch (error) {
+        console.error("抓取使用者資料失敗：", error);
+        // 如果 API 失敗，可以嘗試從 localStorage 拿當作備案
+        form.name = localStorage.getItem('username') || '';
     }
+};
+
+// 💡 關鍵：頁面一打開就去執行
+onMounted(() => {
+    fetchUserData();
+});
+
+
+const handleFormSubmit = async () => {
+    // 每次送出前先初始化狀態
+    success.value = false;
+    errorMessage.value = '';
+    
+    try {
+        const postData = {
+            feedback_name: form.name,
+            question_type: form.type,
+            use_page: form.page,
+            content: form.message
+        };
+        console.log("準備送出的資料：", postData);
+
+        // 呼叫 API
+        await submitFeedbackApi(postData);
+        
+        // 顯示成功訊息
+        alert("送出成功");
+        success.value = true;
+
+        // 💡 清空表格內容
+        form.type = '';
+        form.page = '';
+        form.message = '';
+
+    } catch (error) {
+        console.error("錯誤：", error);
+        // 💡 發生錯誤時，也可以給使用者提示
+        errorMessage.value = error.response?.data?.detail || "送出失敗，請稍後再試";
+    }
+};
+
     </script>
 
     <template>
@@ -34,16 +87,17 @@
         <div class="feedback-container">
         
 
-        <form @submit.prevent="submitFeedback">
+        <form @submit.prevent="handleFormSubmit">
 
         <label>
-            帳戶名稱
+            帳戶名稱 
             <input 
-            type="text" 
-            v-model="form.name" 
-            required 
-            placeholder="暱稱"
-            class="textarea">
+        type="text" 
+        v-model="form.name" 
+        required 
+        readonly 
+        placeholder="正在載入帳戶名稱..."
+        class="textarea readonly-input">
         </label>
 
         <label>
@@ -90,6 +144,7 @@
         </form>
 
         <p v-if="success" class="success">感謝你的回饋！我們會持續改善 🙌</p>
+        <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
     </div>
 
 
@@ -171,4 +226,11 @@
         border-radius: 10px;
         font-weight: 600;
     }
+
+    .readonly-input {
+    background-color: #f8fafc; /* 淺灰色背景 */
+    color: #64748b;           /* 灰字 */
+    cursor: not-allowed;      /* 滑鼠變成禁止符號 */
+    border: 2px solid #e2e8f0;
+}
     </style>

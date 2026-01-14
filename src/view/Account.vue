@@ -1,15 +1,125 @@
 <script setup>
-import { ref } from 'vue';
-import Nav from '@/components/Nav.vue';
-import AccountAdd1 from '@/components/AccountAdd1.vue';
+import { ref, onMounted, computed } from 'vue';
+import api from '@/api' // 確保使用統一的 api 設定
+import { accountApi } from '@/api/account';
 import AccountAdd2 from '@/components/AccountAdd2.vue';
+import AccountAdd1 from '@/components/AccountAdd1.vue';
+import Nav from '@/components/Nav.vue';
 
-// 重要
+
+
+
+
 const accounts = ref([])
-const addAccount = (account) => {
-    accounts.value.push(account)
-}
+
+
+// 計算加總數值 (優化點：動態計算而非寫死)
+const totalAssets = computed(() => {
+    return accounts.value
+        .filter(acc => acc.balance > 0)
+        .reduce((sum, acc) => sum + acc.balance, 0)
+})
+
+// 總負債：計算 balance 為負數的加總
+const totalDebt = computed(() => {
+    return accounts.value
+        .filter(acc => acc.balance < 0)
+        .reduce((sum, acc) => sum + Math.abs(acc.balance), 0)
+})
+
+// 總淨值：總資產 - 總負債
+const netWorth = computed(() => {
+    // 這裡我們直接加總所有餘額即可（正加負減）
+    return accounts.value.reduce((sum, acc) => sum + acc.balance, 0)
+})
+
+//負責將後端資料庫傳回來的名稱（通常是底線命名 account_id），轉換成前端元件好閱讀、好操作的名稱
+const mapApiToAppTransactions = (apiData) => {
+    return apiData.map(item => ({
+        id: item.account_id,
+        name: item.account_name,
+        type: item.account_type,
+        currency: item.currency,
+        balance: Number(item.current_balance),
+        icon: item.icon_id
+    }));
+};
+
+
+//get
+const fetchAccounts = async () => {
+    try {
+        const response = await accountApi.getList();
+        // 如果你的 axios 直接回傳 data，或者是包裹在 response.data 裡
+        const rawData = response.data ? response.data : response;
+
+        if (Array.isArray(rawData)) {
+            accounts.value = mapApiToAppTransactions(rawData);
+            console.log("前端陣列已更新:", accounts.value);
+        } else {
+            console.error("後端回傳格式非陣列", rawData);
+        }
+    } catch (error) {
+        console.error("加載失敗:", error);
+    }
+};
+
+
+//post+GET
+//連線到API放資料進去
+const handleAddAccount = async (newAccountData) => {
+    try {
+    await accountApi.create(newAccountData);
+    await fetchAccounts(); // 新增成功後重新拉取清單
+    } catch (err) {
+    console.error('新增帳戶失敗', err);
+    }
+};
+
+
+
+
+
+
+
+
+const activeId = ref(null); // 紀錄目前哪一個帳戶被點擊
+
+// 切換選中狀態，如果點擊同一個就取消選中
+const toggleActive = (id) => {
+    if (activeId.value === id) {
+        activeId.value = null;
+    } else {
+        activeId.value = id;
+    }
+};
+
+// 刪除處理 (先寫 log 測試)
+const handleDelete = (id) => {
+    console.log('刪除帳戶 ID:', id);
+    // 這裡之後接：await accountApi.delete(id); fetchAccounts();
+};
+
+// 編輯處理
+const handleEdit = (acc) => {
+    console.log('編輯帳戶:', acc);
+};
+
+
+
+
+
+
+onMounted(() => {
+    fetchAccounts()
+})
 </script>
+
+
+
+
+
+
 
 <template>
     <Nav>
@@ -20,7 +130,8 @@ const addAccount = (account) => {
         <h1 class="page-title">帳戶管理</h1>
     </div>
 
-    <AccountAdd1 @add-account="addAccount" />
+<!-- 「當我聽到 add-account 這個訊號時，請幫我執行 handleAddAccount 函數，並把子層丟出來的資料傳進去。」 -->
+    <AccountAdd1 @add-account="handleAddAccount" />
     
 </div>
 <p class="page-subtitle">管理您的所有帳戶與資產</p>
@@ -34,7 +145,7 @@ const addAccount = (account) => {
             <polyline points="17 6 23 6 23 12"></polyline></svg>
         </div>
         <br>
-        <h3 class="amount">NT$ 583,500</h3>
+        <h3 class="amount">NT$ {{ totalAssets.toLocaleString() }}</h3>
         <p class="change-text">所有正資產總和</p>
     </div>
     <div class="box debt-card">
@@ -44,7 +155,7 @@ const addAccount = (account) => {
             <polyline points="17 18 23 18 23 12"></polyline></svg>
         </div>
         <br>
-        <h3 class="amount">NT$ 12,300</h3>
+        <h3 class="amount">NT$ {{ totalDebt.toLocaleString() }}</h3>
         <p class="change-text">所有負債總和</p>
     </div>
     <div class="box value-card">
@@ -55,7 +166,7 @@ const addAccount = (account) => {
             <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>
         </div>
         <br>
-        <h3 class="amount">NT$ 571,200</h3>
+        <h3 class="amount">NT$ {{ netWorth.toLocaleString() }}0</h3>
         <p class="change-text">總資產減去總負債</p>
     </div>
 </div>
@@ -72,22 +183,29 @@ const addAccount = (account) => {
     <br>
     
     <div>
-        <div class="account-list">
-            <div class="account-card" v-for="(acc, index) in accounts" :key="index">
-                    <span class="emoji">{{ acc.icon }}</span>
-                    <div>
-                        <div>{{ acc.name }}</div>
-                        <div>{{ acc.type }} · {{ acc.currency }}</div>
-                    </div>
-                        
-            
-                <div class="world_right"> {{ acc.currency }} {{ acc.balance }}</div>
-            </div>    
-            
+        <div 
+            class="account-card" 
+            v-for="acc in accounts" 
+            :key="acc.id"
+            :class="{ 'is-transparent': activeId === acc.id }"
+            @click="toggleActive(acc.id)"
+            >
+            <span class="emoji">{{ acc.icon }}</span>
+            <div>
+                <div class="account-name">{{ acc.name }}</div>
+                <div class="change-text">{{ acc.type }}</div>
+            </div>
+            <div class="world_right"> {{ acc.currency }} {{ acc.balance.toLocaleString() }}</div>
+
+            <div v-if="activeId === acc.id">
+                <button class="edit-btn" @click.stop="handleEdit(acc)">編輯</button>
+                <button class="delete-btn" @click.stop="handleDelete(acc.id)">刪除</button>
+            </div>
         </div>
     </div>
+    
 <br>  
-<AccountAdd2 @add-account="addAccount" />
+<AccountAdd2 @add-account="handleAddAccount" />
 </div>
 </Nav>
 </template>
@@ -144,6 +262,11 @@ const addAccount = (account) => {
     font-weight: 700;
     color: #1e293b;
     margin-bottom: 10px;
+    }
+
+    .account-name{
+    font-size: 20px;
+    color: black;
     }
 
     .change-text{
@@ -243,6 +366,35 @@ const addAccount = (account) => {
         font-size: 50px;
     }
 
-    
+
+/* 編輯按鈕：純文字 + 圖標感 */
+.edit-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    color: #3b82f6;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+/* 刪除按鈕：純文字 + 圖標感 */
+.delete-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    color: #ef4444;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.edit-btn:hover, .delete-btn:hover {
+    transform: scale(1.1); /* 懸浮微放大的互動感 */
+}
 
 </style>

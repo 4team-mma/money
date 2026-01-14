@@ -18,6 +18,7 @@ import ChartForthIncome from "../view/ChartForthIncome.vue"
 import ForgetPassword from "@/view/ForgetPassword.vue";
 import AdminsComments from "@/view/AdminsComments.vue"
 import Feedback from "@/view/Feedback.vue";
+import AdminMain from "@/view/AdminMain.vue";
 
 const routes = [
   {
@@ -115,6 +116,11 @@ const routes = [
     path: "/AdminsComments",
     component: AdminsComments,
     name: "AdminsComments",
+  } ,
+    {
+    path: "/AdminMain",
+    component: AdminMain,
+    name: "AdminMain",
   }
 
 ];

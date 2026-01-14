@@ -1,67 +1,77 @@
 <script setup>
+import { reactive, ref, defineEmits } from 'vue'
+import { ElMessage } from 'element-plus'
 
-import { ref } from 'vue'
+// 1. 定義事件
+const emit = defineEmits(['add-account'])
 
 const showAddDialog = ref(false)
 
-const accountTypes = ref([
+// 2. 靜態選項資料
+const accountTypes = [
     { value: 'bank', label: '銀行帳戶' },
     { value: 'cash', label: '現金' },
     { value: 'credit', label: '信用卡' },
     { value: 'investment', label: '投資帳戶' }
-])
-const selectedType = ref(accountTypes.value[0].value)
+]
 
-
-const currencys = ref([
+const currencys = [
     { value: 'NT $', label: '新台幣 (TWD)' },
     { value: 'USD $', label: '美元 (USD)' },
     { value: 'EUR €', label: '歐元 (EUR)' },
     { value: 'JPY ¥', label: '日圓 (JPY)' }
-])
-const selectedCurrency = ref(currencys.value[0].value)
+]
 
+const icons = ['💰', '💳', '💵','🏦', '📈', '📉', '🧾', '📱', '🪙', '🏃',"🐵", "🐶", "🐷", "🐻", "🐨", "🐮", "🦁", "🐯", "🐰", "🐭", "🦉", "🐸"]
 
-const icons = ref(['💰', '💳', '💵','🏦', '📈', '📉', '🧾', '📱', '🪙', '🏃',"🐵", "🐶", "🐷", "🐻", "🐨", "🐮", "🦁", "🐯", "🐰", "🐭", "🦉", "🐸"])
-const selectedIcon = ref(icons.value[0])
+// 3. 核心狀態：統一管理所有輸入欄位
+const account = reactive({
+    name: '',
+    type: 'bank',
+    currency: 'NT $',
+    initial: 0,
+    exclude: false,
+    icon: '💰'
+})
 
+// 4. 重置邏輯 (呼叫一次即可清空全部)
+const resetAccount = () => {
+    Object.assign(account, {
+    name: '',
+    type: 'bank',
+    currency: 'NT $',
+    initial: 0,
+    exclude: false,
+    icon: '💰'
+    })
+}
 
-// 注意:較難的部分
-const newAdd = ref('')
-const initialBalance = ref(0)
-const emit = defineEmits(['add-account'])
-
+// 5. 提交邏輯
 const submit = () => {
-    if (!newAdd.value.trim()) {
-    alert('請輸入帳戶名稱')
+  // 檢查名稱是否為空
+    if (!account.name.trim()) {
+    ElMessage.warning('請輸入帳戶名稱') // 使用 Element Plus 的警告
     return
     }
 
-    emit('add-account',{
-    name: newAdd.value,
-    type: selectedType.value,
-    currency: selectedCurrency.value,
-    balance: initialBalance.value,
-    icon: selectedIcon.value
-    })
+  // 發送資料 (確保第一個參數是字串 'add-account')
+    emit('add-account', { ...account })
 
-  // 清空表單
-    newAdd.value = ''
-    selectedType.value = accountTypes.value[0].value
-    selectedCurrency.value = currencys.value[0].value
-    selectedIcon.value = icons.value[0]
-
-  // 關閉彈窗
+  // 關閉並重置
     showAddDialog.value = false
-    }
-
+    resetAccount()
+}
 </script>
 
+
 <template>
-    <button @click="showAddDialog = true" class="add_account_button "><i class="bi bi-plus">新增帳戶</i></button>
-    <div v-if="showAddDialog" class="acc_modal_overlay" @click="showAddDialog = false" >
+    <button @click="showAddDialog = true" class="add_account_button">
+        <i class="bi bi-plus">新增帳戶</i>
+    </button>
+
+    <div v-if="showAddDialog" class="acc_modal_overlay " @click="showAddDialog = false" >
         <!-- 上面的@click="showAddDialog = false代表按背景跳出 -->
-        <div class="add_acc_background acc_modal_content" @click.stop>
+        <div class="add_acc_background acc_modal_content " @click.stop>
             <!-- 上面的@click.stop代表小框框內停止喧染 -->
             <div class="acc_head">
                 <h3 class="acc_button_word">新增帳戶</h3>
@@ -70,13 +80,13 @@ const submit = () => {
             <hr>
             <div>
                 <h4 class="acc_button_word_small">帳戶名稱:</h4>
-                <input type="text" placeholder="例如：玉山銀行" v-model="newAdd" class="textarea">
+                <input type="text" placeholder="例如：玉山銀行" v-model="account.name" class="textarea">
             </div>
             <br>
             <div>
                 <label class="acc_button_word_small">帳戶類型:</label>
                 <div>
-                    <select v-model="selectedType" class="textarea">
+                    <select v-model="account.type" class="textarea">
                         <option v-for="type in accountTypes" :key="type.value" :value="type.value">
                             {{ type.label }}
                         </option>
@@ -87,7 +97,7 @@ const submit = () => {
             <div>
                 <label class="acc_button_word_small">貨幣:</label>
                 <div>
-                    <select v-model="selectedCurrency" class="textarea">
+                    <select v-model="account.currency" class="textarea">
                         <option v-for="currency in currencys" :key="currency.value" :value="currency.value">
                             {{ currency.label }}
                         </option>
@@ -97,12 +107,12 @@ const submit = () => {
             <br>
             <div>
                 <h4 class="acc_button_word_small">初始餘額:</h4>
-                <input type="number" placeholder="0" v-model.number="initialBalance" class="textarea">
+                <input type="number" placeholder="0" v-model.number="account.initial" class="textarea">
             </div>
             <br>
                 <h4 class="acc_button_word_small">是否計入資產:</h4>
                 <span class="form-check form-switch ">
-                    <input class="form-check-input" type="checkbox" role="switch" id="switchCheckDefault" >
+                    <input class="form-check-input" type="checkbox" role="switch" id="switchCheckDefault" v-model="account.exclude">
                 </span>
             <br>
             <div>
@@ -110,9 +120,9 @@ const submit = () => {
                 <div>
                     <button
                         v-for="(icon, index) in icons" 
-                        :class="{ active: selectedIcon === icon }"
-                        @click="selectedIcon = icon"
-                        :key="index" class="acc_button_color"
+                        :key="index" class="acc_button_color" 
+                        :class="{ active: account.icon === icon }"
+                        @click="account.icon = icon"
                         >
                         <span class="emoji">{{ icon }}</span>
                     </button>
@@ -125,7 +135,7 @@ const submit = () => {
             
         </div>
     </div>
-    
+
 </template>
 
 <style scoped>
