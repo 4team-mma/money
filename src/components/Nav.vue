@@ -53,9 +53,11 @@ const navigation = [
   { name: '帳戶管理', to: '/Account', icon: '⛺' },
   { name: '記一筆', to: '/Add', icon: '➕' },
   { name: '圖表分析', to: '/Chart', icon: '📈' },
+  { name: '消費趨勢', to: '/ConsumerAnalysis', icon: '⛽' },
   { name: '成就系統', to: '/Achievements', icon: '🏆' },
   { name: '問題回饋', to: '/Feedback', icon: '❓' },
   { name: '設定', to: '/Settings', icon: '⚙️' }
+  
 ]
 
 

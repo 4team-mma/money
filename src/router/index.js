@@ -19,6 +19,7 @@ import ForgetPassword from "@/view/ForgetPassword.vue";
 import AdminsComments from "@/view/AdminsComments.vue"
 import Feedback from "@/view/Feedback.vue";
 import AdminMain from "@/view/AdminMain.vue";
+import ConsumerAnalysis from "@/view/ConsumerAnalysis.vue";
 
 const routes = [
   {
@@ -121,6 +122,11 @@ const routes = [
     path: "/AdminMain",
     component: AdminMain,
     name: "AdminMain",
+  },
+    {
+    path: "/ConsumerAnalysis",
+    component: ConsumerAnalysis,
+    name: "ConsumerAnalysis",
   }
 
 ];
