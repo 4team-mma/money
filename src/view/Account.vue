@@ -166,7 +166,7 @@ onMounted(() => {
             <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>
         </div>
         <br>
-        <h3 class="amount">NT$ {{ netWorth.toLocaleString() }}0</h3>
+        <h3 class="amount">NT$ {{ netWorth.toLocaleString() }}</h3>
         <p class="change-text">總資產減去總負債</p>
     </div>
 </div>

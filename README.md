@@ -83,6 +83,7 @@ git clone https://github.com/4team-mma/money.git
 pnpm install
 pnpm add pinia
 pnpm install element-plus
+pnpm install chart.js
 
 # 安裝 v-calendar 套件
 pnpm install v-calendar@3.0.1 @popperjs/core
