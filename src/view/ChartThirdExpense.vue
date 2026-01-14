@@ -184,6 +184,12 @@ watch([categoryTableData, period, startDate, endDate], () => {
                 </div>
 
                 <table class="money-table">
+                    <colgroup>
+                        <col style="width: 10%;"> <!-- 排序（窄） -->
+                        <col style="width: 45%;"> <!-- 類別 -->
+                        <col style="width: 25%;"> <!-- 金額 -->
+                        <col style="width: 20%;"> <!-- 比例（吃剩下的） -->
+                    </colgroup>
                     <thead>
                         <tr><th>排序</th><th>類別</th><th>金額</th><th>比例</th></tr>
                     </thead>
