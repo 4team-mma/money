@@ -119,8 +119,8 @@ const tableData = computed(() => {
                     <thead>
                         <tr>
                             <th>期間</th>
-                            <th>本期淨資產</th>
-                            <th>淨資產增減(與上期相比)</th>
+                            <th>期末淨資產</th>
+                            <th>增減</th>
                         </tr>
                     </thead>
                     <tbody>

@@ -193,8 +193,8 @@ const tableData = computed(() => {
                             <th>期間</th>
                             <th>收入</th>
                             <th>支出</th>
-                            <th>本期收支</th>
-                            <th>總資產</th>
+                            <th>期末收支</th>
+                            <th>期末淨資產</th>
                         </tr>
                     </thead>
                     <tbody>
