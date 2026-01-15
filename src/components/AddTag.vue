@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue' // 🌟 確保引入 onMounted
 import { useCategoryStore } from '@/stores/useCategoryStore'
 import { storeToRefs } from 'pinia'
 
@@ -7,29 +7,66 @@ import { storeToRefs } from 'pinia'
 const showModal = ref(false)
 const showAdd = ref(false)
 const categoryStore = useCategoryStore()
-const { tags: categoryItems } = storeToRefs(categoryStore) // 2. 連結 Store 資料
-const selectedIds = ref([1])
+const { tags: categoryItems } = storeToRefs(categoryStore)
+
+const selectedIds = ref([]) // 初始為空，交給監聽器或掛載邏輯處理
 const newAdd = ref('')
 const newColor = ref('#ef4444')
-
-// 圖片中的顏色序列
 const colors = ['#ef4444', '#3b82f6','#004B97', '#22c55e', '#f97316', '#a855f7', '#ec4899']
 
-/* ---------- 計算屬性 ---------- */
+const props = defineProps({
+    modelValue: [Array, String]
+})
+const emit = defineEmits(['update:modelValue'])
 
-// 1. 找出所有「被選中」的完整標籤物件
+/**
+ * 🌟 監聽器：負責編輯時的資料回填
+ */
+watch(() => props.modelValue, (newVal) => {
+    if (!newVal) return;
+
+    let targetNames = [];
+    if (typeof newVal === 'string') {
+        targetNames = newVal.split(',').map(s => s.trim());
+    } else if (Array.isArray(newVal)) {
+        targetNames = newVal.map(i => typeof i === 'object' ? i.itemName : i);
+    }
+
+    const matchedIds = categoryItems.value
+        .filter(tag => targetNames.includes(tag.itemName))
+        .map(tag => tag.id);
+
+    if (matchedIds.length > 0) {
+        selectedIds.value = matchedIds;
+    }
+}, { immediate: true });
+
+/**
+ * 🌟 修正：組件掛載時的預設值處理
+ */
+onMounted(() => {
+    // 如果是「新增模式」(沒有傳入 modelValue) 且目前沒選中任何標籤
+    if (!props.modelValue && selectedIds.value.length === 0) {
+        // 預設選中 ID 為 1 的標籤 (假設 1 是「一般」)
+        const hasGeneral = categoryItems.value.some(t => t.id === 1);
+        if (hasGeneral) {
+            selectedIds.value = [1];
+            // 💡 重要：通知父組件現在選中的是「一般」，這樣儲存時才會有資料
+            emit('update:modelValue', selectedItems.value);
+        }
+    }
+});
+
+/* ---------- 計算屬性與方法 (保持不變) ---------- */
 const selectedItems = computed(() => {
     return categoryItems.value.filter(i => selectedIds.value.includes(i.id))
 })
 
-// 2. 計算主頁面按鈕要顯示的文字
 const displayText = computed(() => {
     if (selectedItems.value.length === 0) return '選擇標籤'
     return selectedItems.value.map(i => i.itemName).join(', ')
 })
 
-/* ---------- 父子方法 ---------- */
-const emit = defineEmits(['update:modelValue'])
 const toggleTag = (id) => {
     const index = selectedIds.value.indexOf(id)
     if (index > -1) {
@@ -37,35 +74,25 @@ const toggleTag = (id) => {
     } else {
         selectedIds.value.push(id)
     }
-    //  每次切換都要傳送最新選中的列表給父組件
     emit('update:modelValue', selectedItems.value)
 }
 
 const addNewItem = () => {
     if (!newAdd.value.trim()) return
-
     const newItem = { id: Date.now(), itemName: newAdd.value, color: newColor.value }
-
-// 3. 呼叫 Store 新增標籤，使其持久化
     categoryStore.addCustomTag(newItem)
-// 4. 將新標籤加入選中狀態
     selectedIds.value.push(newItem.id)
-    newAdd.value = ''
-    showAdd.value = false
-    //  每次切換都要傳送最新選中的列表給父組件
+    newAdd.value = ''; showAdd.value = false
     emit('update:modelValue', selectedItems.value)
 }
-// 如果需要刪除功能，也要同步修改 Store
+
 const removeItem = (id) => {
     categoryStore.$patch((state) => {
         state.tags = state.tags.filter(i => i.id !== id)
     })
-    // 移除選中狀態
     selectedIds.value = selectedIds.value.filter(sid => sid !== id)
     emit('update:modelValue', selectedItems.value)
 }
-
-
 </script>
 
 <template>
@@ -81,7 +108,6 @@ const removeItem = (id) => {
         <transition name="fade">
             <div v-if="showModal" class="modal-overlay" @click="showModal = false">
                 <div class="modal-content" @click.stop>
-
                     <div class="modal-header">
                         <h3>選擇標籤 (多選)</h3>
                         <button class="confirm-btn" @click="showModal = false">完成</button>
@@ -92,25 +118,22 @@ const removeItem = (id) => {
                             :class="{ active: selectedIds.includes(item.id) }" @click="toggleTag(item.id)">
                             <span class="color-dot" :style="{ backgroundColor: item.color }"></span>
                             {{ item.itemName }}
+                            <span class="del-btn" @click.stop="removeItem(item.id)">✕</span>
                         </div>
                     </div>
 
                     <div class="add-section">
-                        <div class="add-form" style="margin-top: 0;">
+                        <div class="add-form">
                             <input v-model="newAdd" placeholder="新增標籤名稱" class="tag-input" @keyup.enter="addNewItem" />
-
                             <div class="color-picker-wrapper">
-                                <div v-for="c in colors" :key="c" class="color-option-container" @click="newColor = c">
+                                <div v-for="c in colors" :key="c" @click="newColor = c">
                                     <span class="color-dot-large" :style="{ backgroundColor: c }"
-                                        :class="{ 'is-selected': newColor === c }">
-                                    </span>
+                                        :class="{ 'is-selected': newColor === c }"></span>
                                 </div>
                             </div>
-
                             <button class="btn-submit-large" @click="addNewItem">新增並選取</button>
                         </div>
                     </div>
-
                 </div>
             </div>
         </transition>

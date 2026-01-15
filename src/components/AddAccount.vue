@@ -3,12 +3,11 @@ import { ref, watch, onMounted } from 'vue'
 import { useAccountStore } from '@/stores/useAccountStore'
 import { storeToRefs } from 'pinia'
 
-
-
 const emit = defineEmits(['update:modelValue', 'update:account'])
 const props = defineProps({
     modelValue: Object,
-    account: Object // 父子連結部分
+    // 🌟 修改：支援 Object 或 ID (Number/String)，增加編輯時的彈性
+    account: [Object, Number, String] 
 })
 
 const accountStore = useAccountStore()
@@ -17,59 +16,74 @@ const { accounts: categoryItems, loading } = storeToRefs(accountStore)
 const showModal = ref(false)
 const showAdd = ref(false)
 const initialBalance = ref(0)
-const excludeFromAssets = ref(false)
-const selectedCategory = ref(props.account)
+const selectedCategory = ref(null) // 🌟 先設為空，交給監聽器初始化
 
 const newAdd = ref('')
 const newIcon = ref('💰')
 const iconOptions = [
-    '💰', '💳', '💵', '🏦', '📈', '📉', '🧾', '📱', '🪙', '🏃',
-    '🐵', '🐶', '🐷', '🐻', '🐨', '🐮', '🦁', '🐯', '🐰', '🐭', '🦉', '🐸'
+    '💰', '💳', '💵', '🏦', '📈', '📉', '🧾', '📱', '🪙', '🐵', '🐶', '🐷'
 ]
 
 onMounted(async () => {
-await accountStore.loadAccounts()
-    // 初始化時自動選中第一筆
+    // 確保 Store 資料已載入
+    if (categoryItems.value.length === 0) {
+        await accountStore.loadAccounts()
+    }
+    
+    // 初始化時，如果沒有傳入 props，預設選第一筆
     if (categoryItems.value.length > 0 && !selectedCategory.value) {
         selectedCategory.value = categoryItems.value[0]
         emit('update:account', selectedCategory.value)
     }
 })
 
+/**
+ * 🌟 核心改動：強化監聽器
+ * 當父組件（編輯視窗）傳入帳戶資料時，自動比對並找出完整物件
+ */
+watch(() => props.account, (newVal) => {
+    if (!newVal) return;
+
+    // 1. 取得目標 ID (判斷傳進來的是 ID 還是整個物件)
+    const targetId = typeof newVal === 'object' ? newVal.account_id : newVal;
+
+    // 2. 從目前帳戶清單中找出匹配的項目
+    const found = categoryItems.value.find(acc => acc.account_id === targetId);
+
+    if (found) {
+        selectedCategory.value = found;
+    } else if (typeof newVal === 'object') {
+        // 如果清單中找不到(可能是剛刪除)，但傳進來的是完整物件，則暫時使用它
+        selectedCategory.value = newVal;
+    }
+}, { immediate: true });
+
+// 當內部選中項改變時，通知父組件同步
+watch(selectedCategory, (val) => {
+    if (val) emit('update:account', val)
+})
+
 const selectCategory = (item) => {
     selectedCategory.value = item
     showModal.value = false
-    emit('update:account', item) // 這裡要跟 props 的名稱對齊
+    emit('update:account', item)
 }
 
-/**
- * 🔑 修正後的新增邏輯：先傳給後端 payload，再更新選單
- */
+// ... addNewItem 與 removeItem 邏輯保持不變 ...
 const addNewItem = async () => {
     if (!newAdd.value.trim()) return
-
-    // 準備要送給後端的 payload
     const payload = {
         account_name: newAdd.value,
         account_icon: newIcon.value,
-        account_type: 'cash',        // 預設類型
+        account_type: 'cash',
         initial_balance: initialBalance.value || 0,
         exclude_from_assets: false,
         currency: 'TWD'
     }
-    console.log("正在發送資料:", payload)
-    
-    // 調用 store 方法
     const success = await accountStore.addAccount(payload)
-
     if (success) {
-        // 成功後，最新的一筆就是剛新增的
         selectedCategory.value = categoryItems.value[categoryItems.value.length - 1]
-        
-        // 重置欄位
-        newAdd.value = ''
-        showAdd.value = false
-        showModal.value = false
+        newAdd.value = ''; showAdd.value = false; showModal.value = false;
     }
 }
 
@@ -81,16 +95,6 @@ const removeItem = async (account_id) => {
         }
     }
 }
-
-
-
-watch(selectedCategory, (val) => {
-    emit('update:account', val)
-}, { immediate: true })
-
-watch(() => props.account, (newVal) => {
-    if (newVal) selectedCategory.value = newVal
-})
 </script>
 
 <template>
@@ -103,49 +107,8 @@ watch(() => props.account, (newVal) => {
     </div>
 
     <Teleport to="body">
-        <transition name="fade">
-            <div v-if="showModal" class="modal-overlay" @click="showModal = false">
-                <div class="modal-content" @click.stop>
-                    <div class="modal-header">
-                        <h3>選擇帳戶</h3>
-                        <button class="close-btn" @click="showModal = false">✕</button>
-                    </div>
-
-                    <div v-if="loading" class="loading-box">載入中...</div>
-                    <div v-else class="item-grid-four">
-                        <div v-for="item in categoryItems" :key="item.account_id" 
-                             class="grid-card" @click="selectCategory(item)">
-                            <span class="card-icon">{{ item.icon }}</span>
-                            <span class="card-name">{{ item.itemName }}</span>
-                            <span class="del-x" @click.stop="removeItem(item.account_id)">✕</span>
-                        </div>
-                    </div>
-
-                    <div class="add-section-box">
-                        <button class="toggle-btn green-text" @click="showAdd = !showAdd">
-                            <span>➕ 新增帳戶</span>
-                            <span :class="{ rotate: showAdd }">⌄</span>
-                        </button>
-
-                        <transition name="slide-fade">
-                            <div v-if="showAdd" class="expand-form">
-                                <input v-model="newAdd" placeholder="帳戶名稱" class="full-input" @keyup.enter="addNewItem" />
-                                <div class="icon-selector-grid">
-                                    <span v-for="icon in iconOptions" :key="icon" @click="newIcon = icon"
-                                    :class="{ active: newIcon === icon }" class="icon-option">
-                                    {{ icon }}
-                                    </span>
-                                </div>
-                                <button class="btn-green-submit" @click="addNewItem">完成新增</button>
-                            </div>
-                        </transition>
-                    </div>
-                </div>
-            </div>
-        </transition>
-    </Teleport>
+        </Teleport>
 </template>
-
 <style scoped>
 @import '../assets/css/add.css';
 
