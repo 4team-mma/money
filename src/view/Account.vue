@@ -41,7 +41,7 @@ const mapApiToAppTransactions = (apiData) => {
         type: item.account_type,
         currency: item.currency,
         balance: Number(item.current_balance),
-        icon: item.icon_id
+        icon: item.account_icon
     }));
 };
 
