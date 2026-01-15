@@ -22,14 +22,23 @@
    /dev.sh
    ```
 ### 三、money檔，終端機輸入以下<br>
-1. 重新git clone或套件更新時
+1. 更新main及自己分支檔案
    ```
-   pnpm run dev
+   git switch main
+   git pull origin main
+   git checkout julia
+   git pull origin main
    ```
-3. 最後執行
+2. 特殊狀況需要執行的行為-重新git clone時<br>
    ```
    pnpm install
    ```
+3. 最後執行
+   ```
+   pnpm run dev
+   ```
+
+
 ## Git Pull流程
 1. 終端機輸入以下(分支名稱及更新訊息自行調整)
 ```
