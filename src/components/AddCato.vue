@@ -1,26 +1,45 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue' // 🌟 匯總 import
 import { useCategoryStore } from '@/stores/useCategoryStore'
 import { storeToRefs } from 'pinia'
 
-const showModal = ref(false)
-const showAdd = ref(false)
-
+// 1. 先定義 Props 和 Emits
 const props = defineProps({
-    modelValue: Object,
-    account: Object // 父子連結部分
-}) //接收父組件傳來的對象
+    modelValue: [Object, String], // 🌟 支援物件或字串
+    account: Object
+})
 const emit = defineEmits(['update:modelValue'])
 
+// 2. 初始化 Store
 const categoryStore = useCategoryStore()
-// 使用 storeToRefs 保持響應式連結
 const { categories: categoryItems } = storeToRefs(categoryStore)
-// ... selectedCategory 初始化改為從 store 拿 ...
-const selectedCategory = ref(categoryItems.value[0])
 
+// 3. 定義內部的響應式變數
+const showModal = ref(false)
+const showAdd = ref(false)
+const selectedCategory = ref(categoryItems.value[0]) // 預設值
 const newAdd = ref('')
 const newIcon = ref('🍔')
 
+// 4. 🌟 核心監聽邏輯 (放在 props 定義之後)
+watch(() => props.modelValue, (newVal) => {
+    if (!newVal) return;
+
+    // 判斷傳進來的是「名稱字串」還是「整個物件」
+    const targetName = typeof newVal === 'string' ? newVal : newVal.itemName;
+    
+    // 從清單中找回對應的完整物件，這樣圖示 (icon) 才能對上
+    const found = categoryItems.value.find(c => c.itemName === targetName);
+    
+    if (found) {
+        selectedCategory.value = found;
+    } else if (typeof newVal === 'object') {
+        // 如果找不到但傳進來的是物件，就直接使用它（適用於剛新增的項目）
+        selectedCategory.value = newVal;
+    }
+}, { immediate: true }); // immediate 確保一開啟編輯時就會觸發同步
+
+// ... 以下 addNewItem, selectCategory, removeItem 邏輯保持不變 ...
 const iconOptions = [
     '🍔', '🚗', '🏠', '🎮', '💡', '💊', '📚', '✈️', '🚆', '🎬', '🎁',
     '🎨', '🎵', '🏃', '🛍️', '🏖️', '🍕', '🍩', '☕', '🥗', '🍎'
@@ -29,20 +48,15 @@ const iconOptions = [
 const selectCategory = (item) => {
     selectedCategory.value = item
     showModal.value = false
-    // 💡 關鍵：把選中的結果傳回父組件
     emit('update:modelValue', item)
 }
 
 const addNewItem = () => {
     if (!newAdd.value.trim()) return
     const newItem = { id: Date.now(), itemName: newAdd.value, icon: newIcon.value }
-    // ✅ 改為存入 Store
     categoryItems.value.push(newItem)
-
-    // 💡 修正：選中新項目的同時，必須發送事件通知父組件同步更新 form 資料
     selectedCategory.value = newItem
     emit('update:modelValue', newItem)
-
     newAdd.value = '';
     showAdd.value = false;
     showModal.value = false;
