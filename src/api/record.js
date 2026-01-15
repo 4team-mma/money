@@ -20,3 +20,9 @@ export const recordApi = {
 
 // 為了相容你目前的 useAddRecord.js，保留這個導出
 export const createRecord = recordApi.create;
+
+
+// 🌟 請補上這段：更新紀錄
+export const updateRecord = (id, data) => {
+    return axios.put(`/records/${id}`, data)
+}

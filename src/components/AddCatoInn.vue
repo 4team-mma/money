@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue' // 🌟 引入 watch
 import { useCategoryStore } from '@/stores/useCategoryStore'
 import { storeToRefs } from 'pinia'
 
@@ -8,12 +8,12 @@ const showModal = ref(false)
 const showAdd = ref(false)
 
 const categoryStore = useCategoryStore()
-// 🌟 假設你在 Store 裡新增了 incomeCategories，或直接用 categories 並過濾
+// 假設 Store 裡已經有 incomeCategories
 const { incomeCategories: categoryItems } = storeToRefs(categoryStore)
 
 const props = defineProps({
-    modelValue: Object,
-    account: Object // 消除 Extraneous attributes 警告
+    modelValue: [Object, String], // 🌟 修改：支援物件或字串，方便編輯時對接
+    account: Object 
 })
 const emit = defineEmits(['update:modelValue'])
 
@@ -22,8 +22,29 @@ const newAdd = ref('')
 const newIcon = ref('💰')
 const iconOptions = ['💰', '💳', '💵', '🏦', '📈', '📉', '🧾', '📱', '🪙', '🏃', "🐵", "🐶", "🐷", "🐻", "🐨", "🐮", "🦁", "🐯", "🐰", "🐭", "🦉", "🐸"]
 
+/**
+ * 🌟 核心監聽邏輯：支援編輯模式
+ * 當父組件傳入 modelValue 時（例如編輯舊資料），自動從清單找回完整的圖示物件
+ */
+watch(() => props.modelValue, (newVal) => {
+    if (!newVal) return;
+
+    // 判斷是名稱字串還是物件
+    const targetName = typeof newVal === 'string' ? newVal : newVal.itemName;
+    
+    // 從收入類別清單中查找
+    const found = categoryItems.value.find(c => c.itemName === targetName);
+    
+    if (found) {
+        selectedCategory.value = found;
+    } else if (typeof newVal === 'object') {
+        selectedCategory.value = newVal;
+    }
+}, { immediate: true });
+
 onMounted(() => {
-    if (categoryItems.value && categoryItems.value.length > 0) {
+    // 只有在「新增模式」（沒有傳入 modelValue）時，才預設選中第一筆
+    if (!props.modelValue && categoryItems.value && categoryItems.value.length > 0) {
         selectedCategory.value = categoryItems.value[0]
         emit('update:modelValue', selectedCategory.value)
     }
@@ -38,7 +59,7 @@ const selectCategory = (item) => {
 const addNewItem = () => {
     if (!newAdd.value.trim()) return
     const newItem = { id: Date.now(), itemName: newAdd.value, icon: newIcon.value }
-    categoryStore.addCustomIncomeCategory(newItem) // 🌟 需在 Store 增加此 Action
+    categoryStore.addCustomIncomeCategory(newItem) 
     selectedCategory.value = newItem
     emit('update:modelValue', newItem)
     newAdd.value = ''; showAdd.value = false; showModal.value = false

@@ -1,35 +1,55 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue' // 🌟 引入 watch
 import { useCategoryStore } from '@/stores/useCategoryStore'
 import { storeToRefs } from 'pinia'
 
-const showModal = ref(false)
-const showAdd = ref(false)
-
-const props = defineProps(['modelValue']) // 建議補上以符合 Vue 規範
+// 1. 先定義 Props 與 Emits
+const props = defineProps({
+    modelValue: [Object, String] // 🌟 支援物件或成員名稱字串
+})
 const emit = defineEmits(['update:modelValue'])
 
+// 2. 初始化狀態
+const showModal = ref(false)
+const showAdd = ref(false)
 const categoryStore = useCategoryStore()
-// 使用 storeToRefs 保持響應式連結
 const { members: categoryItems } = storeToRefs(categoryStore)
-// ... selectedCategory 初始化改為從 store 拿 ...
-const selectedCategory = ref(categoryItems.value[0])
 
+// 預設選中第一筆，若之後有 props 傳入會被 watch 覆蓋
+const selectedCategory = ref(categoryItems.value[0])
 const newAdd = ref('')
+
+/**
+ * 🌟 核心監聽邏輯：支援編輯模式
+ * 當父組件傳入成員資料時，自動從 Store 清單找回對應的物件
+ */
+watch(() => props.modelValue, (newVal) => {
+    if (!newVal) return;
+
+    // 判斷傳進來的是成員名稱字串還是物件
+    const targetName = typeof newVal === 'object' ? newVal.itemName : newVal;
+    
+    // 從成員清單中查找
+    const found = categoryItems.value.find(m => m.itemName === targetName);
+    
+    if (found) {
+        selectedCategory.value = found;
+    } else if (typeof newVal === 'object') {
+        selectedCategory.value = newVal;
+    }
+}, { immediate: true });
+
 const selectCategory = (item) => {
     selectedCategory.value = item
     showModal.value = false
-    // 通知父組件
     emit('update:modelValue', item)
 }
 
 const addNewItem = () => {
     if (!newAdd.value.trim()) return
     const newItem = { id: Date.now(), itemName: newAdd.value }
-    // ✅ 改為存入 Store
     categoryItems.value.push(newItem)
 
-    // 💡 修正：選中新項目後，必須 emit 通知父組件更新 form.add_member
     selectedCategory.value = newItem
     emit('update:modelValue', newItem)
 
