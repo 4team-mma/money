@@ -5,6 +5,7 @@
     import BookSummaryCard from "@/components/BookSummaryCard.vue";
     import api from "@/api";
     import { ref, computed, onMounted, watch } from "vue";
+    import { ElMessage } from 'element-plus';
 
     const transactions = ref([]);
 
@@ -86,14 +87,39 @@
         month.value = payload.month;
         selectedDate.value = null;
     };
+
+    /**
+     * 刪除資料
+     */
+    const deleteTransaction = async (id) => {
+        const confirmDelete = window.confirm('確定要刪除這筆交易嗎？此操作無法復原！');
+        if (!confirmDelete) return;
+        try {
+            await api.delete(`/records/${id}`);
+            // 刪除成功後重新載入搜尋結果
+            await fetchTransactions();
+            ElMessage.success('刪除成功！');
+        } catch (error) {
+            ElMessage.error('刪除失敗：' + (err.response?.data?.detail || '連線異常'));
+        }
+    };
+
+     // 紀錄目前點選的項目 ID，預設為空
+    const activeId = ref(null);
+
+    const toggleButton = (id) => {
+        // 如果點的是同一個就關閉，不同就切換過去
+        activeId.value = activeId.value === id ? null : id;
+    };
 </script>
 
 <template>
-    <Nav>
+    <Nav @click="activeId = null">
         <h1 class="page-title">行事曆</h1>
         <div class="calendar-page-layout">
             <div class="calendar-grid">
                 <BookCalendarSection
+                    :key="transactions.length"
                     :attributes="calendarAttributes"
                     :today="today" @select-date="selectDate"
                     @move-today="selectedDate = today"
@@ -102,6 +128,9 @@
                 <BookTransactionDetails
                     :selectedDate="selectedDate"
                     :transactions="selectedDateTransactions"
+                    :activeId="activeId"
+                    @toggleButton="toggleButton"
+                    @deleteTransaction="deleteTransaction"
                 />
             </div>
             <BookSummaryCard

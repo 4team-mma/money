@@ -4,11 +4,44 @@
     const props = defineProps({
         selectedDate: String,
         transactions: Array,
+        activeId: Number,
     });
 
-    const formatNumber = (num) => num ? num.toLocaleString() : 0;
+    // 向父層回傳事件
+    const emit = defineEmits(["toggleButton", "deleteTransaction"]);
 
-    const isShow = ref(false);
+    // 格式化金額
+    const formatNumber = (num) => {
+        return num ? Number(num).toLocaleString() : 0;
+    };
+
+    // 編輯 Modal 控制
+    const showModal = ref(false);
+
+    // 表單資料
+    const formData = ref({
+        add_date: '',
+        add_amount: '',
+        add_type: '',
+        add_class: '',
+        add_class_icon: '',
+        account_id: '',
+        add_member: '',
+        add_tag: '',
+        add_note: ''
+    });
+
+    // 編輯 ID
+    const editingId = ref(null);
+
+    /**
+     * 開啟編輯 Modal
+     */
+    const openEditModal = (item) => {
+        editingId.value = item.add_id;
+        formData.value = { ...item };
+        showModal.value = true;
+    };
 </script>
 
 <template>
@@ -17,7 +50,7 @@
         <h3 class="details-title">{{ selectedDate || "請選擇日期" }}</h3>
 
         <div v-if="transactions.length > 0" class="transactions-scroll">
-            <div v-for="(t, index) in transactions" :key="index" class="transaction-item" @click="isShow = true">
+            <div v-for="(t, index) in transactions" :key="index" class="transaction-item" @click.stop="emit('toggleButton', t.add_id)">
                 <div class="transaction-info">
                     <div class="transaction-icon" :class="t.add_type ? 'income' : 'expense'">
                         <span v-if="t.add_class_icon">{{ t.add_class_icon }}</span>
@@ -34,8 +67,8 @@
                             {{ t.add_member }}<span v-if="t.add_note"> | {{ t.add_note }}</span>
                         </div>
                     </div>
-                    <button v-if="isShow">修改</button>
-                    <button v-if="isShow">刪除</button>
+                    <button v-if="props.activeId === t.add_id" @click="openEditModal(t)">編輯</button>
+                    <button v-if="props.activeId === t.add_id" @click="emit('deleteTransaction', t.add_id)">刪除</button>
                 </div>
                 <div class="transaction-details">
                     <div class="transaction-amount" :class="{ income: t.add_type }">
@@ -48,6 +81,26 @@
 
         <div v-else-if="selectedDate" class="empty-state">這天沒有交易記錄</div>
         <div v-else class="empty-state">點擊日期查看交易詳情</div>
+    </div>
+
+    <div v-if="showModal" class="modal">
+        <div class="modal-content">
+            <h3>編輯交易</h3>
+            <input v-model="formData.add_date" type="date" placeholder="日期" />
+            <input v-model="formData.add_amount" type="number" placeholder="金額" />
+            <input v-model="formData.add_type" placeholder="類型" />
+            <input v-model="formData.add_class" placeholder="類別名" />
+            <input v-model="formData.add_class_icon" placeholder="類別icon" />
+            <input v-model="formData.account_id" placeholder="帳戶來源" />
+            <input v-model="formData.add_member" placeholder="成員" />
+            <input v-model="formData.add_tag" placeholder="標籤" />
+            <input v-model="formData.add_note" placeholder="備註" />
+
+            <div style="margin-top: 10px;">
+                <button @click="saveData">儲存</button>
+                <button @click="showModal = false">取消</button>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -159,5 +212,28 @@
         text-align: center;
         color: #94a3b8;
         margin-top: 20px;
+    }
+
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .modal-content {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        width: 400px;
+    }
+    .modal-content input {
+        display: block;
+        width: 100%;
+        margin-bottom: 10px;
     }
 </style>
