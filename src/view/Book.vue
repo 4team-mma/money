@@ -107,18 +107,10 @@
             ElMessage.error('刪除失敗：' + (err.response?.data?.detail || '連線異常'));
         }
     };
-
-     // 紀錄目前點選的項目 ID，預設為空
-    const activeId = ref(null);
-
-    const toggleButton = (id) => {
-        // 如果點的是同一個就關閉，不同就切換過去
-        activeId.value = activeId.value === id ? null : id;
-    };
 </script>
 
 <template>
-    <Nav @click="activeId = null">
+    <Nav>
         <h1 class="page-title">行事曆</h1>
         <div class="calendar-page-layout">
             <div class="calendar-grid">
@@ -132,8 +124,6 @@
                 <BookTransactionDetails
                     :selectedDate="selectedDate"
                     :transactions="selectedDateTransactions"
-                    :activeId="activeId"
-                    @toggleButton="toggleButton"
                     @deleteTransaction="deleteTransaction"
                     @refreshList="refreshList"
                 />
@@ -159,7 +149,7 @@
 
     .calendar-grid {
         display: grid;
-        grid-template-columns: 3fr 2fr; /* 左大右小 */
+        grid-template-columns: 1fr 1fr; /* 左大右小 */
         gap: 24px;
         margin-bottom: 24px;
     }
