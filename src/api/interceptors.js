@@ -1,7 +1,8 @@
 import service from "./service";
 import { ElMessage } from "element-plus";
 
-
+// 🌟 必須引入 router 才能在攔截器裡做 router.push
+import router from '@/router';
 
 service.interceptors.request.use((config) => {
   // 1. 自動添加 JWT token

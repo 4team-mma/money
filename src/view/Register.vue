@@ -1,64 +1,103 @@
 <script setup>
-import { reactive,ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
-const loading = ref(false) // 防止重複點擊
+const loading = ref(false)
 
+// 🌟 Google Client ID (請確認這是您最新的 ID)
+const GOOGLE_CLIENT_ID = "709149079121-1mma6vkj82ni707n86sp098ub1re4q22.apps.googleusercontent.com";
+
+// 🌟 核心：頁面載入後，直接呼叫 window.google 產生按鈕
+onMounted(() => {
+    // 1. 確保 Google SDK 已載入
+    if (window.google) {
+        // 初始化 Google ID
+        window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleCallback
+        });
+        
+        // 渲染按鈕到 id 為 "google-btn-container" 的 div 裡
+        window.google.accounts.id.renderButton(
+            document.getElementById("google-btn-container"),
+            { 
+                theme: "outline", 
+                size: "large",
+                width: "300", // 按鈕寬度，配合您的設計
+                text: "signup_with", // 顯示 "使用 Google 註冊"
+                shape: "rectangular",
+                logo_alignment: "left"
+            }
+        );
+    } else {
+        console.error("Google SDK 尚未載入，請檢查網路或是 index.html");
+    }
+});
+
+// 處理 Google 回傳的 credential
+const handleGoogleCallback = async (response) => {
+    const credential = response.credential;
+    loading.value = true;
+    try {
+        const res = await api.post('/auth/google', { token: credential });
+        
+        // 🌟 1. 確保 Token 寫入 LocalStorage
+        localStorage.setItem('token', res.access_token);
+        // 🌟 2. 重要：同時更新 axios 的預設 header，確保下一次請求馬上帶上
+        // 假設您的 api 實例是從 @/api 引入的，這裡可以手動補強
+        api.defaults.headers.common['Authorization'] = `Bearer ${res.access_token}`;
+
+        ElMessage.success('Google 登入成功！');
+        
+        // 🌟 3. 短暫延遲 100ms 再跳轉，確保儲存完畢 (這是最保險的做法)
+        setTimeout(() => {
+            router.push('/book');
+        }, 100);
+
+    } catch (err) {
+        console.error('Google 驗證失敗:', err);
+        ElMessage.error('登入失敗，請稍後再試');
+    } finally {
+        loading.value = false;
+    }
+};
+
+// --- 以下維持您原本的表單邏輯 ---
 const formData = reactive({
-    username: '', // 
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    agreeTerms: false
+    username: '', name: '', email: '', password: '', confirmPassword: '', agreeTerms: false
 })
 
 const handleRegister = async () => {
-    // 1. 驗證密碼一致性
     if (formData.password !== formData.confirmPassword) {
-        ElMessage.warning('密碼不一致，請重新輸入')
+        ElMessage.warning('密碼不一致')
         return
     }
     if (!formData.agreeTerms) {
-            ElMessage.warning('請勾選同意條款')
-            return
+        ElMessage.warning('請勾選同意條款')
+        return
     }
     loading.value = true
-
-try {
-        // 🌟 2. 呼叫後端 API 註冊接口
-        // 最終發出：POST http://localhost:8000/api/auth/register
-        const res =await api.post('/auth/register', {
+    try {
+        await api.post('/auth/register', {
             username: formData.username,
             name: formData.name,
             email: formData.email,
             password: formData.password,
-            confirm_password: formData.confirmPassword // 這裡必須用下底線
-        });
-        //console.log('註冊成功回傳：', res);
-
-        // 🌟 3. 因為攔截器已經處理過 .data，所以這裡直接判斷回傳訊息
-        // 你的 auth.py 回傳的是 {"msg": "註冊成功"}
-        ElMessage.success('註冊成功！歡迎加入 Money MMA');
-        
-        // 清除舊的本地離線資料（選做，為了確保之後讀取都是資料庫的資料）
-        localStorage.removeItem('mma_users');
-
-        router.push('/'); // 跳轉回登入頁
+            confirm_password: formData.confirmPassword
+        })
+        ElMessage.success('註冊成功！')
+        router.push('/')
     } catch (err) {
-        // 🌟 4. 錯誤處理：如果 Email 已被註冊，後端會拋出 400 錯誤
-        // 攔截器 interceptors.js 會自動彈出 ElMessage.error(detail)
-        console.error('註冊流程中斷：', err);
+        console.error('註冊流程中斷：', err)
     } finally {
         loading.value = false
     }
 }
 
 const goToLogin = () => router.push('/')
-
 </script>
 
 <template>
@@ -69,20 +108,15 @@ const goToLogin = () => router.push('/')
 
         <div class="main-container">
             <div class="card-wrapper">
-
                 <div class="form-section">
                     <div class="logo-area">
                         <div class="logo-icon">
-                            <span class="icon">
-                                <img src="../assets/logo.svg" alt="logo" width="48" height="48">
-                            </span>
+                            <img src="../assets/logo.svg" alt="logo" width="48" height="48">
                         </div>
                         <h1 class="brand-name">Money MMA</h1>
                     </div>
-
                     <div class="header-text">
                         <h2 style="padding-bottom: 5px;">創建新帳戶</h2>
-
                     </div>
 
                     <form @submit.prevent="handleRegister" class="register-form">
@@ -90,17 +124,14 @@ const goToLogin = () => router.push('/')
                             <label>登入帳號 (Username)</label>
                             <input v-model="formData.username" type="text" placeholder="設定登入帳號" required />
                         </div>
-
                         <div class="form-group">
                             <label>使用者名稱 (暱稱)</label>
                             <input v-model="formData.name" type="text" placeholder="您的稱呼" required />
                         </div>
-
                         <div class="form-group">
                             <label>電子郵件 (Email)</label>
                             <input v-model="formData.email" type="email" placeholder="your@email.com" required />
                         </div>
-
                         <div class="password-row">
                             <div class="form-group">
                                 <label>密碼</label>
@@ -108,19 +139,15 @@ const goToLogin = () => router.push('/')
                             </div>
                             <div class="form-group">
                                 <label>確認密碼</label>
-                                <input v-model="formData.confirmPassword" type="password" placeholder="••••••••"
-                                    required />
+                                <input v-model="formData.confirmPassword" type="password" placeholder="••••••••" required />
                             </div>
                         </div>
-
                         <div class="checkbox-group">
                             <input v-model="formData.agreeTerms" type="checkbox" id="terms" required />
                             <label for="terms">我同意服務條款和隱私政策</label>
                         </div>
-
-                        <button type="submit" class="submit-button">
-                            立即註冊
-                            <span class="arrow">→</span>
+                        <button type="submit" class="submit-button" :disabled="loading">
+                            立即註冊 <span class="arrow">→</span>
                         </button>
                     </form>
 
@@ -128,11 +155,8 @@ const goToLogin = () => router.push('/')
                         <span>或使用</span>
                     </div>
 
-                    <div class="social-actions">
-                        <button class="btn-social">
-                            <img src="https://www.google.com/favicon.ico" width="18" alt="google" />
-                            使用 Google 註冊
-                        </button>
+                    <div class="social-actions" style="display: flex; justify-content: center; margin-top: 15px;">
+                        <div id="google-btn-container"></div>
                     </div>
 
                     <p class="login-link">
@@ -146,32 +170,14 @@ const goToLogin = () => router.push('/')
                             <h3>加入智能理財</h3>
                             <p>體驗專業的財務管理工具</p>
                         </div>
-
                         <div class="feature-grid">
-                            <div class="feature-card">
-                                <div class="feature-icon">💰</div>
-                                <h3>智能記帳</h3>
-                                <p>自動分類管理收支</p>
-                            </div>
-                            <div class="feature-card">
-                                <div class="feature-icon">📈</div>
-                                <h3>趨勢洞察</h3>
-                                <p>視覺化您的財富增長</p>
-                            </div>
-                            <div class="feature-card">
-                                <div class="feature-icon">🛡️</div>
-                                <h3>安全加密</h3>
-                                <p>銀行級資料保護</p>
-                            </div>
-                            <div class="feature-card">
-                                <div class="feature-icon">🚀</div>
-                                <h3>財富自由</h3>
-                                <p>邁向理想生活目標</p>
-                            </div>
+                            <div class="feature-card"><div class="feature-icon">💰</div><h3>智能記帳</h3><p>自動分類管理收支</p></div>
+                            <div class="feature-card"><div class="feature-icon">📈</div><h3>趨勢洞察</h3><p>視覺化您的財富增長</p></div>
+                            <div class="feature-card"><div class="feature-icon">🛡️</div><h3>安全加密</h3><p>銀行級資料保護</p></div>
+                            <div class="feature-card"><div class="feature-icon">🚀</div><h3>財富自由</h3><p>邁向理想生活目標</p></div>
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
@@ -179,6 +185,8 @@ const goToLogin = () => router.push('/')
 
 <style scoped>
 @import '../assets/css/register.css';
-
-
+/* 確保 Google 按鈕容器有高度，避免閃爍 */
+#google-btn-container {
+    min-height: 40px;
+}
 </style>
