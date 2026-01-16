@@ -12,7 +12,7 @@ export const recordApi = {
     getDetail: (recordId) => api.get(`/records/${recordId}`),
 
     // 4. 修改記錄 (用於編輯功能)
-    update: (recordId, data) => api.put(`/records/${recordId}`, data),
+    update: (recordId, data) => api.patch(`/records/${recordId}`, data),
 
     // 5. 刪除記錄 (用於註銷功能)
     delete: (recordId) => api.delete(`/records/${recordId}`)
@@ -24,5 +24,5 @@ export const createRecord = recordApi.create;
 
 // 🌟 請補上這段：更新紀錄
 export const updateRecord = (id, data) => {
-    return axios.put(`/records/${id}`, data)
+    return recordApi.update(id, data)
 }
