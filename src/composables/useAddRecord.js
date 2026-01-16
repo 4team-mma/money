@@ -136,6 +136,7 @@ export function useAddRecord(initialType = false) {
             if (await submitData()) {
                 ElMessage.success(form.add_id ? '修改成功！' : '儲存成功！')
                 router.push('/book')
+                return {'success': true}
             }
         } catch (err) {
             ElMessage.error('儲存失敗：' + (err.response?.data?.detail || '連線異常'))

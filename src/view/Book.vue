@@ -88,6 +88,10 @@
         selectedDate.value = null;
     };
 
+    const refreshList = async () => {
+        await fetchTransactions();
+    }
+
     /**
      * 刪除資料
      */
@@ -131,6 +135,7 @@
                     :activeId="activeId"
                     @toggleButton="toggleButton"
                     @deleteTransaction="deleteTransaction"
+                    @refreshList="refreshList"
                 />
             </div>
             <BookSummaryCard
