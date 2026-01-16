@@ -88,7 +88,114 @@
 </template>
 
 <style scoped>
-    /* 原有的 CSS 保持不變即可... */
+    .details-section {
+        background: #fff;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+        height: 450px; /* 固定高度 */
+    }
+
+    .details-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 12px;
+    }
+
+    .transactions-scroll {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 8px;
+    }
+
+    .transaction-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        border-radius: 10px;
+        transition: background 0.2s;
+    }
+
+    .transaction-item:hover {
+        background: #f8fafc;
+    }
+
+    .transaction-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .transaction-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .transaction-icon.income {
+        background: rgba(16, 185, 129, 0.1);
+    }
+
+    .transaction-icon.expense {
+        background: rgba(239, 68, 68, 0.1);
+    }
+
+    .transaction-icon svg {
+        width: 16px;
+        height: 16px;
+        stroke-width: 2;
+        fill: none;
+    }
+
+    .transaction-icon.income svg {
+        stroke: #10b981;
+    }
+
+    .transaction-icon.expense svg {
+        stroke: #ef4444;
+    }
+
+    .transaction-name {
+        font-size: 14px;
+        font-weight: 500;
+        color: #1e293b;
+    }
+
+    .transaction-category {
+        font-size: 12px;
+        color: #94a3b8;
+    }
+
+    .transaction-details {
+        text-align: right;
+    }
+
+    .transaction-amount {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .transaction-amount.income {
+        color: #10b981;
+    }
+
+    .transaction-account-name {
+        font-size: 12px;
+        color: #94a3b8;
+    }
+
+    .empty-state {
+        text-align: center;
+        color: #94a3b8;
+        margin-top: 20px;
+    }
     .modal {
         position: fixed;
         top: 0;
