@@ -120,6 +120,7 @@
                     :today="today" @select-date="selectDate"
                     @move-today="selectedDate = today"
                     @update-date="updateBookDate"
+                    :selectedDate="selectedDate"
                 />
                 <BookTransactionDetails
                     :selectedDate="selectedDate"
@@ -149,7 +150,7 @@
 
     .calendar-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr; /* 左大右小 */
+        grid-template-columns: 1fr 1fr; /* 左右等寬 */
         gap: 24px;
         margin-bottom: 24px;
     }
