@@ -3,10 +3,8 @@ import { ref, watch, onMounted } from 'vue'
 import { useAccountStore } from '@/stores/useAccountStore'
 import { storeToRefs } from 'pinia'
 
-const emit = defineEmits(['update:modelValue', 'update:account'])
+const emit = defineEmits(['update:account'])
 const props = defineProps({
-    modelValue: Object,
-    // 🌟 修改：支援 Object 或 ID (Number/String)，增加編輯時的彈性
     account: [Object, Number, String] 
 })
 
@@ -15,50 +13,38 @@ const { accounts: categoryItems, loading } = storeToRefs(accountStore)
 
 const showModal = ref(false)
 const showAdd = ref(false)
-const initialBalance = ref(0)
-const selectedCategory = ref(null) // 🌟 先設為空，交給監聽器初始化
+const selectedCategory = ref(null)
 
 const newAdd = ref('')
 const newIcon = ref('💰')
-const iconOptions = [
-    '💰', '💳', '💵', '🏦', '📈', '📉', '🧾', '📱', '🪙', '🐵', '🐶', '🐷'
-]
+const initialBalance = ref(0)
+const iconOptions = ['💰', '💳', '💵', '🏦', '📈', '📉', '🧾', '📱', '🪙', '🐵', '🐶', '🐷']
 
 onMounted(async () => {
-    // 確保 Store 資料已載入
+    // 1. 確保資料載入
     if (categoryItems.value.length === 0) {
         await accountStore.loadAccounts()
     }
     
-    // 初始化時，如果沒有傳入 props，預設選第一筆
+    // 2. 如果是新增模式且沒選中，預設選第一筆
     if (categoryItems.value.length > 0 && !selectedCategory.value) {
+        // 🌟 這裡要確保抓取的屬性名稱與 Store 一致
         selectedCategory.value = categoryItems.value[0]
         emit('update:account', selectedCategory.value)
     }
 })
 
-/**
- * 🌟 核心改動：強化監聽器
- * 當父組件（編輯視窗）傳入帳戶資料時，自動比對並找出完整物件
- */
+// 監聽外部傳入的 account (用於編輯模式)
 watch(() => props.account, (newVal) => {
     if (!newVal) return;
-
-    // 1. 取得目標 ID (判斷傳進來的是 ID 還是整個物件)
     const targetId = typeof newVal === 'object' ? newVal.account_id : newVal;
-
-    // 2. 從目前帳戶清單中找出匹配的項目
     const found = categoryItems.value.find(acc => acc.account_id === targetId);
-
     if (found) {
         selectedCategory.value = found;
-    } else if (typeof newVal === 'object') {
-        // 如果清單中找不到(可能是剛刪除)，但傳進來的是完整物件，則暫時使用它
-        selectedCategory.value = newVal;
     }
 }, { immediate: true });
 
-// 當內部選中項改變時，通知父組件同步
+// 監聽內部選中變化，同步給父組件
 watch(selectedCategory, (val) => {
     if (val) emit('update:account', val)
 })
@@ -66,10 +52,8 @@ watch(selectedCategory, (val) => {
 const selectCategory = (item) => {
     selectedCategory.value = item
     showModal.value = false
-    emit('update:account', item)
 }
 
-// ... addNewItem 與 removeItem 邏輯保持不變 ...
 const addNewItem = async () => {
     if (!newAdd.value.trim()) return
     const payload = {
@@ -86,29 +70,51 @@ const addNewItem = async () => {
         newAdd.value = ''; showAdd.value = false; showModal.value = false;
     }
 }
-
-const removeItem = async (account_id) => {
-    if (confirm('確定要刪除此帳戶嗎？')) {
-        const success = await accountStore.deleteAccount(account_id);
-        if (success && selectedCategory.value?.account_id === account_id) {
-            selectedCategory.value = categoryItems.value[0] ?? null;
-        }
-    }
-}
 </script>
 
 <template>
-    <div class="picker-trigger" @click="showModal = true">
+    <div class="picker-trigger" @click="showModal = true" style="cursor: pointer;">
         <span v-if="loading" class="current-name">載入中...</span>
         <template v-else>
-            <span class="current-icon">{{ selectedCategory?.icon || '❓' }}</span>
-            <span class="current-name">{{ selectedCategory?.itemName || '請選擇帳戶' }}</span>
+            <span class="current-icon">{{ selectedCategory?.icon || selectedCategory?.account_icon || '🏦' }}</span>
+            <span class="current-name">{{ selectedCategory?.itemName || selectedCategory?.account_name || '請選擇帳戶' }}</span>
         </template>
     </div>
 
     <Teleport to="body">
-        </Teleport>
+        <transition name="fade">
+            <div v-if="showModal" class="modal-overlay" @click="showModal = false">
+                <div class="modal-content" @click.stop>
+                    <div class="modal-header">
+                        <h3>選擇帳戶</h3>
+                        <button class="close-btn" @click="showModal = false">✕</button>
+                    </div>
+
+                    <div v-if="loading" class="loading-box">載入中...</div>
+                    <div v-else class="item-grid-four">
+                        <div v-for="item in categoryItems" :key="item.account_id" 
+                             class="grid-card" @click="selectCategory(item)">
+                            <span class="card-icon">{{ item.icon || item.account_icon }}</span>
+                            <span class="card-name">{{ item.itemName || item.account_name }}</span>
+                        </div>
+                    </div>
+
+                    <div class="add-section-box">
+                        <button class="toggle-btn" @click="showAdd = !showAdd">
+                            <span>➕ 新增帳戶</span>
+                        </button>
+                        <div v-if="showAdd" class="expand-form">
+                            <input v-model="newAdd" placeholder="帳戶名稱" />
+                            <button @click="addNewItem">完成</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+    </Teleport>
 </template>
+
+
 <style scoped>
 @import '../assets/css/add.css';
 
