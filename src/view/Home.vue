@@ -1,38 +1,96 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue' // 🌟 記得引入 onMounted
 import { useRouter } from 'vue-router'
 import api from '@/api'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 
+// 🌟 Google Client ID (與註冊頁一致)
+const GOOGLE_CLIENT_ID = "709149079121-1mma6vkj82ni707n86sp098ub1re4q22.apps.googleusercontent.com";
+
 const formData = ref({
     email: '',
     password: ''
 })
 
+// --- Google 登入邏輯 (新增) ---
+onMounted(() => {
+    // 渲染 Google 按鈕
+    if (window.google) {
+        window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleCallback
+        });
+        
+        window.google.accounts.id.renderButton(
+            document.getElementById("google-login-btn"),
+            { 
+                theme: "outline", 
+                size: "large",
+                width: "320", // 配合下方 CSS 的寬度
+                text: "signin_with", // 顯示 "使用 Google 登入"
+                shape: "rectangular",
+                logo_alignment: "left"
+            }
+        );
+    }
+});
+
+const handleGoogleCallback = async (response) => {
+    const credential = response.credential;
+    try {
+        const res = await api.post('/auth/google', { token: credential });
+        
+        // 🌟 統一儲存邏輯 (跟您原本的手動登入保持一致)
+        if (res.access_token) {
+            localStorage.setItem('currentUser', JSON.stringify(res.user));
+            localStorage.setItem('user_token', res.access_token); // 統一叫 user_token
+            
+            // 更新 Axios 預設 Header
+            api.defaults.headers.common['Authorization'] = `Bearer ${res.access_token}`;
+
+            ElMessage.success('Google 登入成功！');
+            
+            // 延遲跳轉確保寫入
+            setTimeout(() => {
+                // 如果後端回傳 user.role，可在此判斷跳轉
+                if (res.user && res.user.role === 'admin') {
+                    router.push('/admins');
+                } else {
+                    router.push('/book');
+                }
+            }, 100);
+        }
+    } catch (err) {
+        console.error('Google 登入失敗:', err);
+        ElMessage.error('Google 登入失敗，請稍後再試');
+    }
+};
+
+// --- 手動登入邏輯 (維持不變) ---
 const handleLogin = async () => {
     const { email: loginIdentifier, password } = formData.value
     
     try {
-        // 🌟 1. 統一使用 res 接收 API 結果
         const res = await api.post('/auth/login', {
             identifier: loginIdentifier,
             password: password
         });
 
-        // 🌟 2. 直接檢查 res.access_token (攔截器已拆箱)
         if (res && res.access_token) {
             const user = res.user;
             const token = res.access_token;
 
-            // 存入 localStorage 供全系統使用
+            // 存入 localStorage
             localStorage.setItem('currentUser', JSON.stringify(user));
             localStorage.setItem('user_token', token); 
             
+            // 🌟 建議補上這行：讓後續 API 請求能立刻帶上 Token
+            api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
             ElMessage.success('登入成功！');
 
-            // 依角色跳轉
             if (user.role === 'admin') {
                 router.push('/admins');
             } else {
@@ -40,8 +98,6 @@ const handleLogin = async () => {
             }
         }
     } catch (err) {
-        // 🌟 3. 錯誤處理邏輯
-        // 這裡不需要再跳 ElMessage（攔截器做過了）
         console.log('登入失敗，攔截器已處理彈窗');
     }
 }
@@ -88,6 +144,14 @@ const handleRegister = () => router.push('/Register')
                         </button>
                     </form>
 
+                    <div class="divider">
+                        <span>or</span>
+                    </div>
+
+                    <div class="social-login">
+                        <div id="google-login-btn"></div>
+                    </div>
+
                     <div class="register-link">
                         還沒有帳號？ <a href="#" @click.prevent="handleRegister">立即註冊 </a>or
                         <RouterLink to="/ForgetPassword">忘記密碼?</RouterLink>
@@ -123,4 +187,33 @@ const handleRegister = () => router.push('/Register')
 
 <style scoped>
 @import '../assets/css/home.css';
+
+/* 🌟 新增樣式：分隔線與 Google 按鈕容器 */
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 20px 0;
+    color: #666;
+    font-size: 14px;
+}
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #e0e0e0;
+}
+.divider span {
+    padding: 0 10px;
+    color: #999;
+    text-transform: uppercase;
+    font-size: 12px;
+}
+
+.social-login {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    min-height: 40px; /* 避免閃爍 */
+}
 </style>
