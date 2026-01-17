@@ -49,11 +49,11 @@ const onSave = async () => {
     <div class="edit-form-wrap">
         <div class="edit-header">
             <h3>{{ form.add_type ? '編輯收入' : '編輯支出' }}</h3>
-            <DatePicker v-model="form.add_date" mode="date" :popover="{ visibility: 'click' }">
+            <DatePicker v-model="form.add_date" mode="date" :popover="{ visibility: 'click' }" :masks="{ title: 'YYYY年 MMM' }">
                 <template #default="{ togglePopover, inputValue }">
                     <div class="date-trigger" @click="togglePopover">
-                        <span class="icon">🗓</span>
-                        <span class="text">{{ inputValue }}</span>
+                        <span class="icon">🗓️</span>
+                        <span>{{ inputValue }}</span>
                     </div>
                 </template>
             </DatePicker>
@@ -128,4 +128,17 @@ textarea { width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 
 .btn-cancel { flex: 1; background: #f1f5f9; color: #64748b; border: none; padding: 12px; border-radius: 8px; cursor: pointer; }
 
 .btn-submit:hover { background: #2563eb; }
+
+.icon {
+    font-size: 1.2rem;
+    margin-right: 8px;
+    vertical-align: middle; /* 讓圖示與文字對齊 */
+    display: inline-block;
+    transition: transform 0.2s; /* 增加懸停動畫 */
+}
+
+/* 滑鼠移上去時圖示稍微放大 */
+.btn-icon:hover .icon {
+    transform: scale(1.2);
+}
 </style>

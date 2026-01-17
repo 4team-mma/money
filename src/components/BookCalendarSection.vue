@@ -6,6 +6,7 @@
     const props = defineProps({
         attributes: Array,
         today: String,
+        selectedDate: String,
     });
 
     // 向父層回傳事件
@@ -43,6 +44,18 @@
         >
             <template #footer>
                 <button class="btn-icon" @click="moveToday">今天</button>
+                <RouterLink 
+                    class="btn-icon btn-outline-primary" 
+                    :to="{ path: '/Add', state: { date: props.selectedDate } }"
+                >新增支出</RouterLink>
+                <RouterLink 
+                    class="btn-icon btn-outline-primary" 
+                    :to="{ path: '/AddIncome', state: { date: props.selectedDate } }"
+                >新增收入</RouterLink>
+                <RouterLink 
+                    class="btn-icon btn-outline-primary" 
+                    :to="{ path: '/AddTrans', state: { date: props.selectedDate } }"
+                >新增轉帳</RouterLink>
             </template>
         </Calendar>
     </div>
@@ -64,6 +77,7 @@
         margin: 1px;
         border-radius: 10px;
         font-weight: 600;
+        text-decoration: none;
     }
 
     :deep(.vc-day) {

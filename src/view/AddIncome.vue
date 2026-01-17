@@ -6,6 +6,7 @@ import Add_account from '@/components/AddAccount.vue'
 import Add_member from '@/components/AddMember.vue'
 import Add_tag from '@/components/AddTag.vue'
 import { useAddRecord } from '@/composables/useAddRecord'
+import { onMounted } from 'vue';
 
 import { DatePicker } from 'v-calendar'
 import 'v-calendar/style.css'
@@ -17,6 +18,12 @@ const {
     handleSaveNext, formatNote 
 } = useAddRecord(true)
 
+onMounted(() => {
+    // 如果 Book 有傳 date 進來，就帶入 form.add_date
+    if (window.history.state?.date) {
+        form.add_date = window.history.state?.date;
+    }
+});
 </script>
 
 <template>
@@ -27,7 +34,7 @@ const {
             <div class="card">
                 <div class="header">
                     <h2>新增收入</h2>
-                    <DatePicker v-model="form.add_date" mode="date" :popover="{ visibility: 'click' }" :transition="'none'">
+                    <DatePicker v-model="form.add_date" mode="date" :popover="{ visibility: 'click' }" :transition="'none'" :masks="{ title: 'YYYY年 MMM' }">
                         <template #default="{ togglePopover, inputValue, inputEvents }">
                             <div class="date-input-container">
                                 <button type="button" @click="togglePopover" style="border:0; cursor:pointer">🗓</button>
