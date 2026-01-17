@@ -20,6 +20,8 @@ import AdminsComments from "@/view/AdminsComments.vue"
 import Feedback from "@/view/Feedback.vue";
 import AdminMain from "@/view/AdminMain.vue";
 import ConsumerAnalysis from "@/view/ConsumerAnalysis.vue";
+import SalaryAnalysis from "@/view/SalaryAnalysis.vue";
+
 
 const routes = [
   {
@@ -127,6 +129,11 @@ const routes = [
     path: "/ConsumerAnalysis",
     component: ConsumerAnalysis,
     name: "ConsumerAnalysis",
+  },
+    {
+    path: "/SalaryAnalysis",
+    component: SalaryAnalysis,
+    name: "SalaryAnalysis",
   }
 
 ];
