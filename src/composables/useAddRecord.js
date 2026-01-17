@@ -37,14 +37,23 @@ export function useAddRecord(initialType = false) {
         form.add_tag = data.add_tag
         form.add_note = data.add_note
         
-        // 對應 Add_account 組件需要的物件格式
-        if (data.account_id) {
-            form.account = { 
-                account_id: data.account_id, 
-                itemName: data.account_name || '預設帳戶', 
-                icon: data.account_icon || '🏦'
-            }
+        // 🌟 處理轉入/一般帳戶
+    if (data.account_id) {
+        form.account = { 
+            account_id: data.account_id, 
+            itemName: data.account_name || '預設帳戶', 
+            icon: data.account_icon || '🏦'
         }
+    }
+
+    // 🌟 新增：處理轉出帳戶 (如果資料裡有 from_account_id)
+    if (data.from_account_id) {
+        form.source_account = {
+            account_id: data.from_account_id,
+            itemName: data.from_account_name || '轉出帳戶',
+            icon: data.from_account_icon || '🏦'
+        }
+    }
     }
 
     const handleCatoUpdate = (item) => {
