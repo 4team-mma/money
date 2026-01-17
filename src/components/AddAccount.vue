@@ -20,7 +20,7 @@ const selectedCategory = ref(null)
 const accountForm = reactive({
     name: '',
     type: 'bank',
-    currency: 'NT $',
+    currency: 'TWD',
     initial: 0,
     exclude: false,
     icon: '💰'

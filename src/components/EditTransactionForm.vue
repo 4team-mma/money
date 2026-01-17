@@ -1,12 +1,10 @@
 <script setup>
 import { onMounted, watch } from 'vue'
 import { useAddRecord } from '@/composables/useAddRecord'
-
-// 1. 引入月曆套件與樣式
 import { DatePicker } from 'v-calendar'
 import 'v-calendar/style.css'
 
-// 2. 引入你已經改好「監聽功能」的子組件
+// 引入你的所有子組件
 import Add_cato from './AddCato.vue'
 import Add_cato_inn from './AddCatoInn.vue'
 import Add_account from './AddAccount.vue'
@@ -14,41 +12,40 @@ import Add_member from './AddMember.vue'
 import Add_tag from './AddTag.vue'
 
 const props = defineProps({
-    initialData: Object // 隊友從 Book 頁面傳進來的舊交易物件
+    initialData: Object // 隊友傳進來的舊資料
 })
 
 const emit = defineEmits(['save-success', 'cancel'])
 
 const { 
     form, setFormData, handleCatoUpdate, handleAccountUpdate,
-    handleMemberUpdate, handleTagUpdate, handleSave, formatNote 
+    handleSourceUpdate, handleMemberUpdate, handleTagUpdate, 
+    handleSave, formatNote, isSubmitting 
 } = useAddRecord()
 
-// 🌟 初始化資料：組件掛載時灌入舊資料
 onMounted(() => {
     if (props.initialData) {
         setFormData(props.initialData)
     }
 })
 
-// 🌟 資料同步：監聽 props 變化，確保隊友切換不同交易時，表單內容會更新
+// 監聽隊友傳進來的資料變化
 watch(() => props.initialData, (newVal) => {
     if (newVal) setFormData(newVal)
 }, { deep: true })
 
-// 封裝儲存方法，增加成功後的通知
 const onSave = async () => {
-    const success = await handleSave()
-    if (success) {
-        emit('save-success') // 通知隊友：儲存成功，可以關閉 Modal 並刷新列表
+    const res = await handleSave()
+    if (res?.success) {
+        emit('save-success')
     }
 }
 </script>
-
 <template>
     <div class="edit-form-wrap">
         <div class="edit-header">
-            <h3>{{ form.add_type ? '編輯收入' : '編輯支出' }}</h3>
+            <h3>{{ form.add_type === 'transfer' ? '編輯轉帳' : (form.add_type ? '編輯收入' : '編輯支出') }}</h3>
+            
             <DatePicker v-model="form.add_date" mode="date" :popover="{ visibility: 'click' }" :masks="{ title: 'YYYY年 MMM' }">
                 <template #default="{ togglePopover, inputValue }">
                     <div class="date-trigger" @click="togglePopover">
@@ -60,7 +57,7 @@ const onSave = async () => {
         </div>
 
         <div class="form-item">
-            <label>交易金額</label>
+            <label>{{ form.add_type === 'transfer' ? '轉帳金額' : '交易金額' }}</label>
             <div class="amount-input-box">
                 <span class="currency">NT$</span>
                 <input v-model.number="form.add_amount" type="number" placeholder="0" class="main-amount" />
@@ -68,16 +65,29 @@ const onSave = async () => {
         </div>
 
         <div class="form-grid">
-            <div class="form-item">
-                <label>{{ form.add_type ? '收入類別' : '消費類別' }}</label>
-                <Add_cato_inn v-if="form.add_type" :modelValue="form.add_class" @update:model-value="handleCatoUpdate" />
-                <Add_cato v-else :modelValue="form.add_class" @update:model-value="handleCatoUpdate" />
-            </div>
+            <template v-if="form.add_type === 'transfer'">
+                <div class="form-item">
+                    <label>從 (轉出帳戶)</label>
+                    <Add_account :account="form.source_account" @update:account="handleSourceUpdate" />
+                </div>
+                <div class="form-item">
+                    <label>到 (轉入帳戶)</label>
+                    <Add_account :account="form.account" @update:account="handleAccountUpdate" />
+                </div>
+            </template>
 
-            <div class="form-item">
-                <label>帳戶</label>
-                <Add_account v-model:account="form.account" />
-            </div>
+            <template v-else>
+                <div class="form-item">
+                    <label>{{ form.add_type ? '收入類別' : '消費類別' }}</label>
+                    <Add_cato_inn v-if="form.add_type === true" :modelValue="form.add_class" @update:model-value="handleCatoUpdate" />
+                    <Add_cato v-else :modelValue="form.add_class" @update:model-value="handleCatoUpdate" />
+                </div>
+
+                <div class="form-item">
+                    <label>帳戶</label>
+                    <Add_account :account="form.account" @update:account="handleAccountUpdate" />
+                </div>
+            </template>
 
             <div class="form-item">
                 <label>成員</label>
@@ -100,7 +110,9 @@ const onSave = async () => {
 
         <div class="actions">
             <button class="btn-cancel" @click="emit('cancel')">取消</button>
-            <button class="btn-submit" @click="onSave">更新紀錄</button>
+            <button class="btn-submit" @click="onSave" :disabled="isSubmitting">
+                {{ isSubmitting ? '處理中...' : '更新紀錄' }}
+            </button>
         </div>
     </div>
 </template>
