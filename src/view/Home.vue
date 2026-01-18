@@ -20,7 +20,8 @@ onMounted(() => {
     if (window.google) {
         window.google.accounts.id.initialize({
             client_id: GOOGLE_CLIENT_ID,
-            callback: handleGoogleCallback
+            callback: handleGoogleCallback,
+            
         });
         
         window.google.accounts.id.renderButton(
