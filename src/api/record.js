@@ -1,4 +1,5 @@
 import api from '@/api'
+// 這是物件匯出法
 
 // 對應資料庫的 Adds 表
 export const recordApi = {
@@ -22,7 +23,7 @@ export const recordApi = {
 export const createRecord = recordApi.create;
 
 
-// 🌟 請補上這段：更新紀錄
+// 更新紀錄
 export const updateRecord = (id, data) => {
     return recordApi.update(id, data)
 }
