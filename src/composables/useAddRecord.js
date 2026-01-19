@@ -24,7 +24,7 @@ export function useAddRecord(initialType = false) {
         add_note: ''
     })
 
-    // 🌟 核心功能：讓隊友點擊編輯時，把舊資料帶入表單
+    // 核心功能：讓隊友點擊編輯時，把舊資料帶入表單
     const setFormData = (data) => {
         if (!data) return
         form.add_id = data.add_id
@@ -37,7 +37,7 @@ export function useAddRecord(initialType = false) {
         form.add_tag = data.add_tag
         form.add_note = data.add_note
         
-        // 🌟 處理轉入/一般帳戶
+        // 處理轉入/一般帳戶
     if (data.account_id) {
         form.account = { 
             account_id: data.account_id, 
@@ -46,7 +46,7 @@ export function useAddRecord(initialType = false) {
         }
     }
 
-    // 🌟 新增：處理轉出帳戶 (如果資料裡有 from_account_id)
+    // 新增：處理轉出帳戶 (如果資料裡有 from_account_id)
     if (data.from_account_id) {
         form.source_account = {
             account_id: data.from_account_id,
@@ -95,7 +95,7 @@ export function useAddRecord(initialType = false) {
                 ElMessage.warning('請選擇轉出與轉入帳戶')
                 return false
             }
-            
+            // 連接轉帳後端對應欄位:
             const transferPayload = {
                 transaction_date: safeDateString,
                 from_account_id: form.source_account.account_id,
@@ -115,7 +115,7 @@ export function useAddRecord(initialType = false) {
                 ElMessage.warning('請選擇帳戶')
                 return false
             }
-
+            // 連接後端對應欄位:
             const recordPayload = {
                 add_date: safeDateString,
                 add_amount: parseFloat(form.add_amount),
