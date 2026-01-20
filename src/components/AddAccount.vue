@@ -1,12 +1,17 @@
 <script setup>
-import { ref, watch, onMounted, reactive } from 'vue'
+import { ref, watch, onMounted, reactive, computed } from 'vue'
 import { useAccountStore } from '@/stores/useAccountStore'
 import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
 
 const emit = defineEmits(['update:account'])
 const props = defineProps({
-    account: [Object, Number, String] 
+    account: [Object, Number, String] ,
+    //  新增這個 Prop，用來接收爸爸傳下來的過濾清單
+    accountsData: {
+        type: Array,
+        default: null
+    }
 })
 
 const accountStore = useAccountStore()
@@ -15,6 +20,12 @@ const { accounts: categoryItems, loading } = storeToRefs(accountStore)
 const showModal = ref(false)
 const showAdd = ref(false)
 const selectedCategory = ref(null)
+
+//  核心修改：判斷要顯示「過濾後的」還是「全部」
+const displayItems = computed(() => {
+    // 如果爸爸有傳 accountsData 進來，就用爸爸的；否則用 Store 全部的
+    return props.accountsData || categoryItems.value
+})
 
 /* ---------- 新增帳戶的完整狀態 (參考 AccountAdd1) ---------- */
 const accountForm = reactive({
@@ -47,11 +58,7 @@ onMounted(async () => {
     if (categoryItems.value.length === 0) {
         await accountStore.loadAccounts()
     }
-    // 預設選中
-    if (categoryItems.value.length > 0 && !selectedCategory.value) {
-        selectedCategory.value = categoryItems.value[0]
-        emit('update:account', selectedCategory.value)
-    }
+
 })
 
 // 監聽外部傳入 (用於編輯)
@@ -122,7 +129,7 @@ const addNewItem = async () => {
 
                     <div v-if="loading" class="loading-box">載入中...</div>
                     <div v-else class="item-grid-four">
-                        <div v-for="item in categoryItems" :key="item.account_id" 
+                        <div v-for="item in displayItems" :key="item.account_id" 
                              class="grid-card" @click="selectCategory(item)">
                             <span class="card-icon">{{ item.icon || item.account_icon }}</span>
                             <span class="card-name">{{ item.itemName || item.account_name }}</span>
@@ -139,7 +146,6 @@ const addNewItem = async () => {
                                 <label>帳戶名稱:</label>
                                 <input v-model="accountForm.name" placeholder="例如：玉山銀行" class="full-input" />
                             </div>
-
                             <div class="input-row">
                                 <div class="input-item">
                                     <label>類型:</label>
@@ -154,7 +160,6 @@ const addNewItem = async () => {
                                     </select>
                                 </div>
                             </div>
-
                             <div class="input-row">
                                 <div class="input-item">
                                     <label>初始餘額:</label>
@@ -165,7 +170,6 @@ const addNewItem = async () => {
                                     <input type="checkbox" v-model="accountForm.exclude" />
                                 </div>
                             </div>
-
                             <div class="input-item">
                                 <label>選擇圖示:</label>
                                 <div class="mini-icon-grid">
@@ -177,7 +181,6 @@ const addNewItem = async () => {
                                     </span>
                                 </div>
                             </div>
-
                             <button class="btn-blue-submit" @click="addNewItem">完成新增帳戶</button>
                         </div>
                     </div>

@@ -7,7 +7,7 @@ import Add_member from '@/components/AddMember.vue'
 import Add_tag from '@/components/AddTag.vue'
 import { useAddRecord } from '@/composables/useAddRecord'
 import { onMounted } from 'vue';
-
+import { useAccountStore } from '@/stores/useAccountStore'
 import { DatePicker } from 'v-calendar'
 import 'v-calendar/style.css'
 
@@ -18,12 +18,19 @@ const {
     handleSaveNext, formatNote 
 } = useAddRecord(true)
 
-onMounted(() => {
-    // 如果 Book 有傳 date 進來，就帶入 form.add_date
+const accountStore = useAccountStore()
+onMounted(async () => {
+    await accountStore.loadAccounts()
+    
+    // 🌟 補回自動預設值：預設選第一個帳戶
+    if (accountStore.accounts.length > 0) {
+        handleAccountUpdate(accountStore.accounts[0])
+    }
+
     if (window.history.state?.date) {
         form.add_date = window.history.state?.date;
     }
-});
+})
 </script>
 
 <template>

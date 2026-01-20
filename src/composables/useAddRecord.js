@@ -63,13 +63,25 @@ export function useAddRecord(initialType = false) {
         }
     }
 
-    const handleAccountUpdate = (item) => { 
-        if (item) form.account = item 
+    const handleAccountUpdate = (item) => {
+    if (item) {
+        form.account = item;
+        //  防呆：如果轉入選了跟轉出一樣的，就把轉出清空或換掉
+        if (form.source_account?.account_id === item.account_id) {
+            form.source_account = null;
+        }
     }
+}
 
     const handleSourceUpdate = (item) => {
-        if (item) form.source_account = item
+    if (item) {
+        form.source_account = item;
+        // 防呆：如果轉出選了跟轉入一樣的，就把轉入清空或換掉
+        if (form.account?.account_id === item.account_id) {
+            form.account = null; 
+        }
     }
+}
 
     const handleMemberUpdate = (item) => { 
         if (item) form.add_member = item.itemName 
@@ -91,6 +103,12 @@ export function useAddRecord(initialType = false) {
         const safeDateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
         if (form.add_type === 'transfer') {
+        // --- 🚀 新增：防呆檢查 ---
+            if (form.source_account?.account_id === form.account?.account_id) {
+                ElMessage.error('轉出帳戶與轉入帳戶不能相同')
+                return false
+            }
+
             if (!form.source_account?.account_id || !form.account?.account_id) {
                 ElMessage.warning('請選擇轉出與轉入帳戶')
                 return false

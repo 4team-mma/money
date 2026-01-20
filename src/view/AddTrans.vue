@@ -5,29 +5,41 @@ import Add_account from '@/components/AddAccount.vue'
 import Add_member from '@/components/AddMember.vue'
 import Add_tag from '@/components/AddTag.vue'
 import { useAddRecord } from '@/composables/useAddRecord'
-import { onMounted } from 'vue';
-
+import { computed, onMounted } from 'vue';
+import { useAccountStore } from '@/stores/useAccountStore' 
 import { DatePicker } from 'v-calendar';
 import 'v-calendar/style.css';
 
-// 🌟 傳入 'transfer'
+const accountStore = useAccountStore() 
 const { 
-    form, 
-    handleSourceUpdate, // 轉出
-    handleAccountUpdate, // 轉入 (沿用原本的 handleAccountUpdate)
-    handleMemberUpdate, 
-    handleTagUpdate, 
-    handleSave, 
-    handleSaveNext,
-    formatNote
+    form, handleSourceUpdate, handleAccountUpdate,
+    handleMemberUpdate, handleTagUpdate, handleSave, 
+    handleSaveNext, formatNote
 } = useAddRecord('transfer')
 
-onMounted(() => {
-    // 如果 Book 有傳 date 進來，就帶入 form.add_date
+onMounted(async () => {
+    // 1. 確保帳戶資料載入
+    await accountStore.loadAccounts()
+
+    // 2. 🌟 預設值設定：轉出選第一個(台新)，轉入選第二個(一般錢包)
+    if (accountStore.accounts.length >= 2) {
+        handleSourceUpdate(accountStore.accounts[0]) 
+        handleAccountUpdate(accountStore.accounts[1]) 
+    }
+
     if (window.history.state?.date) {
         form.add_date = window.history.state?.date;
     }
-});
+})
+
+// 🌟 依照要求修改的邏輯：
+// 轉出 (From) 帳戶：列出「全部」帳戶
+const allFromAccounts = computed(() => accountStore.accounts)
+
+// 到 (To) 帳戶：排除掉「轉出帳戶」選中的項目
+const filteredToAccounts = computed(() => {
+    return accountStore.accounts.filter(acc => acc.account_id !== form.source_account?.account_id)
+})
 </script>
 
 <template>
@@ -56,12 +68,20 @@ onMounted(() => {
                 <div class="grid">
                     <div class="form-group">
                         <label>從 (轉出帳戶)</label>
-                        <Add_account @update:account="handleSourceUpdate" />
+                        <Add_account 
+                            :accounts-data="allFromAccounts"
+                            :account="form.source_account"
+                            @update:account="handleSourceUpdate" 
+                        />
                     </div>
 
                     <div class="form-group">
                         <label>到 (轉入帳戶)</label>
-                        <Add_account @update:account="handleAccountUpdate" />
+                        <Add_account 
+                            :accounts-data="filteredToAccounts"
+                            :account="form.account"
+                            @update:account="handleAccountUpdate" 
+                        />
                     </div>
 
                     <div class="form-group">

@@ -6,6 +6,7 @@ import Add_account from '@/components/AddAccount.vue'
 import Add_member from '@/components/AddMember.vue'
 import Add_tag from '@/components/AddTag.vue'
 import { useAddRecord } from '@/composables/useAddRecord'
+import { useAccountStore } from '@/stores/useAccountStore'
 import { onMounted } from 'vue';
 
 // 月曆與通知套件
@@ -15,17 +16,26 @@ import 'v-calendar/style.css';
 // 調用 Composable，傳入 false (支出)
 //handleAccountUpdate 直接連資料庫，所以沒用到
 const {
-    form, handleCatoUpdate,
+    form, handleCatoUpdate,handleAccountUpdate,
     handleMemberUpdate, handleTagUpdate, handleSave,
     handleSaveNext, formatNote
 } = useAddRecord(false)
 
-onMounted(() => {
-    // 如果 Book 有傳 date 進來，就帶入 form.add_date
+const accountStore = useAccountStore()
+onMounted(async () => {
+    await accountStore.loadAccounts()
+    
+    // 🌟 補回自動預設值：預設選第一個帳戶
+    if (accountStore.accounts.length > 0) {
+        handleAccountUpdate(accountStore.accounts[0])
+    }
+
     if (window.history.state?.date) {
         form.add_date = window.history.state?.date;
     }
-});
+})
+
+
 </script>
 
 <template>
