@@ -24,7 +24,7 @@ export function useAddRecord(initialType = false) {
         add_note: ''
     })
 
-    // 🌟 核心功能：讓隊友點擊編輯時，把舊資料帶入表單
+    // 核心功能：讓隊友點擊編輯時，把舊資料帶入表單
     const setFormData = (data) => {
         if (!data) return
         form.add_id = data.add_id
@@ -37,7 +37,7 @@ export function useAddRecord(initialType = false) {
         form.add_tag = data.add_tag
         form.add_note = data.add_note
         
-        // 🌟 處理轉入/一般帳戶
+        // 處理轉入/一般帳戶
     if (data.account_id) {
         form.account = { 
             account_id: data.account_id, 
@@ -46,7 +46,7 @@ export function useAddRecord(initialType = false) {
         }
     }
 
-    // 🌟 新增：處理轉出帳戶 (如果資料裡有 from_account_id)
+    // 新增：處理轉出帳戶 (如果資料裡有 from_account_id)
     if (data.from_account_id) {
         form.source_account = {
             account_id: data.from_account_id,
@@ -63,13 +63,25 @@ export function useAddRecord(initialType = false) {
         }
     }
 
-    const handleAccountUpdate = (item) => { 
-        if (item) form.account = item 
+    const handleAccountUpdate = (item) => {
+    if (item) {
+        form.account = item;
+        //  防呆：如果轉入選了跟轉出一樣的，就把轉出清空或換掉
+        if (form.source_account?.account_id === item.account_id) {
+            form.source_account = null;
+        }
     }
+}
 
     const handleSourceUpdate = (item) => {
-        if (item) form.source_account = item
+    if (item) {
+        form.source_account = item;
+        // 防呆：如果轉出選了跟轉入一樣的，就把轉入清空或換掉
+        if (form.account?.account_id === item.account_id) {
+            form.account = null; 
+        }
     }
+}
 
     const handleMemberUpdate = (item) => { 
         if (item) form.add_member = item.itemName 
@@ -91,11 +103,17 @@ export function useAddRecord(initialType = false) {
         const safeDateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
         if (form.add_type === 'transfer') {
+        // --- 🚀 新增：防呆檢查 ---
+            if (form.source_account?.account_id === form.account?.account_id) {
+                ElMessage.error('轉出帳戶與轉入帳戶不能相同')
+                return false
+            }
+
             if (!form.source_account?.account_id || !form.account?.account_id) {
                 ElMessage.warning('請選擇轉出與轉入帳戶')
                 return false
             }
-            
+            // 連接轉帳後端對應欄位:
             const transferPayload = {
                 transaction_date: safeDateString,
                 from_account_id: form.source_account.account_id,
@@ -115,7 +133,7 @@ export function useAddRecord(initialType = false) {
                 ElMessage.warning('請選擇帳戶')
                 return false
             }
-
+            // 連接後端對應欄位:
             const recordPayload = {
                 add_date: safeDateString,
                 add_amount: parseFloat(form.add_amount),

@@ -5,25 +5,24 @@ import api from '@/api'
 export const useRecordStore = defineStore('record', () => {
     const records = ref([])
 
-    const fetchAllRecords = async () => {
+// 🌟 同時提供舊名稱與新功能，避免 ChartPreface.vue 報錯
+    const fetchAllRecords = async (filterParams = {}) => {
         try {
-            // 調用 API
-            const res = await api.get('/records/', { params: { page_size: 1000 } })
+            // 預設抓取 500 筆，確保分析圖表有足夠資料
+            const res = await api.get('/records/', { 
+                params: { ...filterParams, page_size: 500 } 
+            })
             
-            // 🔍 除錯監控：res 現在就是後端傳回的 JSON 物件
-            console.log('API 回傳內容:', res)
-
-            // 修正點：根據你的 Log 顯示，資料就在 res.data 裡
             if (res && res.success && Array.isArray(res.data)) {
                 records.value = res.data
-        
-            } else {
-                console.error('❌ 資料解析失敗：res.data 不是陣列或 res.success 不為 true')
             }
         } catch (error) {
-            console.error('❌ 請求發生錯誤:', error)
+            console.error('🍍 抓取紀錄失敗:', error)
         }
     }
 
-    return { records, fetchAllRecords }
+    // 別名，方便開發理解
+    const fetchRecords = fetchAllRecords 
+
+    return { records, fetchAllRecords, fetchRecords }
 })

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRecordStore } from '@/stores/useRecordStore'
+import { calculateCategoryData, calculatePeriodDays } from '@/utils/financeHelper' // 🌟 引入工具函數
 import Chart from 'chart.js/auto'
 import Nav from '@/components/Nav.vue'
 import Chart_Preface from '@/components/ChartPreface.vue'
@@ -9,117 +10,39 @@ const recordStore = useRecordStore()
 const dailyChartRef = ref(null)
 let chartInstance = null
 
-// 1. 檢視期間設定
 const period = ref('month')
-// 🌟 修正：給予自訂區間預設值 (本月 1 號到今天)，避免切換時直接顯示 0
 const startDate = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0])
 const endDate = ref(new Date().toISOString().split('T')[0])
 
-onMounted(async () => {
-    await recordStore.fetchAllRecords()
-    renderChart()
-})
-
-const today = computed(() => {
-    const now = new Date()
-    const weekMap = ['週日', '週一', '週二', '週三', '週四', '週五', '週六']
-    return `${now.getFullYear()} 年 ${now.getMonth() + 1} 月 ${now.getDate()} 日・${weekMap[now.getDay()]}`
-})
-
-// 🌟 2. 核心過濾：只抓支出 (add_type 為 false)
-const realRecords = computed(() => {
-    return recordStore.records.filter(r => r.add_type === false || r.add_type === 0)
-})
-
-// 🌟 3. 期間篩選邏輯 (修正：自訂區間的含括範圍)
-const filteredExpenseData = computed(() => {
-    const data = realRecords.value
-    const now = new Date()
-    const currentYear = now.getFullYear()
-    const currentMonth = now.getMonth()
-
+// 🌟 核心：根據篩選條件動態從後端抓取
+const loadData = async () => {
+    const params = { page_size: 500 } // 設定安全上限
     if (period.value === 'month') {
-        return data.filter(r => {
-            const d = new Date(r.add_date)
-            return d.getFullYear() === currentYear && d.getMonth() === currentMonth
-        })
+        params.year = new Date().getFullYear()
+        params.month = new Date().getMonth() + 1
+    } else if (period.value === 'year') {
+        params.year = new Date().getFullYear()
     }
     
-    if (period.value === 'year') {
-        return data.filter(r => new Date(r.add_date).getFullYear() === currentYear)
-    }
+    await recordStore.fetchRecords(params)
+    renderChart()
+}
 
-    if (period.value === 'custom') {
-        if (!startDate.value || !endDate.value) return []
-        const start = new Date(startDate.value)
-        const end = new Date(endDate.value)
-        // 確保包含結束當天
-        end.setHours(23, 59, 59, 999)
-        return data.filter(r => {
-            const d = new Date(r.add_date)
-            return d >= start && d <= end
-        })
-    }
-    return data
-})
+onMounted(() => loadData())
 
-// 🌟 4. 計算分類加總 (使用後端欄位：add_class, add_amount)
-const categoryTableData = computed(() => {
-    const map = {}
-    let total = 0
+// 🌟 使用 Utils 進行計算
+const categoryTableData = computed(() => 
+    calculateCategoryData(recordStore.records, period.value, startDate.value, endDate.value)
+)
 
-    filteredExpenseData.value.forEach(item => {
-        const catName = item.add_class || '未分類'
-        const amount = parseFloat(item.add_amount || 0)
+const periodDays = computed(() => calculatePeriodDays(period.value, startDate.value, endDate.value))
 
-        if (!map[catName]) {
-            map[catName] = { category: catName, amount: 0 }
-        }
-        map[catName].amount += amount
-        total += amount
-    })
+const totalAmount = computed(() => categoryTableData.value.reduce((sum, i) => sum + i.amount, 0))
+const averagePerDay = computed(() => totalAmount.value > 0 ? Math.round(totalAmount.value / periodDays.value) : 0)
 
-    return Object.values(map)
-        .sort((a, b) => b.amount - a.amount)
-        .map((item, index) => ({
-            id: index + 1,
-            category: item.category,
-            amount: item.amount,
-            ratio: total ? (item.amount / total) * 100 : 0
-        }))
-})
-
-// 合計金額
-const totalAmount = computed(() => {
-    return categoryTableData.value.reduce((sum, item) => sum + item.amount, 0)
-})
-
-// 🌟 修正：動態計算天數，讓「平均每天」在切換年份/自訂時是正確的
-const periodDays = computed(() => {
-    const now = new Date()
-    if (period.value === 'month') {
-        return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-    }
-    if (period.value === 'year') {
-        const year = now.getFullYear()
-        return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0) ? 366 : 365
-    }
-    if (period.value === 'custom' && startDate.value && endDate.value) {
-        const diff = new Date(endDate.value) - new Date(startDate.value)
-        return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1
-    }
-    return 1
-})
-
-const averagePerDay = computed(() => {
-    return totalAmount.value > 0 ? Math.round(totalAmount.value / periodDays.value) : 0
-})
-
-// 5. 繪製圖表
 const renderChart = () => {
     if (!dailyChartRef.value) return
     if (chartInstance) chartInstance.destroy()
-
     const chartData = categoryTableData.value
     if (chartData.length === 0) return
 
@@ -133,18 +56,17 @@ const renderChart = () => {
                 borderWidth: 2
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { position: 'right' } }
-        }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
     })
 }
 
-// 🌟 監聽篩選條件變化 (包含自訂日期變化)
-watch([categoryTableData, period, startDate, endDate], () => {
-    nextTick(() => renderChart())
-}, { deep: true })
+watch([period, startDate, endDate], () => loadData())
+
+const today = computed(() => {
+    const now = new Date();
+    const weekMap = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+    return `${now.getFullYear()} 年 ${now.getMonth() + 1} 月 ${now.getDate()} 日・${weekMap[now.getDay()]}`;
+})
 </script>
 
 <template>
@@ -155,7 +77,6 @@ watch([categoryTableData, period, startDate, endDate], () => {
                 <h3>支出分析</h3>
                 <span class="date">{{ today }}</span>
                 <hr>
-
                 <div class="charts-grid">
                     <div class="chart-card">
                         <div class="chart-header chart-description">
@@ -171,25 +92,16 @@ watch([categoryTableData, period, startDate, endDate], () => {
                                 <input type="date" v-model="endDate" class="custom-select" />
                             </div>
                         </div>
-
                         <div class="chart-wrapper" style="position: relative; height: 350px; width: 100%;">
                             <canvas ref="dailyChartRef"></canvas>
                         </div>
-
                         <div class="summary">
                             <div>合計：NT${{ totalAmount.toLocaleString() }}</div>
                             <div>平均每天：NT${{ averagePerDay.toLocaleString() }}</div>
                         </div>
                     </div>
                 </div>
-
                 <table class="money-table">
-                    <colgroup>
-                        <col style="width: 10%;"> <!-- 排序（窄） -->
-                        <col style="width: 45%;"> <!-- 類別 -->
-                        <col style="width: 25%;"> <!-- 金額 -->
-                        <col style="width: 20%;"> <!-- 比例（吃剩下的） -->
-                    </colgroup>
                     <thead>
                         <tr><th>排序</th><th>類別</th><th>金額</th><th>比例</th></tr>
                     </thead>
@@ -201,9 +113,7 @@ watch([categoryTableData, period, startDate, endDate], () => {
                             <td>{{ row.ratio.toFixed(1) }}%</td>
                         </tr>
                         <tr v-if="categoryTableData.length === 0">
-                            <td colspan="4" style="text-align: center; padding: 40px; color: #999;">
-                                此期間尚無支出資料 (檢索天數：{{ periodDays }} 天)
-                            </td>
+                            <td colspan="4" style="text-align: center; padding: 40px; color: #999;">此期間尚無支出資料</td>
                         </tr>
                     </tbody>
                 </table>

@@ -11,12 +11,6 @@
     <RouterLink class="btn btn-outline-primary" to="/AddTrans">轉帳</RouterLink>
   </div>
 </div>
-
-  <!-- <div class="btn-group" role="group" aria-label="Basic outlined example">
-  <button type="button" class="btn btn-outline-primary">Left</button>
-  <button type="button" class="btn btn-outline-primary">Middle</button>
-  <button type="button" class="btn btn-outline-primary">Right</button>
-</div> -->
 </template>
 
 <style scoped>
@@ -31,6 +25,4 @@ h2 {
     justify-content: center;
     margin-bottom: 20px;
 }
-
-
 </style>
