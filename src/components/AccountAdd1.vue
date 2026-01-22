@@ -72,7 +72,7 @@ const submit = () => {
 
     <div v-if="showAddDialog" class="acc_modal_overlay " @click="showAddDialog = false" >
         <!-- 上面的@click="showAddDialog = false代表按背景跳出 -->
-        <div class="add_acc_background acc_modal_content " @click.stop>
+        <div class="modal-card acc_modal_content " @click.stop>
             <!-- 上面的@click.stop代表小框框內停止喧染 -->
             <div class="acc_head">
                 <h3 class="acc_button_word">新增帳戶</h3>
@@ -198,20 +198,12 @@ const submit = () => {
     margin: 8px auto;
 }
 
-.add_acc_background {
-    min-height: 100vh;
-    margin: 0;
-
-    background-image:
-        linear-gradient(
-        rgba(255,255,255,0.9),
-        rgba(255,255,255,0.9)
-        ),
-        url('../assets/新增帳戶背景圖.jpg');
-
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+.modal-card {
+    width: 440px;
+    background: rgb(244, 235, 235);
+    padding: 40px;
+    border-radius: 28px;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
 }
 
     .acc_modal_content {

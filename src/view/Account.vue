@@ -4,7 +4,9 @@ import api from '@/api' // 確保使用統一的 api 設定
 import { accountApi } from '@/api/account';
 import AccountAdd2 from '@/components/AccountAdd2.vue';
 import AccountAdd1 from '@/components/AccountAdd1.vue';
+import AccountEdit from '@/components/AccountEdit.vue';
 import Nav from '@/components/Nav.vue';
+import { ElMessage } from 'element-plus';
 
 
 
@@ -41,9 +43,26 @@ const mapApiToAppTransactions = (apiData) => {
         type: item.account_type,
         currency: item.currency,
         balance: Number(item.current_balance),
-        icon: item.account_icon
+        icon: item.account_icon,
+        initial: Number(item.initial_balance), 
+        exclude: item.exclude_from_assets
     }));
 };
+
+
+// 控制哪一個項目的下拉選單是開啟的 (存儲 index)
+    const activeMenuIndex = ref(null);
+
+    // 切換選單顯示/隱藏
+    const toggleMenu = (event, index) => {
+        event.stopPropagation(); // 防止點擊事件冒泡
+        activeMenuIndex.value = activeMenuIndex.value === index ? null : index;
+    };
+
+    
+
+
+
 
 
 //get
@@ -78,8 +97,32 @@ const handleAddAccount = async (newAccountData) => {
 
 
 
+// 刪除處理
+const handleDelete = async (id) => {
+    // 1. 二次確認，避免誤刪
+    const isConfirmed = window.confirm('您確定要刪除這個帳戶嗎？此動作將無法復原，且可能影響相關交易紀錄。');
+    
+    if (!isConfirmed) return;
 
+    try {
+        // 2. 呼叫 API 進行刪除 (確保你的 accountApi 有 delete 方法)
+        // 假設你的 accountApi.delete 對應的是 DELETE /api/accounts/{id}
+        await accountApi.delete(id);
+        
+        // 3. 提示成功 (可選)
+        ElMessage.success('刪除成功！');
 
+        // 4. 重新拉取清單，讓 UI 即時更新
+        await fetchAccounts();
+        
+        // 5. 如果目前刪除的就是 activeId，將其重置
+        if (activeId.value === id) {
+            activeId.value = null;
+        }
+    } catch (error) {
+        ElMessage.error('刪除失敗：' + (err.response?.data?.detail || '連線異常'));
+    }
+};
 
 
 
@@ -94,16 +137,33 @@ const toggleActive = (id) => {
     }
 };
 
-// 刪除處理 (先寫 log 測試)
-const handleDelete = (id) => {
-    console.log('刪除帳戶 ID:', id);
-    // 這裡之後接：await accountApi.delete(id); fetchAccounts();
-};
+
 
 // 編輯處理
-const handleEdit = (acc) => {
-    console.log('編輯帳戶:', acc);
+    // 編輯 Modal 控制
+    const showModal = ref(false);
+    // 🌟 2. 用來存放「目前正在編輯的那一筆資料」
+    const selectedTransaction = ref(null);
+
+    /**
+     * 開啟編輯 Modal
+     */
+    const openEditModal = (item) => {
+        selectedTransaction.value = { ...item }; // 存入點選的那一筆
+        showModal.value = true;
+    };
+
+    /**
+     * 處理儲存成功後的動作
+     */
+    const handleSaveSuccess = () => {
+    showModal.value = false;      // 1. 關閉編輯彈窗
+    activeMenuIndex.value = null; // ✨ 2. 同時關閉「三個點」下拉選單
+    
+    fetchAccounts();             // 3. 重新抓取資料，更新畫面清單
 };
+
+
 
 
 
@@ -185,7 +245,7 @@ onMounted(() => {
     <div>
         <div 
             class="account-card" 
-            v-for="acc in accounts" 
+            v-for="(acc,index) in accounts" 
             :key="acc.id"
             :class="{ 'is-transparent': activeId === acc.id }"
             @click="toggleActive(acc.id)"
@@ -195,18 +255,40 @@ onMounted(() => {
                 <div class="account-name">{{ acc.name }}</div>
                 <div class="change-text">{{ acc.type }}</div>
             </div>
-            <div class="world_right"> {{ acc.currency }} {{ acc.balance.toLocaleString() }}</div>
+            <div class="world_right"> {{ acc.currency }} {{ acc.initial.toLocaleString() }}</div>
 
-            <div v-if="activeId === acc.id">
-                <button class="edit-btn" @click.stop="handleEdit(acc)">編輯</button>
-                <button class="delete-btn" @click.stop="handleDelete(acc.id)">刪除</button>
-            </div>
+            <!-- 🌟 純 Vue 下拉選單結構 -->
+                <div class="custom-dropdown">
+                    <button class="menu-btn" @click="toggleMenu($event, index)">
+                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                        </svg>
+                    </button>
+                    
+                    <!-- 使用 Vue 的 v-if 控制顯示 -->
+                    <ul v-if="activeMenuIndex === index" class="custom-dropdown-menu">
+                        <li @click="openEditModal(acc)">編輯</li>
+                        <li class="delete-opt" @click="handleDelete(acc.id)">刪除</li>
+                    </ul>
+                </div>
         </div>
     </div>
+
+    <!-- 編輯彈窗 -->
+    <div v-if="showModal" class="acc_modal_overlay" @click.self="showModal = false">
+        <div class="modal-card acc_modal_content" @click.stop>
+            <AccountEdit  
+                v-if="selectedTransaction" 
+                :initial-data="selectedTransaction" 
+                @save-success="handleSaveSuccess" 
+            />
+        </div>
+    </div>
+</div>
     
 <br>  
 <AccountAdd2 @add-account="handleAddAccount" />
-</div>
+
 </Nav>
 </template>
 
@@ -395,6 +477,113 @@ onMounted(() => {
 
 .edit-btn:hover, .delete-btn:hover {
     transform: scale(1.1); /* 懸浮微放大的互動感 */
+}
+
+
+.menu-btn {
+    background: none;
+    border: none;
+    color: #cbd5e1;
+    padding: 8px 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.menu-btn:hover {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+
+/* 5. 純 Vue 下拉選單 */
+.custom-dropdown {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.menu-btn {
+    background: none;
+    border: none;
+    color: #cbd5e1;
+    padding: 8px 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.menu-btn:hover {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.custom-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 1000;
+    background: #ffffff;
+    min-width: 110px;
+    padding: 0px 0;
+    margin-top: 5px;
+    list-style: none;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border: 8px solid #ffffff;
+    animation: fadeIn 0.15s ease-out;
+}
+
+.custom-dropdown-menu li {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    color: #475569;
+    cursor: pointer;
+}
+
+.custom-dropdown-menu li:hover {
+    background: #f8fafc;
+    color: #1e293b;
+}
+
+.custom-dropdown-menu li.delete-opt {
+    color: #ef4444;
+}
+
+.acc_modal_overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    z-index: 2000;
+    padding: 20px;
+}
+
+.modal-card {
+    width: 440px;
+    background: rgb(244, 235, 235);
+    padding: 40px;
+    border-radius: 28px;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+}
+
+.acc_modal_content {
+    width: 90%;
+    max-width: 440px;
+    border-radius: 20px;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+    overflow: hidden;
+    padding: 35px;
+    z-index: 2100;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: hwb(0 100% 0% / 0) hwb(0 100% 0% / 0);
 }
 
 </style>
