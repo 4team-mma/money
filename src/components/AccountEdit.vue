@@ -1,14 +1,19 @@
 
 <script setup>
-import { reactive, ref, defineEmits } from 'vue'
+import { reactive, watch, defineProps, defineEmits } from 'vue'
+import { accountApi } from '../api/account'
 import { ElMessage } from 'element-plus'
 
-// 1. 定義事件
-const emit = defineEmits(['add-account'])
+// 1. 定義接收與傳出
+const props = defineProps({
+    initialData: {
+        type: Object,
+        required: true
+    }
+})
+const emit = defineEmits(['save-success'])
 
-const showAddDialog = ref(false)
-
-// 2. 靜態選項資料
+// 2. 靜態選項資料 (與新增一致)
 const accountTypes = [
     { value: 'bank', label: '銀行帳戶' },
     { value: 'cash', label: '現金' },
@@ -25,57 +30,58 @@ const currencys = [
 
 const icons = ['💰', '💳', '💵','🏦', '📈', '📉', '🧾', '📱', '🪙', '🏃',"🐵", "🐶", "🐷", "🐻", "🐨", "🐮", "🦁", "🐯", "🐰", "🐭", "🦉", "🐸"]
 
-// 3. 核心狀態：統一管理所有輸入欄位
-const account = reactive({
-    name: '',
-    type: 'bank',
-    currency: 'NT $',
-    initial: 0,
-    exclude: false,
-    icon: '💰'
-})
+// 3. 核心狀態：使用傳進來的 initialData 初始化
+// 這裡用 reactive 建立副本，這樣修改時不會直接動到父層原始資料
+const account = reactive({ ...props.initialData })
 
-// 4. 重置邏輯 (呼叫一次即可清空全部)
-const resetAccount = () => {
-    Object.assign(account, {
-    name: '',
-    type: 'bank',
-    currency: 'NT $',
-    initial: 0,
-    exclude: false,
-    icon: '💰'
-    })
-}
+// 4. 監聽 props 變化 (預防父層連續切換編輯不同項目)
+watch(() => props.initialData, (newData) => {
+    Object.assign(account, newData)
+}, { deep: true })
 
-// 5. 提交邏輯
-const submit = () => {
-  // 檢查名稱是否為空
-    if (!account.name.trim()) {
-    ElMessage.warning('請輸入帳戶名稱') // 使用 Element Plus 的警告
-    return
+// 5. 提交編輯邏輯
+const submitEdit = async () => {
+    if (!account.name || !account.name.trim()) {
+        ElMessage.warning('帳戶名稱不能為空')
+        return
     }
 
-  // 發送資料 (確保第一個參數是字串 'add-account')
-    emit('add-account', { ...account })
+    try {
+        // 🌟 修正點：確保所有欄位名稱與後端 Schema 100% 一致
+        const payload = {
+            account_name: account.name,
+            account_type: account.type,
+            currency: account.currency,
+            // 確保餘額是數字，若沒填則不傳或給 0
+            initial_balance: account.initial !== undefined ? Number(account.initial) : 0, 
+            account_icon: account.icon,
+            // 確保 checkbox 是 boolean
+            exclude_from_assets: Boolean(account.exclude) 
+        }
 
-  // 關閉並重置
-    showAddDialog.value = false
-    resetAccount()
+        console.log("送出的 Payload:", payload); // 除錯用
+
+        // 呼叫 API
+        await accountApi.update(account.id, payload)
+        
+        ElMessage.success('更新成功！')
+        emit('save-success')
+    } catch (err) {
+        console.error('更新失敗詳情:', err.response?.data || err)
+        ElMessage.error('儲存失敗，請檢查網路連線')
+    }
 }
 </script>
 
 <template>
-<div class="acc_head3"><button @click="showAddDialog = true" class="plus-icon">+</button></div>
-    <div v-if="showAddDialog" class="acc_modal_overlay " @click="showAddDialog = false" >
-        <!-- 上面的@click="showAddDialog = false代表按背景跳出 -->
-        <div class="modal-card acc_modal_content " @click.stop>
-            <!-- 上面的@click.stop代表小框框內停止喧染 -->
+    <div class="edit-form-wrap">
             <div class="acc_head">
-                <h3 class="acc_button_word">新增帳戶</h3>
-                <button @click="showAddDialog = false" class="btn-icon">✕</button>
-            </div>
-            <hr>
-            <div>
+            <h3 class="acc_button_word">編輯帳戶</h3>
+            <button @click="$emit('save-success')" class="btn-icon">✕</button>
+        </div>
+        <hr>
+        
+        <div>
                 <h4 class="acc_button_word_small">帳戶名稱:</h4>
                 <input type="text" placeholder="例如：玉山銀行" v-model="account.name" class="textarea">
             </div>
@@ -125,15 +131,15 @@ const submit = () => {
                     </button>
                 </div>
             </div>
-            <br>
-            <div class="submit_box_button">
-                <button class="submit_button" @click="submit">新增帳戶</button>
-            </div>
-            
+        <br>
+
+        <div class="submit_box_button">
+            <button class="submit_button" @click="submitEdit">儲存變更</button>
         </div>
     </div>
     
 </template>
+
 
 <style scoped>
 @import '../assets/css/add.css';
@@ -177,39 +183,9 @@ const submit = () => {
         
     }
 
-    .acc_modal_overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(4px);
-        display: flex;
-        justify-content: center;
-        /* align-items: center; */
-        z-index: 2000;
-        padding: 20px;
-        
-    }
+.edit-form-wrap { padding: 10px; font-family: sans-serif; }
+.edit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 
-.modal-card {
-    width: 440px;
-    background: rgb(244, 235, 235);
-    padding: 40px;
-    border-radius: 28px;
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
-}
-
-    .acc_modal_content {
-    width: 90%;
-    max-width: 440px;
-    border-radius: 20px;
-    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
-    overflow: hidden;
-    padding: 35px;
-    z-index: 2100;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: hwb(0 100% 0% / 0) hwb(0 100% 0% / 0);
-}
 
     .btn-icon {
         opacity: 0.5;
