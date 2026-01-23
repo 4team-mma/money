@@ -18,7 +18,8 @@ const accountTypes = [
     { value: 'bank', label: '銀行帳戶' },
     { value: 'cash', label: '現金' },
     { value: 'credit', label: '信用卡' },
-    { value: 'investment', label: '投資帳戶' }
+    { value: 'investment', label: '投資帳戶' },
+    { value: 'other', label: '其他'}
 ]
 
 const currencys = [
@@ -199,14 +200,15 @@ const submitEdit = async () => {
     }
 
     .acc_button_word{
+        letter-spacing:2px ;
         font-size: 30px;
-        font-weight: 600;
+        font-weight: 500;
         color: #1e293b;
     }
 
     .acc_button_word_small{
         font-size: 20px;
-        font-weight: 400;
+        font-weight: 300;
         color: #626367;
     }
 
