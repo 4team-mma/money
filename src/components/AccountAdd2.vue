@@ -13,7 +13,8 @@ const accountTypes = [
     { value: 'bank', label: '銀行帳戶' },
     { value: 'cash', label: '現金' },
     { value: 'credit', label: '信用卡' },
-    { value: 'investment', label: '投資帳戶' }
+    { value: 'investment', label: '投資帳戶' },
+    { value: 'other', label: '其他'}
 ]
 
 const currencys = [

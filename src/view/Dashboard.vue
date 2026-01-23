@@ -1,7 +1,8 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import Nav from '@/components/Nav.vue';
 import api from '@/api'
+import { accountApi } from '@/api/account';
 
 // 💡 存放從 API 抓回來的「活資料」
 const transactions = ref([])
@@ -53,9 +54,7 @@ const goToPage = (page) => {
     }
 }
 
-onMounted(() => {
-    fetchTransactions()
-})
+
 
 // --- 以下為暫時預設的靜態資料，未來可由其他同學串接 ---
 const currentMonth = ref({
@@ -64,11 +63,7 @@ const currentMonth = ref({
   balance: 32660
 })
 
-const accounts = ref([
-  { name: '主要帳戶', balance: 125000, type: 'bank', change: 5.2 },
-  { name: '現金', balance: 8500, type: 'cash', change: -2.1 },
-  { name: '信用卡', balance: -12300, type: 'credit', change: 15.3 }
-])
+
 
 const budgets = ref([
   { category: '飲食', spent: 8500, limit: 12000, color: 'color-1' },
@@ -76,9 +71,94 @@ const budgets = ref([
   { category: '娛樂', spent: 6800, limit: 8000, color: 'color-3' }
 ])
 
+
+
+// --- 1. 狀態定義 ---
+const accounts = ref([]);
+const isAccountsLoading = ref(false); // 💡 追蹤帳戶讀取狀態
+
+// --- 2. 核心邏輯：帳戶類型定義 ---
+// 根據你的需求，定義固定的五種類型
+const accountTypes = [
+    { value: 'bank', label: '銀行帳戶' },
+    { value: 'cash', label: '現金' },
+    { value: 'credit', label: '信用卡' },
+    { value: 'investment', label: '投資帳戶' },
+    { value: 'other', label: '其他'}
+]
+
+// --- 3. 數據轉換與清洗 (Map) ---
+// 負責將後端 Schema (account_id) 轉為前端慣用名稱 (id)
+const mapApiToAppTransactions = (apiData) => {
+    return apiData.map(item => ({
+        id: item.account_id,
+        name: item.account_name,
+        type: item.account_type,
+        currency: item.currency,
+        balance: Number(item.current_balance),
+        icon: item.account_icon,
+        exclude: item.exclude_from_assets
+    }));
+};
+
+// --- 4. 分組與計算 (Computed) ---
+const groupedAccounts = computed(() => {
+    // 1. 初始化分組物件，Key 使用 label
+    const groups = accountTypes.reduce((obj, typeObj) => {
+        obj[typeObj.label] = []; 
+        return obj;
+    }, {});
+
+    accounts.value.forEach(acc => {
+        const rawType = acc.type ? acc.type.trim() : "";
+        
+        // 2. 尋找匹配的類型定義
+        // 同時檢查是否等於 label (中文) 或 value (英文)
+        const matchedType = accountTypes.find(t => 
+            t.label === rawType || 
+            t.value === rawType ||
+            (rawType === "銀行" && t.value === "bank") // 額外防呆
+        );
+
+        if (matchedType) {
+            groups[matchedType.label].push(acc);
+        } else {
+            groups["其他"].push(acc);
+        }
+    });
+    return groups;
+});
+
+const fetchDashboardData = async () => {
+    isAccountsLoading.value = true;
+    try {
+        const response = await accountApi.getList();
+        const rawData = response.data ? response.data : response;
+        
+        // 🚀 加入這行偵錯，按 F12 檢查 Console
+        console.log("後端回傳的原始類型清單:", rawData.map(a => a.account_type));
+
+        if (Array.isArray(rawData)) {
+            accounts.value = mapApiToAppTransactions(rawData);
+        }
+    } catch (error) {
+        console.error("載入帳戶失敗:", error);
+    } finally {
+        isAccountsLoading.value = false;
+    }
+};
+
+
+// 確保你有這個抓取帳戶資料的函式（補上之前漏掉的邏輯）
 const formatNumber = (num) => {
   return num ? num.toLocaleString() : 0
 }
+
+// 在 onMounted 裡面同時呼叫兩個 API
+onMounted(() => {
+    fetchTransactions();     // 抓交易紀錄
+    fetchDashboardData();    // 抓帳戶總覽 🚀 補上這一行
+})
 
 </script>
 
@@ -145,40 +225,45 @@ const formatNumber = (num) => {
     <!-- Main Content Grid -->
     <div class="content-grid">
       <!-- Accounts Overview -->
-      <div class="card">
-        <div class="card-inner-header">
-          <h3 class="card-inner-title">帳戶總覽</h3>
-          <p class="card-description">即時帳戶餘額</p>
-        </div>
-        <div class="card-body">
-          <div class="accounts-list">
-            <div v-for="account in accounts" :key="account.name" class="account-item">
-              <div class="account-info">
-                <div class="account-icon-wrapper">
-                  <svg v-if="account.type === 'bank'" class="account-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <rect width="20" height="14" x="2" y="5" rx="2"></rect>
-                    <line x1="2" x2="22" y1="10" y2="10"></line>
-                  </svg>
-                  <svg v-else class="account-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
-                    <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
-                  </svg>
+      <div class="card accounts-card">
+  <div class="card-inner-header">
+    <h3 class="card-inner-title">帳戶總覽</h3>
+    <p class="card-description">即時帳戶餘額</p>
+  </div>
+
+  <div class="card-body">
+    <div v-if="isAccountsLoading" class="loading-state">載入中...</div>
+      <div v-else class="type-groups-wrapper">
+  <div v-for="typeObj in accountTypes" :key="typeObj.value" class="account-type-section">
+    <div class="group-header">
+      <span class="type-badge">{{ typeObj.label }}</span>
+      <span class="type-count">{{ groupedAccounts[typeObj.label]?.length || 0 }} 個項目</span>
+    </div>
+
+    <div v-if="groupedAccounts[typeObj.label] && groupedAccounts[typeObj.label].length > 0" class="accounts-list-vertical">
+      <div v-for="acc in groupedAccounts[typeObj.label]" :key="acc.id" class="account-row-item">
+        <div class="acc-main-info">
+            <div class="acc-icon-box">{{ acc.icon || '💰' }}</div>
+            <div class="acc-texts">
+                <div class="acc-name-text">
+                    {{ acc.name }}
+                    <span v-if="acc.exclude" class="exclude-mini-tag">排除</span>
                 </div>
-                <div>
-                  <div class="account-name">{{ account.name }}</div>
-                  <div class="account-change" :class="account.change >= 0 ? 'positive' : 'negative'">
-                    {{ account.change >= 0 ? '+' : '' }}{{ account.change }}% 本月變化
-                  </div>
-                </div>
-              </div>
-              <div class="account-balance" :class="{ negative: account.balance < 0 }">
-                NT$ {{ formatNumber(Math.abs(account.balance)) }}
-              </div>
+                <!-- <div class="acc-currency-text">{{ acc.currency }}</div> -->
             </div>
-          </div>
-          <button class="btn-outline">管理帳戶</button>
+        </div>
+        <div class="acc-balance-display" :class="{ 'is-negative': acc.balance < 0 }">
+            NT$ {{ formatNumber(acc.balance) }}
         </div>
       </div>
+    </div>
+
+    <div v-else class="empty-type-msg">暫無 {{ typeObj.label }}</div>
+  </div>
+</div>
+    
+  </div>
+</div>
 
       <!-- Budget Tracking -->
       <div class="card">
