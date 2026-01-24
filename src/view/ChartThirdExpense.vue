@@ -105,7 +105,7 @@ const today = computed(() => {
                                 <option value="year">當年</option>
                                 <option value="custom">自訂</option>
                             </select>
-                            <div v-if="period === 'custom'" style="display: inline-block; margin-left: 10px;">
+                            <div v-if="period === 'custom'" >
                                 <input type="date" v-model="startDate" class="custom-select" />
                                 <span style="margin: 0 5px;">～</span>
                                 <input type="date" v-model="endDate" class="custom-select" />
