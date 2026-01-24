@@ -144,7 +144,7 @@ onMounted(fetchDataAndRender);
                         <div class="stat-icon">💰</div>
                         <div class="stat-info">
                             <h3>本月總花費</h3>
-                            <p class="stat-value">${{ totalSpending.toLocaleString() }}</p>
+                            <p class="stat-value">${{ totalSpending.toLocaleString() }}  NT$</p>
                         </div>
                     </div>
                     <div class="card stat-card">
@@ -161,7 +161,7 @@ onMounted(fetchDataAndRender);
                 </div>
 
                 <div class="card ai-section">
-                    <div class="ai-header">🤖 <h3>AI 理財建議</h3></div>
+                    <div class="ai-header">🚁 <h3>理財建議 :</h3></div>
                     <div class="ai-content">
                         <p>
                             本月 <strong>{{ maxCpiCategory.category }}</strong> 全國漲幅達 {{ maxCpiCategory.gov_cpi_rate }}%。

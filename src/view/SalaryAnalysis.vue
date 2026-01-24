@@ -149,7 +149,7 @@ onMounted(fetchData);
         <div class="page-container">
             <header class="header-section">
                 <div>
-                    <h1 class="page-title">💼 薪資購買力分析</h1>
+                    <h1 class="page-title">💲 薪資分析</h1>
                     <p class="subtitle">針對不同行業進行薪資水平與通膨比對</p>
                 </div>
                 <div class="controls-group">

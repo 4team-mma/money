@@ -1,42 +1,47 @@
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
-import { useRecordStore } from '@/stores/useRecordStore'
-import { calculateCategoryData, calculatePeriodDays } from '@/utils/financeHelper' // 🌟 引入工具函數
+import { ref, computed, onMounted, watch } from 'vue'
+import { statsApi } from '@/api/stats' // 🌟 具名引入，符合你 accountApi 的習慣
+import { calculatePeriodDays } from '@/utils/financeHelper'
 import Chart from 'chart.js/auto'
 import Nav from '@/components/Nav.vue'
 import Chart_Preface from '@/components/ChartPreface.vue'
 
-const recordStore = useRecordStore()
 const dailyChartRef = ref(null)
 let chartInstance = null
+
+// 狀態管理
+const categoryTableData = ref([]) 
+const is_loading = ref(false)
 
 const period = ref('month')
 const startDate = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0])
 const endDate = ref(new Date().toISOString().split('T')[0])
 
-// 🌟 核心：根據篩選條件動態從後端抓取
+/**
+ * 🌟 核心：直接使用 statsApi 獲取結果
+ */
 const loadData = async () => {
-    const params = { page_size: 500 } // 設定安全上限
-    if (period.value === 'month') {
-        params.year = new Date().getFullYear()
-        params.month = new Date().getMonth() + 1
-    } else if (period.value === 'year') {
-        params.year = new Date().getFullYear()
+    is_loading.value = true
+    try {
+        const params = {
+            start_date: startDate.value,
+            end_date: endDate.value
+        }
+        // 呼叫模組化的 API
+        const data = await statsApi.getExpenseCategoryStats(params)
+        categoryTableData.value = data 
+        renderChart()
+    } catch (error) {
+        console.error("統計資料讀取失敗:", error)
+    } finally {
+        is_loading.value = false
     }
-    
-    await recordStore.fetchRecords(params)
-    renderChart()
 }
 
 onMounted(() => loadData())
 
-// 🌟 使用 Utils 進行計算
-const categoryTableData = computed(() => 
-    calculateCategoryData(recordStore.records, period.value, startDate.value, endDate.value)
-)
-
+// 🌟 計算屬性 (保留在前端，處理 UI 邏輯)
 const periodDays = computed(() => calculatePeriodDays(period.value, startDate.value, endDate.value))
-
 const totalAmount = computed(() => categoryTableData.value.reduce((sum, i) => sum + i.amount, 0))
 const averagePerDay = computed(() => totalAmount.value > 0 ? Math.round(totalAmount.value / periodDays.value) : 0)
 
@@ -56,11 +61,25 @@ const renderChart = () => {
                 borderWidth: 2
             }]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { legend: { position: 'right' } } 
+        }
     })
 }
 
-watch([period, startDate, endDate], () => loadData())
+watch([period, startDate, endDate], () => {
+    // 日期重設邏輯
+    if (period.value === 'month') {
+        startDate.value = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
+        endDate.value = new Date().toISOString().split('T')[0]
+    } else if (period.value === 'year') {
+        startDate.value = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0]
+        endDate.value = new Date().toISOString().split('T')[0]
+    }
+    loadData()
+})
 
 const today = computed(() => {
     const now = new Date();
@@ -93,6 +112,7 @@ const today = computed(() => {
                             </div>
                         </div>
                         <div class="chart-wrapper" style="position: relative; height: 350px; width: 100%;">
+                            <div v-if="is_loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">加載中...</div>
                             <canvas ref="dailyChartRef"></canvas>
                         </div>
                         <div class="summary">
@@ -112,7 +132,7 @@ const today = computed(() => {
                             <td>NT${{ row.amount.toLocaleString() }}</td>
                             <td>{{ row.ratio.toFixed(1) }}%</td>
                         </tr>
-                        <tr v-if="categoryTableData.length === 0">
+                        <tr v-if="categoryTableData.length === 0 && !is_loading">
                             <td colspan="4" style="text-align: center; padding: 40px; color: #999;">此期間尚無支出資料</td>
                         </tr>
                     </tbody>
