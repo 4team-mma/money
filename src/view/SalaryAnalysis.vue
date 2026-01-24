@@ -49,6 +49,21 @@ const industryBenchmark = computed(() => {
     return trendData.value[trendData.value.length - 1].nominal_salary;
 });
 
+const myRealSalary = computed(() => {
+    // 如果個人收入是 0，實質薪資理所當然就是 0
+    if (!salaryData.value || salaryData.value.user_income === 0) return 0;
+
+    // 取得最新月份的通膨調整比例 (實質 / 名目)
+    if (trendData.value.length === 0) return 0;
+    const latest = trendData.value[trendData.value.length - 1];
+    const inflationFactor = latest.real_salary / latest.nominal_salary;
+
+    // 用個人的收入去乘這個比例，才是個人的實質薪資
+    return salaryData.value.user_income * inflationFactor;
+});
+
+
+
 // 計算個人收入與行業平均的差距
 const performanceRatio = computed(() => {
     if (!salaryData.value || industryBenchmark.value === 0) return 0;
@@ -167,7 +182,9 @@ onMounted(fetchData);
                 </div>
             </header>
 
-            <div v-if="loading" class="loading-state"><div class="spinner"></div>正在分析數據...</div>
+            <div v-if="loading" class="loading-state">
+                <div class="spinner"></div>正在分析數據...
+            </div>
             <div v-else-if="errorMsg" class="error-state">⚠️ {{ errorMsg }}</div>
 
             <div v-else class="content-grid">
@@ -204,19 +221,31 @@ onMounted(fetchData);
                 </div>
 
                 <div class="card ai-section">
-                    <div class="ai-header">🤖 <h3>AI 理財洞察建議</h3></div>
+                    <div class="ai-header">🚁 <h3>理財建議:</h3>
+                    </div>
                     <div class="ai-content">
-                        <div class="insight-item">
-                            <p v-if="currentRealSalary < industryBenchmark">
-                                目前您的 <strong>實質薪資為 ${{ currentRealSalary.toLocaleString() }}</strong>，這代表受通膨影響，您的真實購買力已低於該行業的名目平均水平。
-                                <br><br>
-                                <strong>💡 建議策略：</strong><br>
-                                在「{{ selectedIndustry }}」領域中，目前的物價漲幅正侵蝕您的儲蓄。建議檢視支出結構，特別是佔比最高的消費類別，並考慮將部分資產投入抗通膨標的（如與 CPI 掛鉤的金融產品），以維持資產價值。
-                            </p>
-                            <p v-else>
-                                <strong>您的薪資表現穩健！</strong> 您的實質購買力目前優於行業基準，這顯示您在「{{ selectedIndustry }}」中的收入增長能有效抵禦通膨壓力。
-                                建議維持現有的儲蓄計畫，並可考慮進行長期資產配置。
-                            </p>
+                        <h4 :class="performanceRatio >= 0 ? 'text-success' : 'text-danger'">
+                            {{ performanceRatio >= 0 ? ' 財務表現優於同業🎉' : ' 購買力面臨挑戰⚠️' }}
+                        </h4>
+
+                        <p>
+                            您的實質購買力為 <strong>${{ Math.round(myRealSalary).toLocaleString() }}</strong>。
+                            雖然通膨率為 {{ ((1 - (currentRealSalary / industryBenchmark)) * 100).toFixed(1) }}%，
+                            但因為您的薪資高出平均 <strong>{{ performanceRatio }}%</strong>，
+                            這抵消了大部分的物價漲幅。
+                        </p>
+
+                        <div class="strategy-box">
+                            <strong>🚀 專屬策略：</strong>
+                            <span v-if="performanceRatio > 20">
+                                您的收入增長已跑贏通膨！建議將薪資的 20% 投入抗通膨資產（如美股 ETF 或房地產 REITs），發揮複利效應。
+                            </span>
+                            <span v-else-if="performanceRatio >= 0">
+                                目前處於穩健階段。建議維持記帳習慣，確保實質薪資的增長不被隨之擴張的慾望抵銷。
+                            </span>
+                            <span v-else>
+                                目前的薪資增長跟不上物價。建議重新審視訂閱服務或餐飲支出，並規劃轉職或技能進修以突破薪資天花板。
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -226,35 +255,164 @@ onMounted(fetchData);
 </template>
 
 <style scoped>
-.page-container { max-width: 1000px; margin: 0 auto; padding: 20px; }
-.header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-.controls-group { display: flex; gap: 10px; align-items: center; }
+.page-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+}
 
-.industry-select { padding: 8px 12px; border-radius: 8px; border: 1px solid #4f46e5; background: #f5f3ff; color: #4338ca; font-weight: 600; cursor: pointer; }
-.date-select { padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; margin-left: 5px; cursor: pointer; }
+.header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
 
-.stats-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-.card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-.stat-card { display: flex; align-items: center; gap: 20px; }
-.stat-icon { font-size: 32px; background: #f1f5f9; padding: 12px; border-radius: 12px; }
-.stat-value { font-size: 26px; font-weight: 800; color: #1e293b; margin: 0; }
+.controls-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
 
-.trend-tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-top: 8px; }
-.up { background: #dcfce7; color: #166534; }
-.down { background: #fee2e2; color: #991b1b; }
-.neutral { background: #f1f5f9; color: #475569; }
+.industry-select {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #4f46e5;
+    background: #f5f3ff;
+    color: #4338ca;
+    font-weight: 600;
+    cursor: pointer;
+}
 
-.chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
-.dot.nominal { background: #4f46e5; }
-.dot.real { background: #10b981; }
+.date-select {
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    margin-left: 5px;
+    cursor: pointer;
+}
 
-.chart-container { height: 350px; }
-.ai-section { border-left: 5px solid #10b981; background: #f0fdf4; }
-.ai-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; color: #166534; }
-.ai-content { line-height: 1.6; color: #374151; }
+.stats-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
 
-.loading-state { text-align: center; padding: 80px; }
-.spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #4f46e5; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px; }
-@keyframes spin { 100% { transform: rotate(360deg); } }
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.stat-icon {
+    font-size: 32px;
+    background: #f1f5f9;
+    padding: 12px;
+    border-radius: 12px;
+}
+
+.stat-value {
+    font-size: 26px;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0;
+}
+
+.trend-tag {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 8px;
+}
+
+.up {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.down {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.neutral {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 4px;
+}
+
+.dot.nominal {
+    background: #4f46e5;
+}
+
+.dot.real {
+    background: #10b981;
+}
+
+.chart-container {
+    height: 350px;
+}
+
+.ai-section {
+    border-left: 5px solid #10b981;
+    background: #f0fdf4;
+}
+
+.ai-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    color: #166534;
+}
+
+.ai-content {
+    line-height: 1.6;
+    color: #374151;
+}
+
+.loading-state {
+    text-align: center;
+    padding: 80px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #4f46e5;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px;
+}
+
+@keyframes spin {
+    100% {
+        transform: rotate(360deg);
+    }
+}
 </style>
