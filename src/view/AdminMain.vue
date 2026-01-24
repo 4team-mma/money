@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { useCategoryStore } from '@/stores/categoryStats'
 import AdminsComments from './AdminsComments.vue'
@@ -22,9 +22,61 @@ const categoryStore = useCategoryStore()
 const searchQuery = ref('')
 
 /* ========================
-   數據計算與過濾 (從原檔完整搬移)
+   分頁邏輯
    ======================== */
-const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(val)
+const currentPage = ref(1)
+const perPage = 20
+const skip = computed(() => (currentPage.value - 1) * perPage)
+
+const changePage = async (page) => {
+    currentPage.value = page
+    const skipVal = (page - 1) * perPage
+    await userStore.fetchUsers(skipVal, perPage)
+}
+
+/* ========================
+   數據分析：子分頁切換
+   ======================== */
+const subActiveTab = ref('topSpenders')
+const subTabs = [
+    { id: 'topSpenders', label: '消費支出排行', icon: '🏆' },
+    { id: 'categories', label: '類別支出統計', icon: '💰' },
+    { id: 'activeBees', label: '記帳排名', icon: '🐝' },
+    { id: 'wealth', label: '儲蓄排行', icon: '🛡️' },
+    { id: 'xp', label: 'XP等級榜', icon: '✨' }
+]
+
+/* ========================
+   模型控制中心：AI 設定
+   ======================== */
+const selectedAiModel = ref('gemini') // 預設選擇 gemini
+const aiSettings = ref({
+    geminiKey: '',
+    geminiVersion: 'gemini-1.5-pro',
+    ollamaHost: 'http://localhost:11434',
+    ollamaModel: 'llama3'
+})
+
+const testConnection = () => {
+    alert(`正在測試 ${selectedAiModel.value} 連線...`)
+}
+
+/* ========================
+   初始載入
+   ======================== */
+onMounted(async () => {
+    await userStore.fetchUsers(0, perPage)
+    await categoryStore.fetchAllRankings() // 確保排行榜數據有抓取
+})
+
+/* ========================
+   數據計算與過濾
+   ======================== */
+const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', { 
+    style: 'currency', 
+    currency: 'TWD', 
+    minimumFractionDigits: 0 
+}).format(val || 0)
 
 const rankingsFilter = (list) => {
     if (!list) return [];
@@ -60,22 +112,41 @@ const normalUsersFiltered = computed(() => {
 <template>
     <main class="main-content">
         <header class="main-header">
-            <div class="breadcrumb">控制中心 / <span :style="{ color: currentStyle.primary }">{{ tabs.find(t => t.id === activeTab)?.label }}</span></div>
-            <div class="user-status"><span class="dot-online"></span> 登入者：<strong>{{ currentLoginAdmin.username }}</strong></div>
+            <div class="breadcrumb">
+                控制中心 / 
+                <span :style="{ color: currentStyle.primary }">
+                    {{ tabs.find(t => t.id === activeTab)?.label }}
+                </span>
+            </div>
+            <div class="user-status">
+                <span class="dot-online"></span> 
+                登入者：<strong>{{ currentLoginAdmin.username }}</strong>
+            </div>
         </header>
 
         <div class="scroll-view">
             <div class="stats-grid">
                 <div class="stat-glass-card">
-                    <div class="stat-info"><span class="stat-label">總註冊用戶</span><div class="stat-value">{{ userStore.users ? userStore.users.length : 0 }}</div></div>
+                    <div class="stat-info">
+                        <span class="stat-label">總註冊用戶</span>
+                        <div class="stat-value">{{ userStore.users ? userStore.users.length : 0 }}</div>
+                    </div>
                     <div class="stat-icon-circle" style="background: #3b82f620; color: #3b82f6;">👥</div>
                 </div>
                 <div class="stat-glass-card">
-                    <div class="stat-info"><span class="stat-label">總用戶消費總額</span><div class="stat-value" :style="{ color: currentStyle.primary }">{{ formatCurrency(totalTransactionAmount) }}</div></div>
+                    <div class="stat-info">
+                        <span class="stat-label">總用戶消費總額</span>
+                        <div class="stat-value" :style="{ color: currentStyle.primary }">
+                            {{ formatCurrency(totalTransactionAmount) }}
+                        </div>
+                    </div>
                     <div class="stat-icon-circle" style="background: #10b98120; color: #10b981;">💰</div>
                 </div>
                 <div class="stat-glass-card">
-                    <div class="stat-info"><span class="stat-label">系統反應</span><div class="stat-value">28ms</div></div>
+                    <div class="stat-info">
+                        <span class="stat-label">系統反應</span>
+                        <div class="stat-value">28ms</div>
+                    </div>
                     <div class="stat-icon-circle" style="background: #f59e0b20; color: #f59e0b;">⚡</div>
                 </div>
             </div>
@@ -83,28 +154,64 @@ const normalUsersFiltered = computed(() => {
             <div class="content-glass-card" :style="{ backgroundColor: currentStyle.cardBg, borderColor: currentStyle.border }">
 
                 <section v-if="activeTab === 'analytics'" class="tab-content">
-                    <div class="section-header"><h3>🏆 財富英雄榜 <small>Top Spenders (Users Only)</small></h3></div>
-                    <div class="table-wrapper mma-main-table">
-                        <table class="mma-table">
-                            <thead><tr><th>排名</th><th>帳號</th><th>暱稱</th><th>累積金額</th><th>次數</th><th>單筆平均</th></tr></thead>
-                            <tbody>
-                                <tr v-for="(u, i) in rankingsFilter(userStore.topUsers)" :key="u.uid">
-                                    <td><span class="rank-badge" :class="'rank-' + (i + 1)">{{ i + 1 }}</span></td>
-                                    <td class="font-bold opacity-60">{{ u.username }}</td>
-                                    <td class="font-bold">{{ u.name }}</td>
-                                    <td class="amount-text" :style="{ color: currentStyle.primary }">{{ formatCurrency(u.totalSpent) }}</td>
-                                    <td>{{ u.transactions }} 次</td>
-                                    <td class="opacity-60">{{ formatCurrency(u.avgSpent) }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div class="sub-tab-nav">
+                        <button 
+                            v-for="sub in subTabs" 
+                            :key="sub.id"
+                            class="sub-tab-item"
+                            :class="{ active: subActiveTab === sub.id }"
+                            @click="subActiveTab = sub.id"
+                        >
+                            <span class="sub-tab-icon">{{ sub.icon }}</span>
+                            {{ sub.label }}
+                        </button>
                     </div>
 
-                    <div class="rankings-sub-grid">
-                        <div class="sub-rank-box">
-                            <div class="section-header"><h4>💰 各路財神消費榜 <small>(類別支出)</small></h4></div>
-                            <div class="table-wrapper"><table class="mma-table mini-mode">
-                                <thead><tr><th>排名</th><th>項目</th><th class="text-right">累積金額</th></tr></thead>
+                    <div v-if="subActiveTab === 'topSpenders'" class="animate-fade-in">
+                        <div class="section-header">
+                            <h3>🏆 財富英雄榜 <small>Top Spenders (Users Only)</small></h3>
+                        </div>
+                        <div class="table-wrapper mma-main-table">
+                            <table class="mma-table">
+                                <thead>
+                                    <tr>
+                                        <th>排名</th>
+                                        <th>帳號</th>
+                                        <th>暱稱</th>
+                                        <th>累積金額</th>
+                                        <th>次數</th>
+                                        <th>單筆平均</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(u, i) in rankingsFilter(userStore.topUsers)" :key="u.uid">
+                                        <td><span class="rank-badge" :class="'rank-' + (i + 1)">{{ i + 1 }}</span></td>
+                                        <td class="font-bold opacity-60">{{ u.username }}</td>
+                                        <td class="font-bold">{{ u.name }}</td>
+                                        <td class="amount-text" :style="{ color: currentStyle.primary }">
+                                            {{ formatCurrency(u.totalSpent) }}
+                                        </td>
+                                        <td>{{ u.transactions }} 次</td>
+                                        <td class="opacity-60">{{ formatCurrency(u.avgSpent) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div v-if="subActiveTab === 'categories'" class="animate-fade-in">
+                        <div class="section-header">
+                            <h4>💰 各路財神消費榜 <small>(類別支出統計)</small></h4>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="mma-table">
+                                <thead>
+                                    <tr>
+                                        <th>排名</th>
+                                        <th>項目類別</th>
+                                        <th class="text-right">累積總金額</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
                                     <tr v-for="(item, index) in categoryStore.allRankings.category_spending" :key="index">
                                         <td><span class="mini-rank">{{ index + 1 }}</span></td>
@@ -112,13 +219,23 @@ const normalUsersFiltered = computed(() => {
                                         <td class="text-right font-bold">{{ formatCurrency(item.value) }}</td>
                                     </tr>
                                 </tbody>
-                            </table></div>
+                            </table>
                         </div>
+                    </div>
 
-                        <div class="sub-rank-box">
-                            <div class="section-header"><h4>✍️ 勤勞小蜜蜂獎 <small>(記帳次數)</small></h4></div>
-                            <div class="table-wrapper"><table class="mma-table mini-mode">
-                                <thead><tr><th>排名</th><th>暱稱</th><th class="text-right">次數</th></tr></thead>
+                    <div v-if="subActiveTab === 'activeBees'" class="animate-fade-in">
+                        <div class="section-header">
+                            <h4>✍️ 勤勞小蜜蜂獎 <small>(記帳次數排名)</small></h4>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="mma-table">
+                                <thead>
+                                    <tr>
+                                        <th>排名</th>
+                                        <th>用戶暱稱</th>
+                                        <th class="text-right">記帳頻率</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
                                     <tr v-for="(item, index) in rankingsFilter(categoryStore.allRankings.active_bees)" :key="index">
                                         <td><span class="mini-rank">{{ index + 1 }}</span></td>
@@ -126,13 +243,23 @@ const normalUsersFiltered = computed(() => {
                                         <td class="text-right font-bold">{{ item.value }} 次</td>
                                     </tr>
                                 </tbody>
-                            </table></div>
+                            </table>
                         </div>
+                    </div>
 
-                        <div class="sub-rank-box">
-                            <div class="section-header"><h4>🛡️ 金庫大總管 <small>(帳戶總額)</small></h4></div>
-                            <div class="table-wrapper"><table class="mma-table mini-mode">
-                                <thead><tr><th>排名</th><th>暱稱</th><th class="text-right">總餘額</th></tr></thead>
+                    <div v-if="subActiveTab === 'wealth'" class="animate-fade-in">
+                        <div class="section-header">
+                            <h4>🛡️ 金庫大總管 <small>(帳戶餘額儲蓄排名)</small></h4>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="mma-table">
+                                <thead>
+                                    <tr>
+                                        <th>排名</th>
+                                        <th>用戶暱稱</th>
+                                        <th class="text-right">目前總餘額</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
                                     <tr v-for="(item, index) in rankingsFilter(categoryStore.allRankings.wealth_masters)" :key="index">
                                         <td><span class="mini-rank">{{ index + 1 }}</span></td>
@@ -140,13 +267,24 @@ const normalUsersFiltered = computed(() => {
                                         <td class="text-right font-bold">{{ formatCurrency(item.value) }}</td>
                                     </tr>
                                 </tbody>
-                            </table></div>
+                            </table>
                         </div>
+                    </div>
 
-                        <div class="sub-rank-box">
-                            <div class="section-header"><h4>🆙 修仙進度表 <small>(XP 等級)</small></h4></div>
-                            <div class="table-wrapper"><table class="mma-table mini-mode">
-                                <thead><tr><th>排名</th><th>暱稱</th><th>等級</th><th class="text-right">經驗值</th></tr></thead>
+                    <div v-if="subActiveTab === 'xp'" class="animate-fade-in">
+                        <div class="section-header">
+                            <h4>🆙 修仙進度表 <small>(XP 等級成長榜)</small></h4>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="mma-table">
+                                <thead>
+                                    <tr>
+                                        <th>排名</th>
+                                        <th>用戶暱稱</th>
+                                        <th>目前稱號</th>
+                                        <th class="text-right">總經驗值</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
                                     <tr v-for="(item, index) in rankingsFilter(categoryStore.allRankings.xp_immortals)" :key="index">
                                         <td><span class="mini-rank">{{ index + 1 }}</span></td>
@@ -155,57 +293,160 @@ const normalUsersFiltered = computed(() => {
                                         <td class="text-right font-bold">{{ item.value }} XP</td>
                                     </tr>
                                 </tbody>
-                            </table></div>
+                            </table>
                         </div>
                     </div>
                 </section>
 
                 <section v-if="activeTab === 'users'" class="tab-content">
-                    <div class="search-box"><input v-model="searchQuery" placeholder="🔍 搜尋..." class="mma-input" /></div>
+                    <div class="search-box">
+                        <input v-model="searchQuery" placeholder="🔍 搜尋帳號、姓名或 Email..." class="mma-input" />
+                    </div>
+
                     <div class="user-group-div admin-section">
                         <div class="group-title">🛡️ 管理權限組 ({{ adminFiltered.length }})</div>
-                        <div class="table-wrapper"><table class="mma-table">
-                            <thead><tr><th>顯示編號</th><th>帳號</th><th>姓名</th><th>電子郵件</th><th>職位勳章</th><th>操作</th></tr></thead>
-                            <tbody>
-                                <tr v-for="u in adminFiltered" :key="u.username">
-                                    <td><span class="uid-tag admin-uid">{{ u.displayUid }}</span></td>
-                                    <td class="font-bold">{{ u.username }}</td>
-                                    <td>{{ u.name }}</td>
-                                    <td class="email-cell">{{ u.email }}</td>
-                                    <td><span class="job-badge">{{ u.job || '管理者' }}</span></td>
-                                    <td><button class="btn-mma-action" :class="{ 'is-disabled': u.username !== currentLoginAdmin.username }" @click="emit('open-edit', u)">
-                                        {{ u.username === currentLoginAdmin.username ? '修改資訊' : '不可修改' }}
-                                    </button></td>
-                                </tr>
-                            </tbody>
-                        </table></div>
+                        <div class="table-wrapper">
+                            <table class="mma-table">
+                                <thead>
+                                    <tr>
+                                        <th>編號</th>
+                                        <th>帳號</th>
+                                        <th>姓名</th>
+                                        <th>職位</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="u in adminFiltered" :key="u.username">
+                                        <td><span class="uid-tag admin-uid">{{ u.displayUid }}</span></td>
+                                        <td class="font-bold">{{ u.username }}</td>
+                                        <td>{{ u.name }}</td>
+                                        <td><span class="job-badge">{{ u.job || '管理者' }}</span></td>
+                                        <td>
+                                            <button class="btn-mma-action"
+                                                :class="{ 'is-disabled': u.username !== currentLoginAdmin.username }"
+                                                @click="emit('open-edit', u)">
+                                                {{ u.username === currentLoginAdmin.username ? '修改資訊' : '不可修改' }}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <div class="user-group-div" style="margin-top: 50px;">
                         <div class="group-title">👤 一般用戶組 ({{ normalUsersFiltered.length }})</div>
-                        <div class="table-wrapper"><table class="mma-table">
-                            <thead><tr><th>顯示編號</th><th>帳號</th><th>名稱</th><th>電子郵件</th><th>操作</th></tr></thead>
-                            <tbody>
-                                <tr v-for="u in normalUsersFiltered" :key="u.uid">
-                                    <td><span class="uid-tag user-uid">{{ u.displayUid }}</span></td>
-                                    <td class="font-bold">{{ u.username }}</td>
-                                    <td>{{ u.name }}</td>
-                                    <td>{{ u.email }}</td>
-                                    <td class="action-btns"><button class="btn-mma-action" :style="{ borderColor: currentStyle.primary, color: currentStyle.primary }">詳情</button><button class="btn-mma-action delete" @click="userStore.deleteUser(u.uid)">註銷</button></td>
-                                </tr>
-                            </tbody>
-                        </table></div>
+                        <div class="table-wrapper">
+                            <table class="mma-table">
+                                <thead>
+                                    <tr>
+                                        <th>編號</th>
+                                        <th>帳號</th>
+                                        <th>姓名</th>
+                                        <th>電子郵件</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="u in normalUsersFiltered" :key="u.uid">
+                                        <td><span class="uid-tag user-uid">{{ u.displayUid }}</span></td>
+                                        <td class="font-bold">{{ u.username }}</td>
+                                        <td>{{ u.name }}</td>
+                                        <td>{{ u.email }}</td>
+                                        <td class="action-btns">
+                                            <button class="btn-mma-action" :style="{ borderColor: currentStyle.primary, color: currentStyle.primary }">詳情</button>
+                                            <button class="btn-mma-action delete" @click="userStore.deleteUser(u.uid)">註銷</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="pagination-controls">
+                                <button :disabled="currentPage === 1" @click="changePage(currentPage - 1)" class="btn-mma-page"> 上一頁 </button>
+                                <span class="page-info">第 {{ currentPage }} 頁</span>
+                                <button :disabled="normalUsersFiltered.length < perPage" @click="changePage(currentPage + 1)" class="btn-mma-page"> 下一頁 </button>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
-                <section v-if="activeTab === 'api'" class="tab-content"><div class="section-header"><h3>🤖 模型控制中心</h3></div><div><p>開發中...</p></div></section>
+                <section v-if="activeTab === 'api'" class="tab-content animate-fade-in">
+                    <div class="section-header">
+                        <h3>🤖 AI 模型控制中心</h3>
+                        <p class="opacity-60">配置用於自動化記帳分類與財務健康分析的 AI 大腦</p>
+                    </div>
 
-                <section v-if="activeTab === 'feedback'" class="tab-content"><AdminsComments /></section>
+                    <div class="model-config-grid">
+                        <div class="config-sidebar">
+                            <div class="model-card" :class="{ active: selectedAiModel === 'gemini' }" @click="selectedAiModel = 'gemini'">
+                                <div class="model-icon">✨</div>
+                                <div class="model-info">
+                                    <span class="model-name">Google Gemini</span>
+                                    <span class="model-desc">雲端高性能 LLM</span>
+                                </div>
+                            </div>
+                            <div class="model-card" :class="{ active: selectedAiModel === 'ollama' }" @click="selectedAiModel = 'ollama'">
+                                <div class="model-icon">🦙</div>
+                                <div class="model-info">
+                                    <span class="model-name">Ollama (Local)</span>
+                                    <span class="model-desc">本地私有化部署</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="config-detail-card">
+                            <div v-if="selectedAiModel === 'gemini'">
+                                <div class="card-title-row">
+                                    <h4>Gemini Cloud 設定</h4>
+                                    <span class="badge-online">已啟用 Google API</span>
+                                </div>
+                                <div class="input-group">
+                                    <label>Gemini API Key</label>
+                                    <input type="password" v-model="aiSettings.geminiKey" placeholder="貼上您的 API 金鑰..." class="mma-input" />
+                                </div>
+                                <div class="input-group">
+                                    <label>模型版本</label>
+                                    <select v-model="aiSettings.geminiVersion" class="mma-input">
+                                        <option value="gemini-1.5-pro">Gemini 1.5 Pro (推薦)</option>
+                                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (極速)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div v-if="selectedAiModel === 'ollama'">
+                                <div class="card-title-row">
+                                    <h4>Ollama 本地設定</h4>
+                                    <span class="badge-offline">本地內網通訊</span>
+                                </div>
+                                <div class="input-group">
+                                    <label>伺服器端點 (Host)</label>
+                                    <input type="text" v-model="aiSettings.ollamaHost" placeholder="http://localhost:11434" class="mma-input" />
+                                </div>
+                                <div class="input-group">
+                                    <label>指定模型名稱 (Model)</label>
+                                    <input type="text" v-model="aiSettings.ollamaModel" placeholder="llama3 / mistral / qwen" class="mma-input" />
+                                </div>
+                            </div>
+
+                            <div class="config-actions">
+                                <button class="btn-mma-secondary" @click="testConnection">⚡ 測試連線</button>
+                                <button class="btn-mma-primary" :style="{ background: currentStyle.primary }">💾 儲存並套用</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section v-if="activeTab === 'feedback'" class="tab-content">
+                    <AdminsComments />
+                </section>
 
                 <section v-if="activeTab === 'system'" class="tab-content">
-                    <div class="section-header"><h3>🎨 視覺主題設定</h3></div>
+                    <div class="section-header">
+                        <h3>🎨 視覺主題設定</h3>
+                    </div>
                     <div class="theme-picker">
-                        <div v-for="(style, id) in themes" :key="id" class="theme-item" :class="{ 'is-selected': currentTheme === id }" @click="emit('set-theme', id)">
+                        <div v-for="(style, id) in themes" :key="id" class="theme-item"
+                            :class="{ 'is-selected': currentTheme === id }" @click="emit('set-theme', id)">
                             <div class="theme-preview" :style="{ background: style.bgGradient }">
                                 <div class="preview-sidebar" :style="{ background: style.sidebarBg }"></div>
                                 <div class="preview-accent" :style="{ background: style.primary }"></div>
@@ -221,5 +462,4 @@ const normalUsersFiltered = computed(() => {
 
 <style scoped>
 @import "../assets/css/admin.css";
-
 </style>
