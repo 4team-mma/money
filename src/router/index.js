@@ -21,7 +21,8 @@ import Feedback from "@/view/Feedback.vue";
 import AdminMain from "@/view/AdminMain.vue";
 import ConsumerAnalysis from "@/view/ConsumerAnalysis.vue";
 import SalaryAnalysis from "@/view/SalaryAnalysis.vue";
-
+import SettingAccount from "@/view/SettingAccount.vue";
+import SettingOutput from "@/view/SettingOutput.vue";
 
 const routes = [
   {
@@ -134,6 +135,17 @@ const routes = [
     path: "/SalaryAnalysis",
     component: SalaryAnalysis,
     name: "SalaryAnalysis",
+  },
+    {
+    path: "/SettingAccount",
+    component: SettingAccount,
+    name: "SettingAccount",
+  }
+  ,
+    {
+    path: "/SettingOutput",
+    component: SettingOutput,
+    name: "SettingOutput",
   }
 
 ];
