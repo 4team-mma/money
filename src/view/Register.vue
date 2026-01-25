@@ -7,10 +7,10 @@ import { ElMessage } from 'element-plus'
 const router = useRouter()
 const loading = ref(false)
 
-// 🌟 Google Client ID (請確認這是您最新的 ID)
-const GOOGLE_CLIENT_ID = "709149079121-1mma6vkj82ni707n86sp098ub1re4q22.apps.googleusercontent.com";
+//  Google Client ID (請確認這是您最新的 ID)
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
-// 🌟 核心：頁面載入後，直接呼叫 window.google 產生按鈕
+// 頁面載入後，直接呼叫 window.google 產生按鈕
 onMounted(() => {
     // 1. 確保 Google SDK 已載入
     if (window.google) {

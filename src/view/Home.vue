@@ -6,8 +6,10 @@ import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 
-// 🌟 Google Client ID (與註冊頁一致)
-const GOOGLE_CLIENT_ID = "709149079121-1mma6vkj82ni707n86sp098ub1re4q22.apps.googleusercontent.com";
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
+//  Google Client ID (與註冊頁一致)
+
 
 const formData = ref({
     email: '',
@@ -189,7 +191,9 @@ const handleRegister = () => router.push('/Register')
 <style scoped>
 @import '../assets/css/home.css';
 
-/* 🌟 新增樣式：分隔線與 Google 按鈕容器 */
+
+
+/*  新增樣式：分隔線與 Google 按鈕容器 */
 .divider {
     display: flex;
     align-items: center;
