@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api' 
-
+import.meta.env.VITE_RECAPTCHA_SITE_KEY
 const router = useRouter()
 
 
@@ -12,6 +12,8 @@ const loading = ref(false)
 const errorMessage = ref('')
 const isEmailChecked = ref(false) 
 const isOtpVerified = ref(false) 
+const countdown = ref(0) //倒數計時器
+let timer = null //倒數計時器
 
 // 表單資料
 const email = ref('')
@@ -19,29 +21,58 @@ const otp = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
 
+// --- 0. 設定倒數函式 ---
+const startCountdown = () => {
+    countdown.value = 60 // 設定 60 秒
+    timer = setInterval(() => {
+        if (countdown.value > 0) {
+            countdown.value--
+        } else {
+            clearInterval(timer)
+        }
+    }, 1000)
+}
+
+// 在組件銷毀時清除計時器，防止記憶體洩漏
+import { onUnmounted } from 'vue'
+onUnmounted(() => {
+    if (timer) clearInterval(timer)
+})
+
 /**
  * 功能 1：發送驗證碼
  */
 const sendVerifyCode = async () => {
-    if (!email.value) {
-        errorMessage.value = '請先輸入電子郵件'
-        return
-    }
+    if (!email.value || countdown.value > 0) return 
+    // 如果正在倒數則不執行
 
     loading.value = true
     errorMessage.value = ''
 
     try {
-        // 🌟 修正點 2：對應路徑 /forgot-password/send-otp
+        // 執行 reCAPTCHA
+        const token = await new Promise((resolve, reject) => {
+            window.grecaptcha.ready(() => {
+                // 這裡引用 .env 變數
+                window.grecaptcha.execute(import.meta.env.VITE_RECAPTCHA_SITE_KEY, { action: 'forgot_password' })
+                    .then(resolve)
+                    .catch(reject);
+            });
+        });
+
+        // 對應路徑 /forgot-password/send-otp
         await api.post('/auth/forgot-password/send-otp', {
-            email: email.value
+            email: email.value,
+            recaptcha_token: token
         })
 
         isEmailChecked.value = true
+        startCountdown() // 成功後啟動倒數
         alert('驗證碼已發送至您的信箱，請於 5 分鐘內輸入')
     } catch (err) {
-        // 🌟 修正點 3：FastAPI 報錯訊息通常在 err.response.data.detail
+        // FastAPI 報錯訊息通常在 err.response.data.detail
         errorMessage.value = err.response?.data?.detail || '此信箱尚未註冊或發送失敗'
+        if (err.response?.status === 429) startCountdown()
     } finally {
         loading.value = false
     }
@@ -140,11 +171,15 @@ const goToLogin = () => router.push('/')
                         <label>電子郵件</label>
                         <div class="input-row">
                             <input v-model="email" type="email" placeholder="your@email.com"
-                                :disabled="isEmailChecked" />
-                            <button @click="sendVerifyCode" :disabled="loading || isEmailChecked"
-                                class="btn-gradient-small">
+                                :disabled="isEmailChecked && countdown > 0" />
+
+                            <button @click="sendVerifyCode" :disabled="loading || countdown > 0 "
+                                class="btn-gradient-small"
+                                :class="{ 'btn-counting': countdown > 0}" >
+
                                 <span v-if="loading">傳送中...</span>
-                                <span v-else>{{ isEmailChecked ? '已寄送' : '發送驗證碼' }}</span>
+                                <span v-else-if="countdown > 0">重新發送 ({{ countdown }}s)</span>
+                                <span v-else>{{ isEmailChecked ? '重新發送' : '發送驗證碼' }}</span>
                             </button>
                         </div>
                     </div>
