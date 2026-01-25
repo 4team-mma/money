@@ -17,6 +17,19 @@ const period = ref('month')
 const startDate = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0])
 const endDate = ref(new Date().toISOString().split('T')[0])
 
+// 分組狀態
+const groupBy = ref('add_class') // 預設依類別 (add_class, account, add_member)
+
+// 根據 groupBy 的值回傳對應的表格標題
+const tableLabel = computed(() => {
+    const labelMap = {
+        'add_class': '類別',
+        'account': '帳戶',
+        'add_member': '成員'
+    }
+    return labelMap[groupBy.value] || '項目'
+})
+
 /**
  * 🌟 核心：直接使用 statsApi 獲取結果
  */
@@ -25,7 +38,8 @@ const loadData = async () => {
     try {
         const params = {
             start_date: startDate.value,
-            end_date: endDate.value
+            end_date: endDate.value,
+            group_by_field: groupBy.value // 傳送分組參數給後端
         }
         // 呼叫模組化的 API
         const data = await statsApi.getExpenseCategoryStats(params)
@@ -69,7 +83,7 @@ const renderChart = () => {
     })
 }
 
-watch([period, startDate, endDate], () => {
+watch([period, startDate, endDate, groupBy], () => {
     // 日期重設邏輯
     if (period.value === 'month') {
         startDate.value = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
@@ -99,6 +113,12 @@ const today = computed(() => {
                 <div class="charts-grid">
                     <div class="chart-card">
                         <div class="chart-header chart-description">
+                            <span>分析維度：</span>
+                            <select class="my-select" v-model="groupBy" style="margin-right: 15px;">
+                                <option value="add_class">按類別</option>
+                                <option value="account">按帳戶</option>
+                                <option value="add_member">按成員</option>
+                            </select>
                             <span>檢視期間：</span>
                             <select class="my-select" v-model="period">
                                 <option value="month">當月</option>
@@ -123,7 +143,7 @@ const today = computed(() => {
                 </div>
                 <table class="money-table">
                     <thead>
-                        <tr><th>排序</th><th>類別</th><th>金額</th><th>比例</th></tr>
+                        <tr><th>排序</th><th>{{ tableLabel }}</th><th>金額</th><th>比例</th></tr>
                     </thead>
                     <tbody>
                         <tr v-for="row in categoryTableData" :key="row.category">
