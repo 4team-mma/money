@@ -1,151 +1,108 @@
 <script setup>
 import Nav from '@/components/Nav.vue';
 import Chart_Preface from '@/components/ChartPreface.vue';
-import { ref, computed } from 'vue'
-
+import { ref, computed, onMounted, watch } from 'vue';
+import { statsApi } from '@/api/stats';
+import { calculatePeriodDays } from '@/utils/financeHelper';
+import Chart from 'chart.js/auto';
 
 // 顯示當天日期
 const today = computed(() => {
-    const now = new Date()
-
-    const year = now.getFullYear()
-    const month = now.getMonth() + 1
-    const date = now.getDate()
-
-    const weekMap = ['週日', '週一', '週二', '週三', '週四', '週五', '週六']
-    const week = weekMap[now.getDay()]
-
-    return `${year} 年 ${month} 月 ${date} 日・${week}`
+    const now = new Date();
+    const weekMap = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+    return `${now.getFullYear()} 年 ${now.getMonth() + 1} 月 ${now.getDate()} 日・${weekMap[now.getDay()]}`;
 })
-// 繪製淨資產分析_折線圖
 const dailyChartRef = ref(null)
 
 // 表格連動下拉選單設定
 // 下拉選單控制，預設月
 const period = ref('month')
 // 自訂區間
-const startDate = ref(null) // '2025-02-01'
-const endDate = ref(null)   // '2025-04-30'
+const startDate = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0])
+const endDate = ref(new Date().toISOString().split('T')[0])
 
-// 假資料
-const rawIncomeData = [
-    { id: 1, date: '2025-01-05', category: '薪資收入', amount: 48000 },
-    { id: 2, date: '2025-05-10', category: '兼職收入', amount: 8500 },
-    { id: 3, date: '2025-05-20', category: '投資利息', amount: 3200 },
-    { id: 4, date: '2026-01-01', category: '薪資收入', amount: 52000 },
-    { id: 5, date: '2026-01-08', category: '獎金', amount: 12000 },
-    { id: 6, date: '2026-01-15', category: '其他收入', amount: 3000 }
-]
+let chartInstance = null
 
-// 根據 period 切換資料
-const filteredExpenseData = computed(() => {
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = now.getMonth()
+// 狀態管理
+const categoryTableData = ref([]) 
+const is_loading = ref(false)
 
-    if (period.value === 'month') {
-        const start = new Date(year, month, 1)
-        const end = new Date(year, month + 1, 0)
-        return rawIncomeData.filter(r => {
-            const d = new Date(r.date)
-            return d >= start && d <= end
-        })
+// 分組狀態
+const groupBy = ref('add_class') // 預設依類別 (add_class, account, add_member)
+
+// 根據 groupBy 的值回傳對應的表格標題
+const tableLabel = computed(() => {
+    const labelMap = {
+        'add_class': '類別',
+        'account': '帳戶',
+        'add_member': '成員'
     }
-
-    if (period.value === 'year') {
-        const start = new Date(year, 0, 1)
-        const end = new Date(year, 11, 31)
-        return rawIncomeData.filter(r => {
-            const d = new Date(r.date)
-            return d >= start && d <= end
-        })
-    }
-
-    if (period.value === 'custom') {
-        if (!startDate.value || !endDate.value) return []
-        const start = new Date(startDate.value)
-        const end = new Date(endDate.value)
-        return rawIncomeData.filter(r => {
-            const d = new Date(r.date)
-            return d >= start && d <= end
-        })
-    }
-
-    return []
+    return labelMap[groupBy.value] || '項目'
 })
 
-const categoryTableData = computed(() => {
-    const map = {}
-    let total = 0
-
-    filteredExpenseData.value.forEach(item => {
-        if (!map[item.category]) {
-            map[item.category] = {
-                category: item.category,
-                amount: 0
-            }
+/**
+ * 🌟 核心：直接使用 statsApi 獲取結果
+ */
+const loadData = async () => {
+    is_loading.value = true
+    try {
+        const params = {
+            start_date: startDate.value,
+            end_date: endDate.value,
+            group_by_field: groupBy.value // 傳送分組參數給後端
         }
-        map[item.category].amount += item.amount
-        total += item.amount
+        const data = await statsApi.getIncomeCategoryStats(params)
+        categoryTableData.value = data 
+        renderChart()
+    } catch (error) {
+        console.error("統計資料讀取失敗:", error)
+    } finally {
+        is_loading.value = false
+    }
+}
+
+onMounted(() => loadData())
+
+// 🌟 計算屬性 (保留在前端，處理 UI 邏輯)
+const periodDays = computed(() => calculatePeriodDays(period.value, startDate.value, endDate.value))
+const totalAmount = computed(() => categoryTableData.value.reduce((sum, i) => sum + i.amount, 0))
+const averagePerDay = computed(() => totalAmount.value > 0 ? Math.round(totalAmount.value / periodDays.value) : 0)
+
+const renderChart = () => {
+    if (!dailyChartRef.value) return
+    if (chartInstance) chartInstance.destroy()
+    const chartData = categoryTableData.value
+    if (chartData.length === 0) return
+
+    chartInstance = new Chart(dailyChartRef.value, {
+        type: 'doughnut',
+        data: {
+            labels: chartData.map(i => i.category),
+            datasets: [{
+                data: chartData.map(i => i.amount),
+                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'],
+                borderWidth: 2
+            }]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { legend: { position: 'right' } } 
+        }
     })
+}
 
-    return Object.values(map)
-        .sort((a, b) => b.amount - a.amount)
-        .map((item, index) => ({
-            id: index + 1,
-            category: item.category,
-            amount: item.amount,
-            ratio: total ? (item.amount / total) * 100 : 0
-        }))
-})
-
-// 合計金額
-const totalAmount = computed(() => {
-    return filteredExpenseData.value.reduce(
-        (sum, item) => sum + item.amount,
-        0
-    )
-})
-
-// 計算期間等效月數（平均每月用）
-const periodMonths = computed(() => {
+watch([period, startDate, endDate, groupBy], () => {
+    // 日期重設邏輯
     if (period.value === 'month') {
-        // 當月 → 1 個月（但後面會被擋掉）
-        return 1
+        startDate.value = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
+        endDate.value = new Date().toISOString().split('T')[0]
+    } else if (period.value === 'year') {
+        startDate.value = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0]
+        endDate.value = new Date().toISOString().split('T')[0]
     }
-
-    if (period.value === 'year') {
-        return 12
-    }
-
-    if (period.value === 'custom') {
-        if (!startDate.value || !endDate.value) return 0
-
-        const start = new Date(startDate.value)
-        const end = new Date(endDate.value)
-
-        const diffDays =
-            Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1
-
-        // 1 個月 ≈ 30.44 天
-        return diffDays / 30.44
-    }
-
-    return 0
+    loadData()
 })
-
-// 平均每月收入（期間需 >= 2 個月）
-const averagePerMonth = computed(() => {
-    if (periodMonths.value < 2) {
-        return null // 前端顯示 "-"
-    }
-
-    return Math.round(
-        totalAmount.value / periodMonths.value
-    )
-})
-
-
 
 
 </script>
@@ -160,11 +117,18 @@ const averagePerMonth = computed(() => {
                 <h3>收入分析</h3>
                 <span class="date">{{ today }}</span>
                 <hr>
-                <!-- 支出分析頁面 -->
-                <!-- 支出分析圖表_(圓餅圖支出項目分析) -->
+                <!-- 收入分析頁面 -->
+                <!-- 收入分析圖表_(圓餅圖收入項目分析) -->
                 <div class="charts-grid">
                     <div class="chart-card">
                         <div class="chart-header chart-description">
+                            <!-- 切換分析維度 -->
+                            <span>分析維度：</span>
+                            <select class="my-select" v-model="groupBy" style="margin-right: 15px;">
+                                <option value="add_class">按類別</option>
+                                <option value="account">按帳戶</option>
+                                <option value="add_member">按成員</option>
+                            </select>
                             <!-- 下拉選單 -->
                             <span>檢視期間：</span>
                             <select class="my-select" v-model="period">
@@ -178,67 +142,35 @@ const averagePerMonth = computed(() => {
                                 <input type="date" v-model="endDate" class="custom-select" />
                             </div>
                         </div>
-                        <div class="chart-wrapper">
+                        <div class="chart-wrapper" style="position: relative; height: 350px; width: 100%;">
+                            <div v-if="is_loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">加載中...</div>
                             <canvas ref="dailyChartRef"></canvas>
                         </div>
                         <div class="summary">
                             <div>合計：NT${{ totalAmount.toLocaleString() }}</div>
-                            <div>
-                                平均每月：
-                                <span v-if="averagePerMonth === null">-</span>
-                                <span v-else>
-                                    NT${{ averagePerMonth.toLocaleString() }}
-                                </span>
-                            </div>
+                            <div>平均每天：NT${{ averagePerDay.toLocaleString() }}</div>
                         </div>
                     </div>
                 </div>
-                <!-- 支出_文字 -->
+                <!-- 收入_文字 -->
                 <table class="money-table">
-                    <colgroup>
-                        <col style="width: 10%;"> <!-- 排序（窄） -->
-                        <col style="width: 45%;"> <!-- 類別 -->
-                        <col style="width: 25%;"> <!-- 金額 -->
-                        <col style="width: 20%;"> <!-- 比例（吃剩下的） -->
-                    </colgroup>
                     <thead>
                         <tr>
                             <th>排序</th>
-                            <th>類別</th>
+                            <th>{{ tableLabel }}</th>
                             <th>金額</th>
                             <th>比例</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>1</td>
-                            <td>工資</td>
-                            <td>NT$8,935</td>
-                            <td>21.1%</td>
+                        <tr v-for="row in categoryTableData" :key="row.category">
+                            <td>{{ row.id }}</td>
+                            <td>{{ row.category  }}</td>
+                            <td>NT${{ row.amount.toLocaleString() }}</td>
+                            <td>{{ row.ratio.toFixed(1) }}%</td>
                         </tr>
-                        <tr>
-                            <td>2</td>
-                            <td>獎金</td>
-                            <td>NT$2,680</td>
-                            <td>10.3%</td>
-                        </tr>
-                        <tr>
-                            <td>3</td>
-                            <td>副業</td>
-                            <td>NT$2,000</td>
-                            <td>10.0%</td>
-                        </tr>
-                        <tr>
-                            <td>4</td>
-                            <td>投資</td>
-                            <td>NT$1,292</td>
-                            <td>8.2%</td>
-                        </tr>
-                        <tr>
-                            <td>5</td>
-                            <td>其他</td>
-                            <td>NT$700</td>
-                            <td>5.2%</td>
+                        <tr v-if="categoryTableData.length === 0 && !is_loading">
+                            <td colspan="4" style="text-align: center; padding: 40px; color: #999;">此期間尚無收入資料</td>
                         </tr>
                     </tbody>
                 </table>
