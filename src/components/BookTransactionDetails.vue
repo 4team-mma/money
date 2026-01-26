@@ -86,7 +86,7 @@
                 <!-- 右側：金額與自定義選單 -->
                 <div class="transaction-details">
                     <div class="transaction-amount" :class="{ income: t.add_type }">
-                        {{ t.add_type ? '+' : '-' }}NT$ {{ formatNumber(t.add_amount) }}
+                        {{ t.add_type ? '+' : '-' }}{{ t.currency }} {{ formatNumber(t.add_amount) }}
                     </div>
                     <div class="transaction-account-name">{{ t.account_name }}</div>
                 </div>

@@ -4,6 +4,7 @@ import Chart_Preface from '@/components/ChartPreface.vue';
 import { ref, computed, onMounted, watch } from 'vue';
 import { statsApi } from '@/api/stats';
 import { calculatePeriodDays } from '@/utils/financeHelper';
+import { getLocalDate, getLocalDateString } from '@/utils/dateHelper';
 import Chart from 'chart.js/auto';
 
 // 顯示當天日期
@@ -17,9 +18,13 @@ const dailyChartRef = ref(null)
 // 表格連動下拉選單設定
 // 下拉選單控制，預設月
 const period = ref('month')
+
+// 初始化日期 (使用本地時間)
+const now = new Date();
+
 // 自訂區間
-const startDate = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0])
-const endDate = ref(new Date().toISOString().split('T')[0])
+const startDate = ref(getLocalDateString(new Date(now.getFullYear(), now.getMonth(), 1)));
+const endDate = ref(getLocalDate());
 
 let chartInstance = null
 
@@ -66,7 +71,12 @@ onMounted(() => loadData())
 // 🌟 計算屬性 (保留在前端，處理 UI 邏輯)
 const periodDays = computed(() => calculatePeriodDays(period.value, startDate.value, endDate.value))
 const totalAmount = computed(() => categoryTableData.value.reduce((sum, i) => sum + i.amount, 0))
-const averagePerDay = computed(() => totalAmount.value > 0 ? Math.round(totalAmount.value / periodDays.value) : 0)
+const averagePerDay = computed(() => {
+    const days = periodDays.value;
+    return (totalAmount.value > 0 && days > 0) 
+        ? Math.round(totalAmount.value / days) 
+        : 0;
+});
 
 const renderChart = () => {
     if (!dailyChartRef.value) return
@@ -92,17 +102,28 @@ const renderChart = () => {
     })
 }
 
-watch([period, startDate, endDate, groupBy], () => {
-    // 日期重設邏輯
-    if (period.value === 'month') {
-        startDate.value = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
-        endDate.value = new Date().toISOString().split('T')[0]
-    } else if (period.value === 'year') {
-        startDate.value = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0]
-        endDate.value = new Date().toISOString().split('T')[0]
+// 監控邏輯：確保切換時也是本地時間
+watch([period, startDate, endDate, groupBy], (newVal, oldVal) => {
+    // 取得執行當下的本地時間
+    const currentNow = new Date();
+    // 檢查是不是 period 變了 (newVal[0] 是 period 的新值, oldVal[0] 是舊值)
+    const periodChanged = newVal[0] !== oldVal[0];
+
+    // 「只有在 period 真的發生改變時」才重置日期
+    if (periodChanged && period.value === 'month') {
+        startDate.value = getLocalDateString(new Date(currentNow.getFullYear(), currentNow.getMonth(), 1));
+        endDate.value = getLocalDate();
+        return; // 修改 startDate 會再次觸發 watch，所以這裡直接 return
+    } else if (periodChanged && period.value === 'year') {
+        startDate.value = `${currentNow.getFullYear()}-01-01`;
+        endDate.value = getLocalDate();
+        return; // 同上
     }
-    loadData()
-})
+    // 如果選的是 'custom'，不自動重置日期，直接執行下方 loadData()
+    // 如果是日期改變 (startDate/endDate) 或分組改變 (groupBy)
+    // 或是從 custom 選回 month 已經完成日期賦值後第二次進來的 watch
+    loadData();
+});
 
 
 </script>

@@ -6,17 +6,12 @@
     import api from "@/api";
     import { ref, computed, onMounted, watch } from "vue";
     import { ElMessage } from 'element-plus';
+    import { getLocalDate, getLocalDateString } from '@/utils/dateHelper'
 
     const transactions = ref([]);
 
     // 修正日期為本地時間 yyyy-mm-dd
-    const today = new Date()
-        .toLocaleDateString("zh-TW", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-        })
-        .replace(/\//g, "-");
+    const today = getLocalDate();
 
     const selectedDate = ref(today);
     const year = ref(new Date().getFullYear());
@@ -58,13 +53,7 @@
     });
 
     const selectDate = (day) => {
-        selectedDate.value = day.date
-            .toLocaleDateString("zh-TW", {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-            })
-            .replace(/\//g, "-");
+        selectedDate.value = getLocalDateString(day.date);
     };
 
     // 選擇日期的事件清單
@@ -75,7 +64,7 @@
         const attr = transactions.value.map(e => ({
             dates: new Date(e.add_date),
             bar: { color: e.add_type ? "green" : "red" },
-            popover: { label: `${e.add_class} NT$ ${e.add_amount.toLocaleString()}` },
+            popover: { label: `${e.add_class} ${e.currency} ${e.add_amount.toLocaleString()}` },
         }));
         attr.push({ key: "today", dates: today, highlight: { color: "orange", fillMode: "outline" } });
         return attr;
