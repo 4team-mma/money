@@ -75,7 +75,7 @@
         const attr = transactions.value.map(e => ({
             dates: new Date(e.add_date),
             bar: { color: e.add_type ? "green" : "red" },
-            popover: { label: `${e.add_class} NT$ ${e.add_amount.toLocaleString()}` },
+            popover: { label: `${e.add_class} ${e.currency} ${e.add_amount.toLocaleString()}` },
         }));
         attr.push({ key: "today", dates: today, highlight: { color: "orange", fillMode: "outline" } });
         return attr;
