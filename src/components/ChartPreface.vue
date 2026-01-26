@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue' // 🌟 修正：補上缺失的引入
 import { useRecordStore } from '@/stores/useRecordStore'
-import { useAccountStore } from '@/stores/useAccountStore' 
+import { useAccountStore } from '@/stores/useAccountStore'
 
 const recordStore = useRecordStore()
 const accountStore = useAccountStore()
@@ -10,7 +10,7 @@ const accountStore = useAccountStore()
 onMounted(() => {
     // 如果冰箱是空的，就去外面抓一次資料
     if (recordStore.records.length === 0) recordStore.fetchAllRecords()
-    
+
     // 假設帳戶 Store 有對應的 loadAccounts 方法
     if (accountStore.loadAccounts) accountStore.loadAccounts()
 })
@@ -61,24 +61,82 @@ const totalNetAssets = computed(() => {
     return accounts.reduce((sum, acc) => sum + parseFloat(acc.current_balance || 0), 0)
 })
 
-// 預留預算卡片資料 (目前暫用假資料，未來可串接後端)
-const budgets = ref([
-    { category: '飲食', spent: 8500, limit: 12000, color: 'color-1' },
-    { category: '交通', spent: 3200, limit: 5000, color: 'color-2' },
-    { category: '娛樂', spent: 6800, limit: 8000, color: 'color-3' }
-])
+// 與上期相比
+const monthlyMOMStats = computed(() => {
+    const now = new Date()
+    const currentYear = now.getFullYear()
+    const currentMonth = now.getMonth()
+    const currentDay = now.getDate() // 今天幾號
+
+    const prevMonthDate = new Date(currentYear, currentMonth - 1, 1)
+    const prevYear = prevMonthDate.getFullYear()
+    const prevMonth = prevMonthDate.getMonth()
+    const lastDayPrevMonth = new Date(prevYear, prevMonth + 1, 0).getDate()
+    const prevEndDay = Math.min(currentDay, lastDayPrevMonth)
+
+    let currentIncome = 0, currentExpense = 0
+    let prevIncome = 0, prevExpense = 0
+
+    recordStore.records.forEach(r => {
+        const d = new Date(r.add_date)
+        const amt = parseFloat(r.add_amount || 0)
+
+        // 本期：本月 1～今天
+        if (d.getFullYear() === currentYear && d.getMonth() === currentMonth && d.getDate() <= currentDay) {
+            if (r.add_type === true || r.add_type === 1) currentIncome += amt
+            else currentExpense += amt
+        }
+
+        // 上期：上月 1～今天同日
+        if (d.getFullYear() === prevYear && d.getMonth() === prevMonth && d.getDate() <= prevEndDay) {
+            if (r.add_type === true || r.add_type === 1) prevIncome += amt
+            else prevExpense += amt
+        }
+    })
+
+    // 計算增減文字並加上逗號
+    const incomeDiff = currentIncome - prevIncome
+    const expenseDiff = currentExpense - prevExpense
+
+    const incomeChangeText = incomeDiff > 0 ? `增加 ${formatNumber(incomeDiff)}`
+        : incomeDiff < 0 ? `減少 ${formatNumber(Math.abs(incomeDiff))}`
+            : `持平 NT$0`
+
+    const expenseChangeText = expenseDiff > 0 ? `增加 ${formatNumber(expenseDiff)}`
+        : expenseDiff < 0 ? `減少 ${formatNumber(Math.abs(expenseDiff))}`
+            : `持平`
+
+    return {
+        current: {
+            income: currentIncome,
+            expense: currentExpense
+        },
+        previous: {
+            income: prevIncome,
+            expense: prevExpense
+        },
+        changeText: {
+            income: incomeChangeText,
+            expense: expenseChangeText
+        }
+    }
+})
+
 </script>
 
 <template>
     <div class="full-width">
         <h2>圖表分析</h2>
-        
+
         <div class="PageTurn">
             <div class="btn-group t-btn-group" role="group">
-                <RouterLink class="btn btn-outline-primary" to="/Chart">淨資產趨勢</RouterLink>
-                <RouterLink class="btn btn-outline-primary" to="/ChartSecondBalance">收支趨勢</RouterLink>
-                <RouterLink class="btn btn-outline-primary" to="/ChartThirdExpense">支出分析</RouterLink>
-                <RouterLink class="btn btn-outline-primary" to="/ChartForthIncome">收入分析</RouterLink>
+                <RouterLink class="btn btn-outline-primary" to="/Chart" active-class="active">淨資產趨勢</RouterLink>
+                <RouterLink class="btn btn-outline-primary" to="/ChartSecondBalance" active-class="active">收支趨勢
+                </RouterLink>
+                <RouterLink class="btn btn-outline-primary" to="/ChartThirdExpense" active-class="active">支出分析
+                </RouterLink>
+                <RouterLink class="btn btn-outline-primary" to="/ChartForthIncome" active-class="active">收入分析
+                </RouterLink>
             </div>
         </div>
 
@@ -95,7 +153,7 @@ const budgets = ref([
                         </div>
                         <div class="card-content">
                             <div class="amount">NT$ {{ formatNumber(monthlyStats.income) }}</div>
-                            <p class="change-text_1">數據已與雲端同步</p>
+                            <p class="change-text_1">與上期相比，{{ monthlyMOMStats.changeText.income }}</p>
                         </div>
                     </div>
 
@@ -109,7 +167,7 @@ const budgets = ref([
                         </div>
                         <div class="card-content">
                             <div class="amount">NT$ {{ formatNumber(monthlyStats.expense) }}</div>
-                            <p class="change-text_1">數據已與雲端同步</p>
+                            <p class="change-text_1">與上期相比，{{ monthlyMOMStats.changeText.expense }}</p>
                         </div>
                     </div>
 
@@ -183,8 +241,10 @@ h2 {
     gap: 16px;
     flex-wrap: nowrap;
     justify-content: flex-start;
-    overflow-x: auto;/* 接受滾輪 */
-    scroll-behavior: smooth;/* 滑動更順 */
+    overflow-x: auto;
+    /* 接受滾輪 */
+    scroll-behavior: smooth;
+    /* 滑動更順 */
     padding: 0 clamp(16px, 4vw, 40px);
     scrollbar-width: none;
 }
@@ -218,4 +278,24 @@ h2 {
     color: #64748b;
     margin: 0;
 }
+
+
+/* 1. 當前選中狀態：藍底白字 (你之前要的) */
+.t-btn-group .btn.active {
+    background-color: #0d6efd !important;
+    color: white !important;
+    border-color: #0d6efd !important;
+}
+
+/* 2. 滑鼠移過去 (Hover) 狀態：顯示白框 */
+.t-btn-group .btn:hover {
+    background-color: #0d6efd !important; /* 保持透明或原色，不要變藍 */
+    color: white !important;              /* 字體保持藍色 */
+    border: 2px solid white !important;      /* 關鍵：顯現白框  */
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.5); /* 選配：加一點點發光感更明顯 */
+}
+
+/* 如果你的背景是深色的，白框才看得到；
+   如果背景是白色的，建議把 border 改成更深的藍色或陰影 */
+
 </style>
