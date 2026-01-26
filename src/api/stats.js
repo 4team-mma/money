@@ -6,7 +6,7 @@ export const statsApi = {
     // 1. 支出分析 (已完成)
     getExpenseCategoryStats: (params) => api.get('/stats/expenses/category', { params }),
 
-    // 2. 收入分析 (隊友 A 負責)
+    // 2. 收入分析 (已完成)
     getIncomeCategoryStats: (params) => api.get('/stats/income/category', { params }),
 
     // 3. 收支趨勢 (隊友 B 負責)
