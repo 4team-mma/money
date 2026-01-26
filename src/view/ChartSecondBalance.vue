@@ -9,7 +9,7 @@ const dailyChartRef = ref(null)
 const chartInstance = shallowRef(null)
 
 // 狀態管理
-const rawTrendData = ref([]) 
+const rawTrendData = ref([])
 const is_loading = ref(false)
 
 const period = ref('month')
@@ -26,8 +26,7 @@ const loadData = async () => {
         }
         // 呼叫 API
         const data = await statsApi.getCashFlowTrend(params)
-        rawTrendData.value = data 
-        
+        rawTrendData.value = data
         await nextTick()
         renderChart()
     } catch (error) {
@@ -37,15 +36,91 @@ const loadData = async () => {
     }
 }
 
-onMounted(() => loadData())
+onMounted(() => {
+    const now = new Date()
 
+    // 預設：月（最近 12 個月）
+    startDate.value = new Date(now.getFullYear(), now.getMonth() - 11, 1)
+        .toISOString().split('T')[0]
+    endDate.value = new Date().toISOString().split('T')[0]
+    loadData()
+})
+
+const displayTrendData = computed(() => {
+    // === 月：逐月匯總（最近 12 個月） ===
+    if (period.value === 'month') {
+        const map = {}
+
+        rawTrendData.value.forEach(d => {
+            const date = new Date(d.date)
+            const key = `${date.getFullYear()}-${date.getMonth()}`
+
+            if (!map[key]) {
+                map[key] = {
+                    year: date.getFullYear(),
+                    month: date.getMonth(), // 0-based，方便排序
+                    date: `${date.getFullYear()}年${String(date.getMonth() + 1).padStart(2, '0')}月`,
+                    income: 0,
+                    expense: 0,
+                    net: 0
+                }
+            }
+
+            map[key].income += d.income
+            map[key].expense += d.expense
+            map[key].net = map[key].income - map[key].expense
+        })
+
+        return Object.values(map)
+            .sort((a, b) =>
+                a.year !== b.year ? a.year - b.year : a.month - b.month
+            )
+            .slice(-12)
+            .reverse()
+    }
+
+    // === 年：逐年匯總 ===
+    if (period.value === 'year') {
+        const map = {}
+
+        rawTrendData.value.forEach(d => {
+            const year = new Date(d.date).getFullYear()
+
+            if (!map[year]) {
+                map[year] = {
+                    date: `${year}年`,
+                    income: 0,
+                    expense: 0,
+                    net: 0
+                }
+            }
+
+            map[year].income += d.income
+            map[year].expense += d.expense
+            map[year].net = map[year].income - map[year].expense
+        })
+
+        return Object.values(map).sort((a, b) =>
+            parseInt(a.date) - parseInt(b.date)
+        )
+    }
+
+    // === 自訂日期：逐日 ===
+    return rawTrendData.value.map(d => ({
+        ...d,
+        net: d.income - d.expense
+    }))
+})
+
+// 圖
 const renderChart = () => {
     if (!dailyChartRef.value) return
+
+    const chartData = displayTrendData.value
+    if (!chartData || chartData.length === 0) return
+
+    // 銷毀舊的 instance
     if (chartInstance.value) chartInstance.value.destroy()
-
-    const chartData = rawTrendData.value
-    if (chartData.length === 0) return
-
     const ctx = dailyChartRef.value.getContext('2d')
     chartInstance.value = new Chart(ctx, {
         type: 'line',
@@ -79,22 +154,22 @@ const renderChart = () => {
     })
 }
 
-// 🌟 日期監聽邏輯 (與支出圖表同步)
-watch([period, startDate, endDate], () => {
-    if (period.value === 'month') {
-        startDate.value = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
-        endDate.value = new Date().toISOString().split('T')[0]
-    } else if (period.value === 'year') {
-        startDate.value = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0]
-        endDate.value = new Date().toISOString().split('T')[0]
-    }
+// 🌟 保留自訂區間監聽
+watch([startDate, endDate], () => {
     loadData()
+})
+
+// 🌟 新增簡化的 period 監聽，用於月/年切換表格 & 圖表
+watch(period, async () => {
+    await nextTick()
+    renderChart()
 })
 
 const today = computed(() => {
     const now = new Date()
     return `${now.getFullYear()} 年 ${now.getMonth() + 1} 月 ${now.getDate()} 日`
 })
+
 </script>
 
 <template>
@@ -105,12 +180,12 @@ const today = computed(() => {
             <span class="date">{{ today }}</span>
             <hr>
             <div class="chart-card">
-                <div class="chart-header">
-                    <span>檢視期間：</span>
+                <div class="chart-header chart-description">
+                    <span>檢視期間單位：</span>
                     <select class="my-select" v-model="period">
-                        <option value="month">當月趨勢</option>
-                        <option value="year">當年趨勢</option>
-                        <option value="custom">自訂區間</option>
+                        <option value="month">月</option>
+                        <option value="year">年</option>
+                        <option value="custom">自訂</option>
                     </select>
                     <div v-if="period === 'custom'" style="display: inline-block; margin-left: 10px;">
                         <input type="date" v-model="startDate" class="custom-select" />
@@ -125,14 +200,19 @@ const today = computed(() => {
 
             <table class="money-table">
                 <thead>
-                    <tr><th>期間</th><th>收入</th><th>支出</th><th>淨額</th></tr>
+                    <tr>
+                        <th class="text_left">期間</th>
+                        <th class="text_right">收入</th>
+                        <th>支出</th>
+                        <th>淨額</th>
+                    </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="row in rawTrendData" :key="row.date">
-                        <td>{{ row.date }}</td>
-                        <td style="color: #3b82f6;">NT${{ row.income.toLocaleString() }}</td>
-                        <td style="color: #ef4444;">NT${{ row.expense.toLocaleString() }}</td>
-                        <td :style="{ color: row.net >= 0 ? '#10b981' : '#ef4444' }">
+                    <tr v-for="row in displayTrendData" :key="row.date">
+                        <td class="text_left">{{ row.date }}</td>
+                        <td class="text_right">NT${{ row.income.toLocaleString() }}</td>
+                        <td class="text_right">NT${{ row.expense.toLocaleString() }}</td>
+                        <td class="text_right" :style="{ color: row.net >= 0 ? '#10b981' : '#ef4444' }">
                             {{ row.net > 0 ? '+' : '' }}{{ row.net.toLocaleString() }}
                         </td>
                     </tr>
@@ -254,16 +334,16 @@ h2 {
 /* 表格格式 */
 .money-table {
     table-layout: fixed;
-    text-align: center;
     width: 100%;
     max-width: 1290px;
     margin: 20px;
-    padding: 30px;
     font-variant-numeric: tabular-nums;
     width: 100%;
     margin-left: 1px;
     line-height: 30px;
     font-size: 14px;
+    border-collapse: collapse;
+    text-align: center;
 }
 
 .money-table th {
@@ -277,6 +357,23 @@ h2 {
     border-bottom: 1px solid rgba(119, 159, 191, 0.35);
     /* 每列底線 */
 }
+
+
+/* 1. 調整「期間」：讓它往右移一點，不要貼齊左邊緣 */
+.money-table td:first-child,
+.money-table th:first-child {
+    padding: 0px 50px;
+    /* 增加左側內距，把文字往右推 */
+}
+
+/* 2. 調整「淨額」：讓它往右邊緣靠近（減少右側留白） */
+.money-table td:last-child,
+.money-table th:last-child {
+    padding: 0px 40px;
+    /* 減少右側內距，讓它更靠近邊界 */
+    /* 淨額的顏色（綠色/紅色）通常直接寫在 HTML 的 style 裡，所以這裡不寫死顏色 */
+}
+
 
 /* 最上面（thead 第一列）不要線 */
 .money-table thead tr:first-child th {
