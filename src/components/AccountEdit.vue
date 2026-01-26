@@ -1,6 +1,6 @@
 
 <script setup>
-import { reactive, watch, defineEmits } from 'vue'
+import { reactive, watch} from 'vue'
 import { accountApi } from '../api/account'
 import { ElMessage } from 'element-plus'
 

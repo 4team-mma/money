@@ -2,8 +2,6 @@
 import Nav from '@/components/Nav.vue'
 import Add_bar from '@/components/AddBar.vue'
 import Add_account from '@/components/AddAccount.vue'
-import Add_member from '@/components/AddMember.vue'
-import Add_tag from '@/components/AddTag.vue'
 import { useAddRecord } from '@/composables/useAddRecord'
 import { computed, onMounted } from 'vue';
 import { useAccountStore } from '@/stores/useAccountStore' 
@@ -84,17 +82,7 @@ const filteredToAccounts = computed(() => {
                         />
                     </div>
 
-                    <div class="form-group">
-                        <label>成員</label>
-                        <Add_member @update:model-value="handleMemberUpdate" />
-                    </div>
-
-                    <div class="form-group">
-                        <label>標籤</label>
-                        <Add_tag @update:model-value="handleTagUpdate" />
-                    </div>
                 </div>
-
                 <div class="form-group">
                     <div>
                         <label>備註 </label>
