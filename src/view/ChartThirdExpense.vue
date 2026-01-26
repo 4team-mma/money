@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { statsApi } from '@/api/stats' // 🌟 具名引入，符合你 accountApi 的習慣
 import { calculatePeriodDays } from '@/utils/financeHelper'
+import { getLocalDate, getLocalDateString } from '@/utils/dateHelper'
 import Chart from 'chart.js/auto'
 import Nav from '@/components/Nav.vue'
 import Chart_Preface from '@/components/ChartPreface.vue'
@@ -14,8 +15,10 @@ const categoryTableData = ref([])
 const is_loading = ref(false)
 
 const period = ref('month')
-const startDate = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0])
-const endDate = ref(new Date().toISOString().split('T')[0])
+// 初始化日期 (使用本地時間)
+const now = new Date();
+const startDate = ref(getLocalDateString(new Date(now.getFullYear(), now.getMonth(), 1)));
+const endDate = ref(getLocalDate());
 
 // 分組狀態
 const groupBy = ref('add_class') // 預設依類別 (add_class, account, add_member)
@@ -57,7 +60,12 @@ onMounted(() => loadData())
 // 🌟 計算屬性 (保留在前端，處理 UI 邏輯)
 const periodDays = computed(() => calculatePeriodDays(period.value, startDate.value, endDate.value))
 const totalAmount = computed(() => categoryTableData.value.reduce((sum, i) => sum + i.amount, 0))
-const averagePerDay = computed(() => totalAmount.value > 0 ? Math.round(totalAmount.value / periodDays.value) : 0)
+const averagePerDay = computed(() => {
+    const days = periodDays.value;
+    return (totalAmount.value > 0 && days > 0) 
+        ? Math.round(totalAmount.value / days) 
+        : 0;
+});
 
 const renderChart = () => {
     if (!dailyChartRef.value) return
@@ -83,14 +91,19 @@ const renderChart = () => {
     })
 }
 
-watch([period, startDate, endDate, groupBy], () => {
+watch([period, startDate, endDate, groupBy], (newVal, oldVal) => {
     // 日期重設邏輯
-    if (period.value === 'month') {
-        startDate.value = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
-        endDate.value = new Date().toISOString().split('T')[0]
-    } else if (period.value === 'year') {
-        startDate.value = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0]
-        endDate.value = new Date().toISOString().split('T')[0]
+    const currentNow = new Date();
+    // 檢查是不是 period 變了 (newVal[0] 是 period 的新值, oldVal[0] 是舊值)
+    const periodChanged = newVal[0] !== oldVal[0];
+    if (periodChanged && period.value === 'month') {
+        startDate.value = getLocalDateString(new Date(currentNow.getFullYear(), currentNow.getMonth(), 1));
+        endDate.value = getLocalDate();
+        return;
+    } else if (periodChanged && period.value === 'year') {
+        startDate.value = `${currentNow.getFullYear()}-01-01`;
+        endDate.value = getLocalDate();
+        return;
     }
     loadData()
 })
