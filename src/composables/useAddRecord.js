@@ -118,6 +118,7 @@ export function useAddRecord(initialType = false) {
                 transaction_date: safeDateString,
                 from_account_id: form.source_account.account_id,
                 to_account_id: form.account.account_id,
+                transaction_note: form.add_note,
                 amount: parseFloat(form.add_amount)
             }
 
