@@ -13,5 +13,5 @@ export const statsApi = {
     getCashFlowTrend: (params) => api.get('/stats/trends/cash-flow', { params }),
 
     // 4. 淨資產趨勢 (隊友 C 負責)
-    getNetWorthTrend: (params) => api.get('/stats/trends/net-worth', { params }),
+    getNetWorthTrend: (params) => api.get('/stats/trends/net-worth-history', { params }),
 };

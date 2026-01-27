@@ -2,7 +2,6 @@
 import { ref, onMounted, computed } from 'vue';
 import api from '@/api' // 確保使用統一的 api 設定
 import { accountApi } from '@/api/account';
-import AccountAdd2 from '@/components/AccountAdd2.vue';
 import AccountAdd1 from '@/components/AccountAdd1.vue';
 import AccountEdit from '@/components/AccountEdit.vue';
 import Nav from '@/components/Nav.vue';
@@ -14,25 +13,70 @@ import { ElMessage } from 'element-plus';
 
 const accounts = ref([])
 
+const assetTypes = [
+    { value: 'cash', label: '現金 (資產項)' },
+    { value: 'bank', label: '銀行帳戶 (資產項)' },
+    { value: 'investment', label: '投資帳戶 (資產項)' },
+    { value: 'other', label: '其他資產 (資產項)' }
+];
 
-// 計算加總數值 (優化點：動態計算而非寫死)
+const debtTypes = [
+    { value: 'credit', label: '信用卡 (負債項)' },
+    { value: 'loan', label: '貸款 (負債項)' },
+    { value: 'installment', label: '分期付款 (負債項)' },
+    { value: 'debt_other', label: '其他負債 (負債項)' }
+];
+
+const accountTypes = [...assetTypes, ...debtTypes, { value: 'other', label: '其他' }];
+const debtTypeValues = ['credit', 'loan', 'installment', 'debt_other'];
+
+
+// 🌟 修改：根據 accountTypes 的 value 進行分組
+const groupedAccounts = computed(() => {
+    const groups = {};
+    
+    // 初始化分組物件，Key 為 'bank', 'cash' 等
+    accountTypes.forEach(type => {
+        groups[type.value] = [];
+    });
+
+    // 將帳戶填入對應分組
+    accounts.value.forEach(acc => {
+        // 確保後端回傳的 acc.type 能對應到我們的 value
+        if (groups[acc.type]) {
+            groups[acc.type].push(acc);
+        } else {
+            groups['other'].push(acc); // 找不到對應時放進其他
+        }
+    });
+    
+    return groups;
+});
+
+
+
+
+// 🌟 修正後的總資產：不是負債類 且 exclude 為 false
 const totalAssets = computed(() => {
     return accounts.value
-        .filter(acc => acc.balance > 0)
+        .filter(acc => !debtTypeValues.includes(acc.type) && !acc.exclude) 
         .reduce((sum, acc) => sum + acc.balance, 0)
 })
 
-// 總負債：計算 balance 為負數的加總
+// 🌟 修正後的總負債：是負債類 且 exclude 為 false
 const totalDebt = computed(() => {
     return accounts.value
-        .filter(acc => acc.balance < 0)
-        .reduce((sum, acc) => sum + Math.abs(acc.balance), 0)
+        .filter(acc => debtTypeValues.includes(acc.type) && !acc.exclude)
+        .reduce((sum, acc) => {
+            return sum + Math.abs(acc.balance);
+        }, 0)
 })
 
-// 總淨值：總資產 - 總負債
+// 🌟 修正後的總淨值：只加總未被排除的帳戶
 const netWorth = computed(() => {
-    // 這裡我們直接加總所有餘額即可（正加負減）
-    return accounts.value.reduce((sum, acc) => sum + acc.balance, 0)
+    return accounts.value
+        .filter(acc => !acc.exclude)
+        .reduce((sum, acc) => sum + acc.balance, 0)
 })
 
 //負責將後端資料庫傳回來的名稱（通常是底線命名 account_id），轉換成前端元件好閱讀、好操作的名稱
@@ -49,7 +93,7 @@ const mapApiToAppTransactions = (apiData) => {
     }));
 };
 
-
+//編輯刪除的三個點
 // 控制哪一個項目的下拉選單是開啟的 (存儲 index)
     const activeMenuIndex = ref(null);
 
@@ -59,7 +103,16 @@ const mapApiToAppTransactions = (apiData) => {
         activeMenuIndex.value = activeMenuIndex.value === index ? null : index;
     };
 
-    
+    const closeMenu = (event) => {
+    // 如果點擊的目標「不是」選單按鈕，也不是選單內容，才關閉
+    if (!event.target.closest('.custom-dropdown')) {
+        activeMenuIndex.value = null;
+    }
+};
+
+    onMounted(() => {
+        window.addEventListener('click', closeMenu);
+    });
 
 
 
@@ -124,8 +177,6 @@ const handleDelete = async (id) => {
     }
 };
 
-
-
 const activeId = ref(null); // 紀錄目前哪一個帳戶被點擊
 
 // 切換選中狀態，如果點擊同一個就取消選中
@@ -136,6 +187,8 @@ const toggleActive = (id) => {
         activeId.value = id;
     }
 };
+
+
 
 
 
@@ -166,10 +219,6 @@ const toggleActive = (id) => {
 
 
 
-
-
-
-
 onMounted(() => {
     fetchAccounts()
 })
@@ -184,15 +233,8 @@ onMounted(() => {
 <template>
     <Nav>
 <br>
-<div class="acc_head1">
-    <p class="transparent-text">(空白)</p>
-    <div>  
+<div class="acc_head0">
         <h1 class="page-title">帳戶管理</h1>
-    </div>
-
-<!-- 「當我聽到 add-account 這個訊號時，請幫我執行 handleAddAccount 函數，並把子層丟出來的資料傳進去。」 -->
-    <AccountAdd1 @add-account="handleAddAccount" />
-    
 </div>
 <p class="page-subtitle">管理您的所有帳戶與資產</p>
 <br>
@@ -235,45 +277,82 @@ onMounted(() => {
 <br>
 
 <!-- 重要 -->
-<div class="sec_box">
-    <div>
-        <h3>帳戶清單</h3>
-        <p class="change-text">所有帳戶</p>
+<div class="sec_box overview-container">
+    <div class="acc_head1 overview-header">
+        <div>
+            <h2>帳戶總覽</h2>
+            <p class="change-text">即時帳戶餘額</p>
+        </div>
+        <AccountAdd1 @add-account="handleAddAccount" />
     </div>
     <br>
-    
-    <div>
-        <div 
-            class="account-card" 
-            v-for="(acc,index) in accounts" 
-            :key="acc.id"
-            :class="{ 'is-transparent': activeId === acc.id }"
-            @click="toggleActive(acc.id)"
-            >
-            <span class="emoji">{{ acc.icon }}</span>
-            <div>
-                <div class="account-name">{{ acc.name }}</div>
-                <div class="change-text">{{ acc.type }}</div>
-            </div>
-            <div class="world_right"> {{ acc.currency }} {{ acc.initial.toLocaleString() }}</div>
-
-            <!-- 🌟 純 Vue 下拉選單結構 -->
-                <div class="custom-dropdown">
-                    <button class="menu-btn" @click="toggleMenu($event, index)">
-                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
-                        </svg>
-                    </button>
-                    
-                    <!-- 使用 Vue 的 v-if 控制顯示 -->
-                    <ul v-if="activeMenuIndex === index" class="custom-dropdown-menu">
-                        <li @click="openEditModal(acc)">編輯</li>
-                        <li class="delete-opt" @click="handleDelete(acc.id)">刪除</li>
-                    </ul>
+    <br>
+    <div class="dual-column-layout">
+        <div class="column asset-column">
+            <div v-for="typeObj in assetTypes" :key="typeObj.value" class="category-group">
+                <div class="category-title-row is-asset">
+                    <span class="category-label">{{ typeObj.label }}</span>
+                    <span class="category-count">{{ groupedAccounts[typeObj.value]?.length || 0 }} 個項目</span>
                 </div>
+                
+                <div v-if="groupedAccounts[typeObj.value]?.length > 0">
+                    <div class="account-card mini" v-for="acc in groupedAccounts[typeObj.value]" 
+                        :key="acc.id" @click="toggleActive(acc.id)" :class="{ 'is-transparent': activeId === acc.id }">
+                        <span class="emoji-small">{{ acc.icon }}</span>
+                        <div>
+                            <div class="account-name-small">{{ acc.name }}</div>
+                            <span v-if="acc.exclude" class="exclude-mini-tag">排除</span>
+                        </div>
+                        <div class="acc-amount-group">
+                            <div class="balance-small debt-text"> {{ acc.currency }} {{ acc.balance.toLocaleString() }}</div>
+                            <div class="change-text">初始餘額:{{ acc.currency }}{{ acc.initial.toLocaleString() }}</div>
+                        </div>
+                        <div class="custom-dropdown">
+                            <button class="menu-btn-small" @click.stop="toggleMenu($event, acc.id)">⋮</button>
+                            <ul v-if="activeMenuIndex === acc.id" class="custom-dropdown-menu">
+                                <li @click.stop="openEditModal(acc)">編輯</li>
+                                <li class="delete-opt" @click.stop="handleDelete(acc.id)">刪除</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="empty-mini">無資料</div>
+            </div>
+        </div>
+
+        <div class="column debt-column">
+            <div v-for="typeObj in debtTypes" :key="typeObj.value" class="category-group">
+                <div class="category-title-row is-debt">
+                    <span class="category-label">{{ typeObj.label }}</span>
+                    <span class="category-count">{{ groupedAccounts[typeObj.value]?.length || 0 }} 個項目</span>
+                </div>
+                
+                <div v-if="groupedAccounts[typeObj.value]?.length > 0">
+                    <div class="account-card mini" v-for="acc in groupedAccounts[typeObj.value]" 
+                        :key="acc.id" @click="toggleActive(acc.id)" :class="{ 'is-transparent': activeId === acc.id }">
+                        <span class="emoji-small">{{ acc.icon }}</span>
+                        <div>
+                            <div class="account-name-small">{{ acc.name }}</div>
+                            <span v-if="acc.exclude" class="exclude-mini-tag">排除</span>
+                        </div>
+                        <div class="acc-amount-group">
+                            <div class="balance-small debt-text2"> {{ acc.currency }} {{ acc.balance.toLocaleString() }}</div>
+                            <div class="change-text">初始負債:{{ acc.currency }}{{ acc.initial.toLocaleString() }}</div>
+                        </div>
+                        <div class="custom-dropdown">
+                            <button class="menu-btn-small" @click.stop="toggleMenu($event, acc.id)">⋮</button>
+                            <ul v-if="activeMenuIndex === acc.id" class="custom-dropdown-menu">
+                                <li @click.stop="openEditModal(acc)">編輯</li>
+                                <li class="delete-opt" @click.stop="handleDelete(acc.id)">刪除</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="empty-mini">無資料</div>
+            </div>
         </div>
     </div>
-
+</div>
     <!-- 編輯彈窗 -->
     <div v-if="showModal" class="acc_modal_overlay" @click.self="showModal = false">
         <div class="modal-card acc_modal_content" @click.stop>
@@ -284,10 +363,8 @@ onMounted(() => {
             />
         </div>
     </div>
-</div>
     
-<br>  
-<AccountAdd2 @add-account="handleAddAccount" />
+<br> 
 
 </Nav>
 </template>
@@ -299,261 +376,188 @@ onMounted(() => {
 
 <style scoped>
 
-.world_right {
-    margin-left: auto;   /* 🔑 這行讓餘額跑到最右邊 */
-    text-align: right;
-    font-weight: bold;
-    font-size: 20px;
-}
-    .account-card {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    padding: 12px;
-    margin-top: 10px;
-    border-radius: 12px;
-    background: white;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-    }
-
-    .card-title {
-    font-size: 14px;
-    font-weight: 500;
-    color: #64748b;
-    }
-
-    .transparent-text {
-    opacity: 0;
-    }
-
-    .page-title {
+/* --- 基礎佈局與文字 --- */
+.page-title {
     font-size: 32px;
     font-weight: 700;
     color: #1e293b;
     margin: 0 0 8px 0;
-    }
+}
 
-    .page-subtitle {
+.page-subtitle {
     font-size: 14px;
     color: #64748b;
     margin: 0;
-    }
+}
 
-    .amount {
+.change-text {
+    font-size: 15px;
+    color: #64748b;
+    margin: 0;
+}
+
+/* --- 頂部統計卡片 (Grid) --- */
+.acc_head2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+}
+
+.box {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border-left: 4px solid;
+}
+
+.card-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #64748b;
+}
+
+.amount {
     font-size: 28px;
     font-weight: 700;
     color: #1e293b;
     margin-bottom: 10px;
-    }
+}
 
-    .account-name{
-    font-size: 20px;
-    color: black;
-    }
+.assets-card { border-left-color: #3b82f6; }
+.debt-card   { border-left-color: #ef4444; }
+.value-card  { border-left-color: #000000; }
 
-    .change-text{
-    font-size: 12px;
-    color: #64748b;
-    margin: 0;
-    }
+.icon { width: 20px; height: 20px; stroke-width: 2; }
+.assets-icon { color: #3b82f6; }
+.debt-icon   { color: #ef4444; }
+.value-icon  { color: #000000; }
 
-    .acc_head1{
-        display: flex;
-        justify-content:space-between
-    }
-
-        .acc_head3{
-        display: flex;
-        justify-content:center
-    }
-
-    .acc_head2{
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 20px;
-    }
-
-    .sec_head{
-        display: flex;
-        justify-content: flex-start
-    }
-
-
-
-    .three_dots_button{
-        border: none;
-        background-color: white;
-        font-size: 20px;
-    }
-
-    .box{
-        background: white;
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-        border-left: 4px solid;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .sec_box{
-        margin: auto;
-        border-radius: 40px;
-        border: 0.05px solid darkgrey;
-        padding: 25px;
-        background-color: white;
-    }
-    .account-icon-wrapper{
-        padding: 1rem;
-    }
-
-    .value-card {
-    border-left-color: #000000;
-    }
-
-    .assets-card {
-    border-left-color: #3b82f6;
-    }
-
-    .debt-card {
-    border-left-color: #ef4444;
-    }
-
-    .icon {
-    width: 20px;
-    height: 20px;
-    stroke-width: 2;
-    }
-
-    .value-icon {
-    color: #000000 ;
-    }
-
-    .assets-icon {
-    color: #3b82f6 ;
-    }
-
-    .debt-icon {
-    color:#ef4444;
-    }
-
-    .plus-icon {
-    font-size: 48px;
-    font-weight: bold;
-    line-height: 1;
+/* --- 帳戶總覽容器 --- */
+.sec_box {
+    margin: auto;
+    border-radius: 40px;
+    border: 1px solid #e2e8f0;
+    padding: 60px; /* 稍微縮小原有的 100px 避免過空 */
     background-color: white;
-    border-color: white;
-    }
+    max-width: 900px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+}
 
-    .emoji{
-        font-size: 50px;
-    }
-
-
-/* 編輯按鈕：純文字 + 圖標感 */
-.edit-btn {
+.acc_head1 {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 4px;
-    background: none;
-    border: none;
-    color: #3b82f6;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.2s;
 }
 
-/* 刪除按鈕：純文字 + 圖標感 */
-.delete-btn {
+/* --- 分類標題樣式 --- */
+.category-group { margin-bottom: 50px; }
+
+.category-title-row {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 4px;
-    background: none;
-    border: none;
-    color: #ef4444;
+    padding: 0 0 8px 12px;
+    border-left: 4px solid #3b82f6; 
+    margin-bottom: 12px;
+}
+
+.category-title-row.is-credit { border-left-color: #ef4444; }
+
+.category-label {
     font-weight: 600;
+    color: #475569;
+    font-size: 1.1rem;
+}
+
+.category-count { color: #94a3b8; font-size: 0.85rem; }
+
+/* --- 帳戶卡片樣式 --- */
+.account-card {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 30px;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    background: white;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     cursor: pointer;
-    transition: transform 0.2s;
+    transition: all 0.2s;
+    max-width: 700px;  /* 你可以調整這個數值，例如 500px 會更窄 */
+    margin-left: auto;
+    margin-right: auto;
 }
 
-.edit-btn:hover, .delete-btn:hover {
-    transform: scale(1.1); /* 懸浮微放大的互動感 */
+.account-card:hover { transform: translateY(-2px); }
+
+.emoji { font-size: 40px; } /* 稍微縮小一點較精緻 */
+
+.account-name { font-size: 18px; font-weight: 500; color: black; }
+
+.exclude-mini-tag {
+    font-size: 10px;
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #64748b;
+    margin-left: 5px;
 }
 
+/* 餘額組 */
+.acc-amount-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    margin-left: auto;
+}
+
+.world_right {
+    font-weight: bold;
+    font-size: 20px;
+}
+
+/* --- 下拉選單 (三個點) --- */
+.custom-dropdown { position: relative; }
 
 .menu-btn {
     background: none;
     border: none;
     color: #cbd5e1;
-    padding: 8px 4px;
+    padding: 8px;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    border-radius: 6px;
-    transition: all 0.2s;
+    border-radius: 50%;
+    transition: background 0.2s;
 }
 
-.menu-btn:hover {
-    background: #f1f5f9;
-    color: #64748b;
-}
-
-
-/* 5. 純 Vue 下拉選單 */
-.custom-dropdown {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.menu-btn {
-    background: none;
-    border: none;
-    color: #cbd5e1;
-    padding: 8px 4px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    border-radius: 6px;
-    transition: all 0.2s;
-}
-
-.menu-btn:hover {
-    background: #f1f5f9;
-    color: #64748b;
-}
+.menu-btn:hover { background: #f1f5f9; color: #64748b; }
 
 .custom-dropdown-menu {
     position: absolute;
     top: 100%;
     right: 0;
-    z-index: 1000;
+    z-index: 100;
     background: #ffffff;
-    min-width: 110px;
-    padding: 0px 0;
+    min-width: 100px;
+    padding: 8px 0;
     margin-top: 5px;
     list-style: none;
     border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    border: 8px solid #ffffff;
-    animation: fadeIn 0.15s ease-out;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+    border: 1px solid #f1f5f9;
 }
 
 .custom-dropdown-menu li {
     padding: 8px 16px;
-    font-size: 0.9rem;
+    font-size: 14px;
     color: #475569;
     cursor: pointer;
 }
 
-.custom-dropdown-menu li:hover {
-    background: #f8fafc;
-    color: #1e293b;
-}
+.custom-dropdown-menu li:hover { background: #f8fafc; }
+.custom-dropdown-menu li.delete-opt { color: #ef4444; }
 
-.custom-dropdown-menu li.delete-opt {
-    color: #ef4444;
-}
-
+/* --- 彈窗 Modal --- */
 .acc_modal_overlay {
     position: fixed;
     inset: 0;
@@ -561,8 +565,8 @@ onMounted(() => {
     backdrop-filter: blur(4px);
     display: flex;
     justify-content: center;
+    align-items: center;
     z-index: 2000;
-    padding: 20px;
 }
 
 .modal-card {
@@ -573,7 +577,7 @@ onMounted(() => {
     box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
 }
 
-.acc_modal_content {
+    .acc_modal_content {
     width: 90%;
     max-width: 440px;
     border-radius: 20px;
@@ -584,6 +588,93 @@ onMounted(() => {
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: hwb(0 100% 0% / 0) hwb(0 100% 0% / 0);
+    max-height: 90vh;
+}
+
+/* 空狀態 */
+.empty-category {
+    text-align: center;
+    padding: 24px;
+    background: #f8fafc;
+    border: 1px dashed #e2e8f0;
+    border-radius: 12px;
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+
+/* --- 雙欄佈局 CSS --- */
+.overview-container {
+    max-width: 1100px; /* 增加寬度容納兩欄 */
+    padding: 40px !important;
+}
+
+.dual-column-layout {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+}
+
+.column {
+    flex: 1; /* 左右各佔 50% */
+}
+
+/* 分類標題區分顏色 */
+.category-title-row.is-asset { border-left: 4px solid #3b82f6; }
+.category-title-row.is-debt { border-left: 4px solid #ef4444; }
+
+/* 縮小版帳戶卡片 */
+.account-card.mini {
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    box-shadow: none;
+    margin-bottom: 6px;
+}
+
+.emoji-small { font-size: 24px; margin-right: 10px; }
+
+.acc-info { flex: 1; }
+
+.account-name-small {
+    font-size: 18px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.balance-small {
+    font-size: 18px;
+    font-family: 'Roboto Mono', monospace;
+    color: #475569;
+}
+
+.debt-text { color: #070707; }
+.debt-text2 { color: #ef4444; }
+
+.empty-mini {
+    font-size: 12px;
+    color: #94a3b8;
+    padding: 10px;
+    text-align: center;
+    border: 1px dashed #e2e8f0;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.menu-btn-small {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #94a3b8;
+    font-weight: bold;
+}
+
+/* 讓手機版變回單欄 */
+@media (max-width: 768px) {
+    .dual-column-layout {
+        flex-direction: column;
+    }
 }
 
 </style>
