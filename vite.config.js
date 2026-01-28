@@ -15,11 +15,17 @@ export default defineConfig({
   },
 
 
-  // ▼▼▼ 請加入下面這一段 ▼▼▼
-  server: {
-    allowedHosts: true
-  },
-  // ▲▲▲ 加入上面這一段 ▲▲▲
+server: {
+    allowedHosts: true,
+    // ▼▼▼ 新增這段代理設定 ▼▼▼
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000', // 假設您的 FastAPI 跑在 8000 port
+        changeOrigin: true,
+        //rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    },
+    // ▲▲▲ 新增這段代理設定 ▲▲▲
 
   optimizeDeps: {
     include: ['vue3-google-signin'],
