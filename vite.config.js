@@ -11,25 +11,20 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
-    },
+    }
   },
-
-
-server: {
+  server: {
     allowedHosts: true,
-    // ▼▼▼ 新增這段代理設定 ▼▼▼
     proxy: {
       '/api': {
-        target: 'http://localhost:8000', // 假設您的 FastAPI 跑在 8000 port
-        changeOrigin: true,
-        //rewrite: (path) => path.replace(/^\/api/, '')
+        target: 'http://localhost:8000',
+        changeOrigin: true
+        // 注意：這裡絕對不能有 rewrite，因為您的後端需要 /api
       }
-    },
-    // ▲▲▲ 新增這段代理設定 ▲▲▲
-
+    }
+  },
   optimizeDeps: {
     include: ['vue3-google-signin'],
-    // 🌟 強制 Vite 處理 CommonJS/ESM 轉換，這能解決 useGoogleLogin 找不到的問題
     needsInterop: ['vue3-google-signin']
   }
 })
