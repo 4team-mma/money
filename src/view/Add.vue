@@ -7,26 +7,55 @@ import Add_member from '@/components/AddMember.vue'
 import Add_tag from '@/components/AddTag.vue'
 import { useAddRecord } from '@/composables/useAddRecord'
 import { useAccountStore } from '@/stores/useAccountStore'
-import { onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 
 // 月曆與通知套件
 import { DatePicker } from 'v-calendar';
 import 'v-calendar/style.css';
 
-// 調用 Composable，傳入 false (支出)
-//handleAccountUpdate 直接連資料庫，所以沒用到
+// 🌟 1. 修正順序：先定義 Store，這樣下面的 computed 才能用
+const accountStore = useAccountStore()
+
+// 調用 Composable
 const {
-    form, handleCatoUpdate,handleAccountUpdate,
+    form, handleCatoUpdate, handleAccountUpdate,
     handleMemberUpdate, handleTagUpdate, handleSave,
     handleSaveNext, formatNote
 } = useAddRecord(false)
 
-const accountStore = useAccountStore()
+
+// 修改 add.vue 裡面的這一段
+
+// 修改 Add.vue 的 computed
+
+const currentCurrency = computed(() => {
+    const selected = form.account;
+
+    // 1. 防呆：如果是 null 或 undefined
+    if (!selected) return '金額';
+
+    // 2. 🌟 關鍵修正：如果它已經是「物件」，直接讀取裡面的 currency
+    if (typeof selected === 'object') {
+        // 如果物件裡有 currency 就用，沒有就預設 NT$
+        return selected.currency || 'NT$';
+    }
+
+    // 3. 如果它是「ID (數字或字串)」，才去 Store 列表尋找
+    // (這是為了相容如果有人傳 ID 進來的情況)
+    if (accountStore.accounts.length > 0) {
+        const found = accountStore.accounts.find(acc => acc.account_id == selected);
+        return found ? (found.currency || 'NT$') : '金額';
+    }
+
+    return '金額';
+})
+
 onMounted(async () => {
     await accountStore.loadAccounts()
-    
-    // 🌟 補回自動預設值：預設選第一個帳戶
+
+    // 設定預設值
     if (accountStore.accounts.length > 0) {
+        // 這裡確保 handleAccountUpdate 會正確更新 form.account
         handleAccountUpdate(accountStore.accounts[0])
     }
 
@@ -34,8 +63,6 @@ onMounted(async () => {
         form.add_date = window.history.state?.date;
     }
 })
-
-
 </script>
 
 <template>
@@ -46,8 +73,8 @@ onMounted(async () => {
             <div class="card">
                 <div class="header">
                     <h2>新增支出</h2>
-                    <DatePicker v-model="form.add_date" mode="date" :popover="{ visibility: 'click' }" :masks="{ title: 'YYYY年 MMM' }"
-                        :transition="'none'">
+                    <DatePicker v-model="form.add_date" mode="date" :popover="{ visibility: 'click' }"
+                        :masks="{ title: 'YYYY年 MMM' }" :transition="'none'">
                         <template #default="{ togglePopover, inputValue, inputEvents }">
                             <div class="date-input-container">
                                 <button type="button" @click="togglePopover"
@@ -61,7 +88,8 @@ onMounted(async () => {
 
                 <div class="form-group">
                     <label>支出金額</label>
-                    <input v-model.number="form.add_amount" type="number" placeholder="NT$ 0" class="amount-input" />
+                    <input v-model.number="form.add_amount" type="number" :placeholder="`${currentCurrency}`"
+                        class="amount-input" />
                 </div>
 
                 <div class="grid">
