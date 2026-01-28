@@ -9,12 +9,17 @@ const showAddDialog = ref(false)
 
 // 2. 靜態選項資料
 const accountTypes = [
-    { value: 'bank', label: '銀行帳戶' },
     { value: 'cash', label: '現金' },
-    { value: 'credit', label: '信用卡' },
+    { value: 'bank', label: '銀行帳戶' },
     { value: 'investment', label: '投資帳戶' },
-    { value: 'other', label: '其他'}
+    { value: 'other', label: '其他資產' },
+    { value: 'credit', label: '信用卡' },
+    { value: 'loan', label: '貸款' },
+    { value: 'installment', label: '分期付款' },
+    { value: 'debt_other', label: '其他負債' }
 ]
+
+const debtTypeValues = ['credit', 'loan', 'installment', 'debt_other'];
 
 const currencys = [
     { value: 'NT $', label: '新台幣 (TWD)' },
@@ -67,7 +72,7 @@ const submit = () => {
 
 <template>
     <button @click="showAddDialog = true" class="add_account_button">
-        <i class="bi bi-plus">新增帳戶</i>
+        <div style="width: auto; font-size: 15px; font-weight: 1000;">➕新增帳戶</div>
     </button>
 
     <div v-if="showAddDialog" class="acc_modal_overlay " @click="showAddDialog = false" >
@@ -107,11 +112,12 @@ const submit = () => {
             </div>
             <br>
             <div>
-                <h4 class="acc_button_word_small">初始餘額:</h4>
+                <h4 class="acc_button_word_small" v-if="debtTypeValues.includes(account.type)" >初始負債:</h4>
+                <h4 class="acc_button_word_small" v-else >初始餘額:</h4>
                 <input type="number" placeholder="0" v-model.number="account.initial" class="textarea">
             </div>
             <br>
-                <h4 class="acc_button_word_small">是否計入資產:</h4>
+                <h4 class="acc_button_word_small">不計入資產:</h4>
                 <span class="form-check form-switch ">
                     <input class="form-check-input" type="checkbox" role="switch" id="switchCheckDefault" v-model="account.exclude">
                 </span>
@@ -162,15 +168,15 @@ const submit = () => {
     }
 
     .add_account_button{
-        background: white;
-        font-size: 12px;
+        background: rgb(253, 253, 253);
+        font-size: 18px;
         border-radius: 16px;
-        width: 80px;
+        width: 100px;
         height: 40px;
-        padding: 4px;
-        border: 0.5px solid rgb(253, 253, 253);
-        border-left: 2px solid;
-        border-left-color: #e8ef28;
+        padding: 8px;
+        border: 0.2px solid rgb(234, 221, 221);
+        
+        
     }
 
     .acc_head{
@@ -186,8 +192,9 @@ const submit = () => {
         backdrop-filter: blur(4px);
         display: flex;
         justify-content: center;
-        z-index: 2000;
+        z-index: 5000;
         padding: 20px;
+        align-items: center;
     }
 
     .drag-bar {
@@ -217,6 +224,7 @@ const submit = () => {
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: hwb(0 100% 0% / 0) hwb(0 100% 0% / 0);
+    max-height: 90vh;
 }
 
     .btn-icon {

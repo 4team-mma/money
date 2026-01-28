@@ -15,12 +15,17 @@ const emit = defineEmits(['save-success'])
 
 // 2. 靜態選項資料 (與新增一致)
 const accountTypes = [
-    { value: 'bank', label: '銀行帳戶' },
     { value: 'cash', label: '現金' },
-    { value: 'credit', label: '信用卡' },
+    { value: 'bank', label: '銀行帳戶' },
     { value: 'investment', label: '投資帳戶' },
-    { value: 'other', label: '其他'}
+    { value: 'other', label: '其他資產' },
+    { value: 'credit', label: '信用卡' },
+    { value: 'loan', label: '貸款' },
+    { value: 'installment', label: '分期付款' },
+    { value: 'debt_other', label: '其他負債' }
 ]
+
+const debtTypeValues = ['credit', 'loan', 'installment', 'debt_other'];
 
 const currencys = [
     { value: 'NT $', label: '新台幣 (TWD)' },
@@ -110,11 +115,12 @@ const submitEdit = async () => {
             </div>
             <br>
             <div>
-                <h4 class="acc_button_word_small">初始餘額:</h4>
+                <h4 class="acc_button_word_small" v-if="debtTypeValues.includes(account.type)" >初始負債:</h4>
+                <h4 class="acc_button_word_small" v-else >初始餘額:</h4>
                 <input type="number" placeholder="0" v-model.number="account.initial" class="textarea">
             </div>
             <br>
-                <h4 class="acc_button_word_small">是否計入資產:</h4>
+                <h4 class="acc_button_word_small">不計入資產:</h4>
                 <span class="form-check form-switch ">
                     <input class="form-check-input" type="checkbox" role="switch" id="switchCheckDefault" v-model="account.exclude">
                 </span>

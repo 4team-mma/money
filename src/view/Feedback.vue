@@ -83,78 +83,79 @@ const handleFormSubmit = async () => {
 
     <template>
         <Nav>
+        <div class="card">
+            <h1 class="page-title">問題回饋</h1>
 
-        <h1 class="page-title">問題回饋</h1>
+            <div class="feedback-container">
+            
 
-        <div class="feedback-container">
-        
+            <form @submit.prevent="handleFormSubmit">
 
-        <form @submit.prevent="handleFormSubmit">
+            <label>
+                帳戶名稱 
+                <input 
+            type="text" 
+            v-model="form.name" 
+            required 
+            readonly 
+            placeholder="正在載入帳戶名稱..."
+            class="textarea readonly-input">
+            </label>
 
-        <label>
-            帳戶名稱 
-            <input 
-        type="text" 
-        v-model="form.name" 
-        required 
-        readonly 
-        placeholder="正在載入帳戶名稱..."
-        class="textarea readonly-input">
-        </label>
+            <label>
+                問題類型
+                <select v-model="form.type" required class="textarea">
+                <option disabled value="">請選擇</option>
+                <option>Bug 回報</option>
+                <option>功能建議</option>
+                <option>操作問題</option>
+                <option>其他</option>
+                </select>
+            </label>
 
-        <label>
-            問題類型
-            <select v-model="form.type" required class="textarea">
-            <option disabled value="">請選擇</option>
-            <option>Bug 回報</option>
-            <option>功能建議</option>
-            <option>操作問題</option>
-            <option>其他</option>
-            </select>
-        </label>
+            <label>
+                使用頁面
+                <select v-model="form.page" placeholder="請選擇" required class="textarea">
+                <option disabled value="">請選擇</option>
+                <option>行事曆</option>
+                <option>儀表板</option>
+                <option>帳戶管理</option>
+                <option>記一筆</option>
+                <option>圖表分析</option>
+                <option>成就系統</option>
+                <option>問題回饋</option>
+                <option>設定</option>
+                <option>其他</option>
+                </select>
+            </label>
 
-        <label>
-            使用頁面
-            <select v-model="form.page" placeholder="請選擇" required class="textarea">
-            <option disabled value="">請選擇</option>
-            <option>行事曆</option>
-            <option>儀表板</option>
-            <option>帳戶管理</option>
-            <option>記一筆</option>
-            <option>圖表分析</option>
-            <option>成就系統</option>
-            <option>問題回饋</option>
-            <option>設定</option>
-            <option>其他</option>
-            </select>
-        </label>
+            <label>
+                問題內容
+                <textarea
+                v-model="form.message"
+                placeholder="請詳細描述你遇到的問題或建議(最多200字)"
+                maxlength="200"
+                required
+                class="textarea"
+                ></textarea>
+            </label>
 
-        <label>
-            問題內容
-            <textarea
-            v-model="form.message"
-            placeholder="請詳細描述你遇到的問題或建議(最多200字)"
-            maxlength="200"
-            required
-            class="textarea"
-            ></textarea>
-        </label>
+            <br>
+            <br>
+            <button type="submit" class="submit_button">送出回饋</button>
+            </form>
 
-        <br>
-        <br>
-        <button type="submit" class="submit_button">送出回饋</button>
-        </form>
-
-        <p v-if="success" class="success">感謝你的回饋！我們會持續改善 🙌</p>
-        <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
-    </div>
+            <p v-if="success" class="success">感謝你的回饋！我們會持續改善 🙌</p>
+            <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+            </div>
+        </div>
         </Nav>
     </template>
 
     <style scoped>
 
     .textarea {
-        min-height: 10px;
+        min-height: 20px;
         padding: 12px;
         border-radius: 12px;
         border: 2px solid #e2e8f0;
@@ -225,5 +226,14 @@ const handleFormSubmit = async () => {
     color: #64748b;           /* 灰字 */
     cursor: not-allowed;      /* 滑鼠變成禁止符號 */
     border: 2px solid #e2e8f0;
+}
+
+.card{
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+    max-width: 550px;
+    margin: 40px auto;
 }
     </style>
