@@ -51,21 +51,33 @@ const fetchTransactions = async (page = 1) => {
       display_member: item.add_member,
       is_transfer: false
     }))
+// 2. 標準化轉帳紀錄
+const transferData = rawTransfers.map(item => {
+    
+    // 步驟 A: 拿這筆轉帳的「來源帳戶ID」去「帳戶清單」裡面找對應的帳戶物件
+    // 這裡的 accounts.value 就是您從 /accounts/ 抓回來且已經整理好的資料
+    const foundAccount = accounts.value.find(acc => acc.id === item.from_account_id);
+    
+    // 步驟 B: 決定要顯示什麼 icon
+    // 如果 foundAccount 存在 (找到了)，就用它的 icon
+    // 如果沒找到 (可能帳戶被刪了)，就用預設的 '🔄'
+    const iconToUse = foundAccount ? foundAccount.icon : '🔄';
 
-    // 2. 標準化轉帳紀錄 (對齊你的 MySQL 欄位：amount, transaction_date)
-const transferData = rawTransfers.map(item => ({
-    id: `t-${item.transaction_id}`,
-    // 🌟 直接讀取後端給的名稱欄位
-    display_note: `帳戶互轉`, 
-    display_date: item.transaction_date,
-    display_amount: Number(item.amount) || 0,
-    display_icon: '🔄',
-    display_type: 'transfer',
-    display_category: '轉帳',
-    // 🌟 這裡使用 item.from_account_name 顯示漂亮的名字
-    display_member: `${item.from_account_name || '未知'} ➔ ${item.to_account_name || '未知'}`,
-    is_transfer: true
-}))
+    return {
+        id: `t-${item.transaction_id}`,
+        display_note: `帳戶互轉`, 
+        display_date: item.transaction_date,
+        display_amount: Number(item.amount) || 0,
+        
+        // 步驟 C: 把剛剛決定好的 icon 放進去顯示欄位
+        display_icon: iconToUse, 
+        
+        display_type: 'transfer',
+        display_category: '轉帳',
+        display_member: `${item.from_account_name || '未知'} ➔ ${item.to_account_name || '未知'}`,
+        is_transfer: true
+    }
+})
 
     // 3. 合併排序 (從新到舊)
     const combined = [...recordData, ...transferData].sort((a, b) => {
@@ -212,9 +224,11 @@ const formatNumber = (num) => {
 }
 
 // 在 onMounted 裡面同時呼叫兩個 API
-onMounted(() => {
-  fetchTransactions();     // 抓交易紀錄
-  fetchDashboardData();    // 抓帳戶總覽 🚀 補上這一行
+onMounted(async () => {
+  // 1. 先等待帳戶資料載入 (為了拿到 icon 字典)
+  await fetchDashboardData(); 
+  // 2. 接著才載入交易紀錄 (這時候就可以去對應 icon 了)
+  fetchTransactions();    
 })
 
 </script>

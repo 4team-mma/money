@@ -12,7 +12,7 @@ const accountStore = useAccountStore()
 const { 
     form, handleSourceUpdate, handleAccountUpdate,
     handleMemberUpdate, handleTagUpdate, handleSave, 
-    handleSaveNext, formatNote
+    handleSaveNext, formatNote,currentCurrency
 } = useAddRecord('transfer')
 
 onMounted(async () => {
@@ -60,7 +60,9 @@ const filteredToAccounts = computed(() => {
 
                 <div class="form-group">
                     <label>轉帳金額</label>
-                    <input v-model.number="form.add_amount" type="number" placeholder="NT$ 0" class="amount-input" />
+                    <input v-model.number="form.add_amount" type="number" 
+                    :placeholder="`${currentCurrency}`"
+                    class="amount-input" />
                 </div>
 
                 <div class="grid">

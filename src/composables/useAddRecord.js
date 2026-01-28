@@ -1,27 +1,56 @@
-import { reactive, ref } from 'vue'
+// composables/useAddRecord.js
+import { reactive, ref, computed } from 'vue' // 1. 補上 computed
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-// 修正：將 create 與 update 放在同一個 import 中，避免重複宣告
 import { createRecord, updateRecord } from '@/api/record'
 import { createTransfer, updateTransfer } from '@/api/transfer'
+// 2. 補上 Store 的引用
+import { useAccountStore } from '@/stores/useAccountStore'
 
 export function useAddRecord(initialType = false) {
     const router = useRouter()
+    
+    // 3. 在這裡初始化 Store，這樣下面的 computed 才能用
+    const accountStore = useAccountStore() 
+    
     const isSubmitting = ref(false)
 
     // add_id 用來判斷是「新增」還是「修改」
     const form = reactive({
-        add_id: null,          
+        add_id: null,
         add_date: new Date(),
         add_amount: null,
         add_type: initialType,
         add_class: initialType === true ? '薪資' : (initialType === 'transfer' ? '轉帳' : '飲食'),
         add_class_icon: initialType === true ? '💰' : (initialType === 'transfer' ? '🔄' : '🍔'),
-        account: null,         
-        source_account: null,  
+        account: null,
+        source_account: null,
         add_member: '自己',
         add_tag: '一般',
         add_note: ''
+    })
+
+    // 4. 🌟 將 computed 移出 setFormData，放在主層級
+    // 這樣才能隨時監聽 form.account 的變化
+    const currentCurrency = computed(() => {
+        const selected = form.account;
+
+        // 防呆：如果是 null 或 undefined
+        if (!selected) return '金額';
+
+        // 如果它已經是「物件」，直接讀取裡面的 currency
+        if (typeof selected === 'object') {
+            return selected.currency || 'NT$';
+        }
+
+        // 如果它是「ID」，去 Store 列表尋找
+        if (accountStore.accounts.length > 0) {
+            // 使用 == 避免字串/數字型別問題
+            const found = accountStore.accounts.find(acc => acc.account_id == selected);
+            return found ? (found.currency || 'NT$') : '金額';
+        }
+
+        return '金額';
     })
 
     // 核心功能：讓隊友點擊編輯時，把舊資料帶入表單
@@ -36,24 +65,26 @@ export function useAddRecord(initialType = false) {
         form.add_member = data.add_member
         form.add_tag = data.add_tag
         form.add_note = data.add_note
-        
-        // 處理轉入/一般帳戶
-    if (data.account_id) {
-        form.account = { 
-            account_id: data.account_id, 
-            itemName: data.account_name || '預設帳戶', 
-            icon: data.account_icon || '🏦'
-        }
-    }
 
-    // 新增：處理轉出帳戶 (如果資料裡有 from_account_id)
-    if (data.from_account_id) {
-        form.source_account = {
-            account_id: data.from_account_id,
-            itemName: data.from_account_name || '轉出帳戶',
-            icon: data.from_account_icon || '🏦'
+        // 處理轉入/一般帳戶
+        if (data.account_id) {
+            form.account = {
+                account_id: data.account_id,
+                itemName: data.account_name || '預設帳戶',
+                icon: data.account_icon || '🏦'
+            }
         }
-    }
+        
+        // (原本錯放在這裡的 computed 已經移出去了)
+
+        // 新增：處理轉出帳戶 (如果資料裡有 from_account_id)
+        if (data.from_account_id) {
+            form.source_account = {
+                account_id: data.from_account_id,
+                itemName: data.from_account_name || '轉出帳戶',
+                icon: data.from_account_icon || '🏦'
+            }
+        }
     }
 
     const handleCatoUpdate = (item) => {
@@ -64,27 +95,27 @@ export function useAddRecord(initialType = false) {
     }
 
     const handleAccountUpdate = (item) => {
-    if (item) {
-        form.account = item;
-        //  防呆：如果轉入選了跟轉出一樣的，就把轉出清空或換掉
-        if (form.source_account?.account_id === item.account_id) {
-            form.source_account = null;
+        if (item) {
+            form.account = item;
+            // 防呆
+            if (form.source_account?.account_id === item.account_id) {
+                form.source_account = null;
+            }
         }
     }
-}
 
     const handleSourceUpdate = (item) => {
-    if (item) {
-        form.source_account = item;
-        // 防呆：如果轉出選了跟轉入一樣的，就把轉入清空或換掉
-        if (form.account?.account_id === item.account_id) {
-            form.account = null; 
+        if (item) {
+            form.source_account = item;
+            // 防呆
+            if (form.account?.account_id === item.account_id) {
+                form.account = null;
+            }
         }
     }
-}
 
-    const handleMemberUpdate = (item) => { 
-        if (item) form.add_member = item.itemName 
+    const handleMemberUpdate = (item) => {
+        if (item) form.add_member = item.itemName
     }
 
     const handleTagUpdate = (items) => {
@@ -103,7 +134,6 @@ export function useAddRecord(initialType = false) {
         const safeDateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
         if (form.add_type === 'transfer') {
-        // --- 🚀 新增：防呆檢查 ---
             if (form.source_account?.account_id === form.account?.account_id) {
                 ElMessage.error('轉出帳戶與轉入帳戶不能相同')
                 return false
@@ -113,7 +143,7 @@ export function useAddRecord(initialType = false) {
                 ElMessage.warning('請選擇轉出與轉入帳戶')
                 return false
             }
-            // 連接轉帳後端對應欄位:
+            
             const transferPayload = {
                 transaction_date: safeDateString,
                 from_account_id: form.source_account.account_id,
@@ -122,7 +152,6 @@ export function useAddRecord(initialType = false) {
                 amount: parseFloat(form.add_amount)
             }
 
-            // 🚀 判斷新增或更新
             if (form.add_id) {
                 await updateTransfer(form.add_id, transferPayload)
             } else {
@@ -134,11 +163,11 @@ export function useAddRecord(initialType = false) {
                 ElMessage.warning('請選擇帳戶')
                 return false
             }
-            // 連接後端對應欄位:
+            
             const recordPayload = {
                 add_date: safeDateString,
                 add_amount: parseFloat(form.add_amount),
-                add_type: form.add_type === true, 
+                add_type: form.add_type === true,
                 add_class: form.add_class,
                 add_class_icon: form.add_class_icon,
                 account_id: form.account.account_id,
@@ -147,7 +176,6 @@ export function useAddRecord(initialType = false) {
                 add_note: form.add_note
             }
 
-            // 🚀 判斷新增或更新
             if (form.add_id) {
                 await updateRecord(form.add_id, recordPayload)
             } else {
@@ -164,7 +192,7 @@ export function useAddRecord(initialType = false) {
             if (await submitData()) {
                 ElMessage.success(form.add_id ? '修改成功！' : '儲存成功！')
                 router.push('/book')
-                return {'success': true}
+                return { 'success': true }
             }
         } catch (err) {
             ElMessage.error('儲存失敗：' + (err.response?.data?.detail || '連線異常'))
@@ -181,7 +209,7 @@ export function useAddRecord(initialType = false) {
                 ElMessage.success('已儲存，請繼續下一筆')
                 form.add_amount = null
                 form.add_note = ''
-                form.add_id = null // 清空 ID 避免下一筆變成修改
+                form.add_id = null
             }
         } catch (err) { ElMessage.error('儲存失敗') }
         finally { isSubmitting.value = false }
@@ -202,7 +230,7 @@ export function useAddRecord(initialType = false) {
 
     return {
         form,
-        setFormData, // 🌟 暴露給隊友使用
+        setFormData,
         handleCatoUpdate,
         handleAccountUpdate,
         handleSourceUpdate,
@@ -211,6 +239,7 @@ export function useAddRecord(initialType = false) {
         handleSave,
         handleSaveNext,
         isSubmitting,
-        formatNote
+        formatNote,
+        currentCurrency // 回傳給 Vue 元件使用
     }
 }

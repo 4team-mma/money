@@ -15,7 +15,7 @@ import 'v-calendar/style.css'
 const { 
     form, handleCatoUpdate, handleAccountUpdate,
     handleMemberUpdate, handleTagUpdate, handleSave, 
-    handleSaveNext, formatNote 
+    handleSaveNext, formatNote,currentCurrency 
 } = useAddRecord(true)
 
 const accountStore = useAccountStore()
@@ -53,7 +53,8 @@ onMounted(async () => {
 
                 <div class="form-group">
                     <label>收入金額</label>
-                    <input v-model.number="form.add_amount" type="number" placeholder="NT$ 0" class="amount-input" />
+                    <input v-model.number="form.add_amount" type="number" :placeholder="`${currentCurrency}`"
+                    class="amount-input" />
                 </div>
 
                 <div class="grid">

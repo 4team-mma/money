@@ -25,6 +25,7 @@ export const useAccountStore = defineStore("account", {
           itemName: acc.account_name, // 轉為前端統一的 itemName
           icon: acc.account_icon || "💰",
           account_type: acc.account_type,
+          currency: acc.currency || "NT$", //外幣台幣連動部分
           current_balance: acc.current_balance,
         }));
       } catch (err) {
