@@ -255,6 +255,11 @@ onMounted(fetchData);
 </template>
 
 <style scoped>
+
+.stat-info{
+    text-align: center;
+}
+
 .page-container {
     max-width: 1000px;
     margin: 0 auto;
@@ -324,6 +329,7 @@ onMounted(fetchData);
     font-weight: 800;
     color: #1e293b;
     margin: 0;
+    text-align: center;
 }
 
 .trend-tag {
@@ -333,6 +339,7 @@ onMounted(fetchData);
     border-radius: 4px;
     display: inline-block;
     margin-top: 8px;
+    
 }
 
 .up {
