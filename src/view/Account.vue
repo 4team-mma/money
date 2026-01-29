@@ -296,12 +296,18 @@ onMounted(() => {
                 </div>
                 
                 <div v-if="groupedAccounts[typeObj.value]?.length > 0">
-                    <div class="account-card mini" v-for="acc in groupedAccounts[typeObj.value]" 
-                        :key="acc.id" @click="toggleActive(acc.id)" :class="{ 'is-transparent': activeId === acc.id }">
+                    <div class="account-card mini" 
+                    v-for="acc in groupedAccounts[typeObj.value]" 
+                    :key="acc.id" 
+                    @click="toggleActive(acc.id)" 
+                    :class="{ 
+                    'is-transparent': activeId === acc.id, 
+                    'is-excluded': acc.exclude }">
+
                         <span class="emoji-small">{{ acc.icon }}</span>
                         <div>
                             <div class="account-name-small">{{ acc.name }}</div>
-                            <span v-if="acc.exclude" class="exclude-mini-tag">排除</span>
+                            <span v-if="acc.exclude" class="exclude-mini-tag">不計入資產</span>
                         </div>
                         <div class="acc-amount-group">
                             <div class="balance-small debt-text"> {{ acc.currency }} {{ acc.balance.toLocaleString() }}</div>
@@ -328,12 +334,18 @@ onMounted(() => {
                 </div>
                 
                 <div v-if="groupedAccounts[typeObj.value]?.length > 0">
-                    <div class="account-card mini" v-for="acc in groupedAccounts[typeObj.value]" 
-                        :key="acc.id" @click="toggleActive(acc.id)" :class="{ 'is-transparent': activeId === acc.id }">
+                    <div class="account-card mini" 
+                    v-for="acc in groupedAccounts[typeObj.value]" 
+                    :key="acc.id" 
+                    @click="toggleActive(acc.id)" 
+                    :class="{ 
+                    'is-transparent': activeId === acc.id, 
+                    'is-excluded': acc.exclude }">
+                    
                         <span class="emoji-small">{{ acc.icon }}</span>
                         <div>
                             <div class="account-name-small">{{ acc.name }}</div>
-                            <span v-if="acc.exclude" class="exclude-mini-tag">排除</span>
+                            <span v-if="acc.exclude" class="exclude-mini-tag">不計入負債</span>
                         </div>
                         <div class="acc-amount-group">
                             <div class="balance-small debt-text2"> {{ acc.currency }} {{ acc.balance.toLocaleString() }}</div>
@@ -668,6 +680,27 @@ onMounted(() => {
     cursor: pointer;
     color: #94a3b8;
     font-weight: bold;
+}
+
+/* 當帳戶被排除時的樣式 */
+.account-card.mini.is-excluded {
+    opacity: 0.80;       /* 讓透明度變低 */
+    filter: grayscale(0.8); /* 讓顏色變灰，增加辨識度 */
+    background: #f1f5f9;  /* 稍微深一點的背景色 */
+    border: 1px dashed #cbd5e1; /* 邊框變成虛線 */
+}
+
+/* 確保裡面的文字顏色繼承透明度 */
+.is-excluded .account-name-small,
+.is-excluded .balance-small,
+.is-excluded .emoji-small {
+    color: #94a3b8;
+}
+
+/* 讓原本排除標籤在變淡的行中稍微亮一點點，方便閱讀 */
+.is-excluded .exclude-mini-tag {
+    background: #e2e8f0;
+    color: #475569;
 }
 
 /* 讓手機版變回單欄 */

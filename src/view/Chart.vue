@@ -14,7 +14,9 @@ const startDate = ref(null)
 const endDate = ref(null) 
 const monthlyData = ref([]) 
 const yearlyData = ref([])  
+const dailyData = ref([]) // 確保定義，接收後端 daily 欄位
 const isLoading = ref(true)
+
 let chartInstance = null
 
 // 當前日期顯示
@@ -24,41 +26,67 @@ const today = computed(() => {
     return `${now.getFullYear()} 年 ${now.getMonth() + 1} 月 ${now.getDate()} 日・${weekMap[now.getDay()]}`
 })
 
-// --- 資料邏輯 (必須放在 watch 之前) ---
+// --- 資料邏輯 ---
 const tableData = computed(() => {
     if (period.value === 'month') return monthlyData.value
     if (period.value === 'year') return yearlyData.value
     if (period.value === 'custom') {
         if (!startDate.value || !endDate.value) return []
-        const start = new Date(startDate.value)
-        const end = new Date(endDate.value)
-        return monthlyData.value
+        
+        // 使用字串直接比對 YYYY-MM-DD，最為精準
+        const start = startDate.value
+        const end = endDate.value
+
+        return dailyData.value
             .filter(row => {
-                const d = new Date(row.date)
+                const d = row.date.split('T')[0] // 處理可能帶有時間的字串
                 return d >= start && d <= end
             })
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .sort((a, b) => new Date(b.date) - new Date(a.date)) // 表格：新 -> 舊
     }
     return []
 })
 
 // --- 圖表渲染 ---
 const renderChart = () => {
-    if (!dailyChartRef.value || tableData.value.length === 0) {
+    if (!dailyChartRef.value) return
+    if (tableData.value.length === 0) {
         if (chartInstance) chartInstance.destroy()
         return
     }
     
     if (chartInstance) chartInstance.destroy()
 
-    // --- 修改這部分 ---
-    // 1. 從 tableData (新->舊) 中先切出前 12 筆最新的資料
-    // 2. 使用 reverse() 將其轉為 (舊->新) 以符合圖表時間軸
-    const chartData = tableData.value.slice(0, 12).reverse()
-    // ----------------
+    let chartData = []
+    if (period.value === 'custom') {
+        chartData = [...tableData.value].reverse()
+    } else {
+        chartData = tableData.value.slice(0, 12).reverse()
+    }
 
     const ctx = dailyChartRef.value.getContext('2d')
     
+    // --- 🚀 新增：計算漸層色邏輯 ---
+    const getGradient = (canvas, chart) => {
+        const { ctx, chartArea } = chart;
+        if (!chartArea) return null;
+
+        const yScale = chart.scales.y;
+        const zeroPixel = yScale.getPixelForValue(0);
+        
+        // 計算 0 軸在圖表高度中的百分比位置
+        let stop = (zeroPixel - chartArea.top) / (chartArea.bottom - chartArea.top);
+        // 限制 stop 範圍在 0~1，避免超出畫布範圍報錯
+        stop = Math.max(0, Math.min(1, stop));
+
+        const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+        gradient.addColorStop(0, '#3b82f6');      // 最高點：藍色
+        gradient.addColorStop(stop, '#3b82f6');   // 0 軸以上：藍色
+        gradient.addColorStop(stop, '#ef4444');   // 0 軸以下：紅色
+        gradient.addColorStop(1, '#ef4444');      // 最低點：紅色
+        return gradient;
+    };
+
     chartInstance = new Chart(ctx, {
         type: 'line',
         data: {
@@ -66,13 +94,41 @@ const renderChart = () => {
             datasets: [{
                 label: '淨資產',
                 data: chartData.map(d => d.net),
-                borderColor: '#779FBF',
-                backgroundColor: 'rgba(119, 159, 191, 0.1)',
+                
+                // 🌟 線條顏色：使用 Function 呼叫漸層
+                borderColor: (context) => {
+                    const chart = context.chart;
+                    return getGradient(ctx.canvas, chart) || 'black';
+                },
+                
+                // 🌟 填滿顏色：也同步改成淡藍/淡紅漸層
+                backgroundColor: (context) => {
+                    const chart = context.chart;
+                    const { ctx, chartArea } = chart;
+                    if (!chartArea) return null;
+                    const yScale = chart.scales.y;
+                    const stop = Math.max(0, Math.min(1, (yScale.getPixelForValue(0) - chartArea.top) / (chartArea.bottom - chartArea.top)));
+                    
+                    const bgGradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                    bgGradient.addColorStop(0, 'rgba(59, 130, 246, 0.2)');
+                    bgGradient.addColorStop(stop, 'rgba(59, 130, 246, 0.05)');
+                    bgGradient.addColorStop(stop, 'rgba(239, 68, 68, 0.05)');
+                    bgGradient.addColorStop(1, 'rgba(239, 68, 68, 0.2)');
+                    return bgGradient;
+                },
+
                 borderWidth: 3,
                 fill: true,
-                tension: 0.4,
-                pointRadius: 4,
-                pointBackgroundColor: '#779FBF'
+                tension: 0.3,
+                pointRadius: chartData.length > 31 ? 0 : 5,
+                
+                // 🌟 點點顏色：同樣根據正負變色
+                pointBackgroundColor: (context) => {
+                    const val = context.dataset.data[context.dataIndex];
+                    return val >= 0 ? '#3b82f6' : '#ef4444';
+                },
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
             }]
         },
         options: {
@@ -80,14 +136,12 @@ const renderChart = () => {
             maintainAspectRatio: false,
             plugins: { 
                 legend: { display: false },
-                // 增加提示框，標註當前點的數值
-                tooltip: {
-                    mode: 'index',
-                    intersect: false
-                }
+                tooltip: { mode: 'index', intersect: false }
             },
             scales: {
                 y: { 
+                    // 確保 0 軸一定會顯示，方便觀察變色點
+                    beginAtZero: false, 
                     ticks: { callback: (val) => 'NT$' + val.toLocaleString() } 
                 }
             }
@@ -96,19 +150,38 @@ const renderChart = () => {
 }
 
 // --- 監聽與生命週期 ---
+// 監聽表格資料變化時重新渲染
 watch(tableData, async () => {
     await nextTick()
     renderChart()
 }, { deep: true })
 
+// 專門監聽自訂日期變動，強制渲染
+watch([startDate, endDate], () => {
+    if (period.value === 'custom') {
+        nextTick(() => renderChart())
+    }
+})
+
 onMounted(async () => {
     try {
         isLoading.value = true
-        // 建議：之後可改從 Pinia 或 LocalStorage 獲取真實 userId
         const res = await statsApi.getNetWorthTrend()
+        
         const data = res.data || res
         monthlyData.value = data.monthly || []
         yearlyData.value = data.yearly || []
+        dailyData.value = data.daily || [] // 接收後端每日資料
+
+        // 預設自訂日期的範圍 (最近一個月)
+        const end = new Date()
+        const start = new Date()
+        start.setMonth(start.getMonth() - 1)
+        startDate.value = start.toISOString().split('T')[0]
+        endDate.value = end.toISOString().split('T')[0]
+
+        await nextTick()
+        renderChart()
     } catch (error) {
         console.error("獲取淨資產歷史失敗:", error)
     } finally {
@@ -159,7 +232,7 @@ onMounted(async () => {
                     <tr v-for="row in tableData" :key="row.id">
                         <td>{{ row.period }}</td>
                         <td>NT${{ row.net?.toLocaleString() }}</td>
-                        <td :style="{ color: row.diff > 0 ? '#3b82f6' : '#ef4444' }">
+                        <td :style="{ color: row.diff > 0 ? '#10b981' : '#ef4444' }">
                             {{ row.diff > 0 ? '+' : '' }}{{ row.diff?.toLocaleString() }}
                         </td>
                     </tr>
@@ -227,7 +300,7 @@ onMounted(async () => {
 }
 
 .money-table th {
-    background-color: #779FBF;
+    background-color: #779fbf;
     color: white;
     padding: 12px;
 }
