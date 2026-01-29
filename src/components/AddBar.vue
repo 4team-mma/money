@@ -20,6 +20,7 @@
 </template>
 
 <style scoped>
+@import'/src/assets/css/add.css';
 
 h2 {
     text-align: center;
