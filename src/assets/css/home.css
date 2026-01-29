@@ -196,16 +196,19 @@
     justify-content: center;
     gap: 12px;
     margin-bottom: 24px;
+    padding-top: 10px;
 }
 
 .logo-icon {
-    width: 56px;
-    height: 56px;
-    background: linear-gradient(135deg, #b1e7eb, #c1cadf);
+    width: 72px;
+    height: 72px;
+    background: linear-gradient(135deg, #ffffff, #ffffff);
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding-bottom: 10px;
+    
 }
 
 .logo-icon .icon {
@@ -213,7 +216,10 @@
     /* 臨時樣式，用於文字替代圖片時 */
     color: #1E293B;
     font-weight: bold;
+    
 }
+
+
 
 .brand-name {
     font-size: 1.875rem;
