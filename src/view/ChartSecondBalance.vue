@@ -165,9 +165,11 @@ watch(period, async () => {
     renderChart()
 })
 
+// 當前日期顯示
 const today = computed(() => {
     const now = new Date()
-    return `${now.getFullYear()} 年 ${now.getMonth() + 1} 月 ${now.getDate()} 日`
+    const weekMap = ['週日', '週一', '週二', '週三', '週四', '週五', '週六']
+    return `${now.getFullYear()} 年 ${now.getMonth() + 1} 月 ${now.getDate()} 日・${weekMap[now.getDay()]}`
 })
 
 </script>
