@@ -39,7 +39,7 @@ const now_money = computed(() => {
         // 確保餘額是數字，並用 Math.floor 去掉小數點
         const rawBalance = selected_account.current_balance ?? 0;
         const integerBalance = Math.floor(rawBalance);
-        //使用 toLocaleString() 加上千分位逗點
+        //
         const formattedBalance = integerBalance.toLocaleString();
         const currency = selected_account.currency || 'NT$';
         // 加上 toLocaleString() 讓金額顯示千分位，如 1,500
