@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue' // 🌟 確保引入 onMounted
 import { useCategoryStore } from '@/stores/useCategoryStore'
 import { storeToRefs } from 'pinia'
+import { ElMessage } from 'element-plus'
 
 /* ---------- 狀態控制 ---------- */
 const showModal = ref(false)
@@ -71,18 +72,50 @@ const toggleTag = (id) => {
     const index = selectedIds.value.indexOf(id)
     if (index > -1) {
         selectedIds.value.splice(index, 1)
+        emit('update:modelValue', selectedItems.value)
     } else {
+        // 計算「如果加上這個標籤」後的總長度
+        const targetTag = categoryItems.value.find(t => t.id === id);
+        if (!targetTag) return;
+
+        // 計算目前已選標籤組合後的預估字串長度 (名稱 + 逗點)
+        const currentNames = selectedItems.value.map(i => i.itemName);
+        const nextTotalText = [...currentNames, targetTag.itemName].join(', ');
+
+        if (nextTotalText.length > 100) {
+            ElMessage.warning('已達到標籤總長度上限 (100 字)！');
+            return;
+        }
+
         selectedIds.value.push(id)
+        emit('update:modelValue', selectedItems.value)
     }
-    emit('update:modelValue', selectedItems.value)
 }
 
 const addNewItem = () => {
-    if (!newAdd.value.trim()) return
-    const newItem = { id: Date.now(), itemName: newAdd.value, color: newColor.value }
+    const name = newAdd.value.trim();
+    if (!name) return
+
+    // 🌟 1. 限制單個標籤長度 (避免單個標籤就爆表)
+    if (name.length > 15) {
+        ElMessage.warning('單個標籤名稱限制 15 字以內！');
+        return;
+    }
+
+    // 🌟 2. 限制總長度
+    const currentNames = selectedItems.value.map(i => i.itemName);
+    const nextTotalText = [...currentNames, name].join(', ');
+
+    if (nextTotalText.length > 100) {
+        ElMessage.warning('此標籤只能小於100字喔,太多標籤了!)！');
+        return;
+    }
+
+    const newItem = { id: Date.now(), itemName: name, color: newColor.value }
     categoryStore.addCustomTag(newItem)
     selectedIds.value.push(newItem.id)
-    newAdd.value = ''; showAdd.value = false
+    newAdd.value = ''; 
+    showAdd.value = false
     emit('update:modelValue', selectedItems.value)
 }
 
@@ -93,6 +126,13 @@ const removeItem = (id) => {
     selectedIds.value = selectedIds.value.filter(sid => sid !== id)
     emit('update:modelValue', selectedItems.value)
 }
+
+// 在 script 加入一個計算屬性
+const remainingChars = computed(() => {
+    const len = displayText.value === '選擇標籤' ? 0 : displayText.value.length;
+    return 100 - len;
+});
+
 </script>
 
 <template>
@@ -109,7 +149,7 @@ const removeItem = (id) => {
             <div v-if="showModal" class="modal-overlay" @click="showModal = false">
                 <div class="modal-content" @click.stop>
                     <div class="modal-header">
-                        <h3>選擇標籤 (多選)</h3>
+                        <h3>選擇標籤 (剩餘容量: {{ remainingChars }} 字)</h3>
                         <button class="confirm-btn" @click="showModal = false">完成</button>
                     </div>
 
@@ -124,7 +164,9 @@ const removeItem = (id) => {
 
                     <div class="add-section">
                         <div class="add-form">
-                            <input v-model="newAdd" placeholder="新增標籤名稱" class="tag-input" @keyup.enter="addNewItem" />
+                            <input v-model="newAdd" placeholder="新增標籤名稱" class="tag-input" @keyup.enter="addNewItem"
+                            maxlength="15"
+                            />
                             <div class="color-picker-wrapper">
                                 <div v-for="c in colors" :key="c" @click="newColor = c">
                                     <span class="color-dot-large" :style="{ backgroundColor: c }"
@@ -143,18 +185,7 @@ const removeItem = (id) => {
 <style scoped>
 @import '../assets/css/add.css';
 
-/* 標籤觸發器樣式 */
-/* .tag-trigger {
-    border-color: #3b82f6;
-    justify-content: center;
-    gap: 8px;
-}
 
-.tag-trigger .current-name {
-    color: #3b82f6;
-} */
-
-/* 修正點：讓多個圓點水平排列 */
 .dot-group {
     display: flex;
     gap: 4px;
