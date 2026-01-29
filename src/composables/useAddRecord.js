@@ -132,10 +132,10 @@ export function useAddRecord(initialType = false) {
         ElMessage.warning('金額超過系統單筆上限')
         return false
     }
-    // 備註長度限制：配合 VARCHAR(200)
-    // 我們在送出前最後檢查一次，避免超過 200 字
-    if (form.add_note && form.add_note.length > 200) {
-        ElMessage.warning(`備註內容太長了 (目前 ${form.add_note.length}/200 字)`)
+    // 備註長度限制：配合 VARCHAR(500)
+    // 我們在送出前最後檢查一次，避免超過 500 字
+    if (form.add_note && form.add_note.length > 500) {
+        ElMessage.warning(`備註內容太長了 (目前 ${form.add_note.length}/500 字)`)
         return false
     }
 
@@ -224,28 +224,7 @@ export function useAddRecord(initialType = false) {
         finally { isSubmitting.value = false }
     }
 
-    const formatNote = () => {
-    if (!form.add_note) return
-    // 增加判斷：先過濾掉已經存在的標記，避免重複
-    const rawLines = form.add_note.replace(/🔹/g, '').split('\n').map(l => l.trim()).filter(l => l.length > 0)
-    const result = []
-    for (let line of rawLines) {
-        const isPrice = line.includes('$') || line.includes('＄')
-        if (isPrice && result.length > 0) result[result.length - 1] += ` ➔ ${line}`
-        else result.push(`🔹 ${line}`)
-    }
-    
-    const finalNote = `【整理明細】\n${result.join('\n')}`
-    
-    // 如果整理完超過 200 字，就不予執行並提醒
-    if (finalNote.length > 200) {
-        ElMessage.warning('明細整理後字數將超過 200 字上限，請手動精簡內容')
-        return
-    }
-    
-    form.add_note = finalNote
-    ElMessage.success('排版已優化')
-}
+ 
 
     return {
         form,
@@ -258,7 +237,6 @@ export function useAddRecord(initialType = false) {
         handleSave,
         handleSaveNext,
         isSubmitting,
-        formatNote,
         currentCurrency // 回傳給 Vue 元件使用
     }
 }
