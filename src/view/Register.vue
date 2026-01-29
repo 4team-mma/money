@@ -111,7 +111,7 @@ const goToLogin = () => router.push('/')
                 <div class="form-section">
                     <div class="logo-area">
                         <div class="logo-icon">
-                            <img src="../assets/logo.svg" alt="logo" width="48" height="48">
+                            <img src="../assets/logo.svg" alt="logo" width="68" height="68">
                         </div>
                         <h1 class="brand-name">Money MMA</h1>
                     </div>

@@ -15,7 +15,7 @@ const emit = defineEmits(['save-success', 'cancel'])
 const { 
     form, setFormData, handleCatoUpdate, handleAccountUpdate,
     handleMemberUpdate, handleTagUpdate, 
-    handleSave, formatNote, isSubmitting 
+    handleSave, isSubmitting 
 } = useAddRecord()
 
 onMounted(() => { if (props.initialData) setFormData(props.initialData) })
@@ -71,7 +71,7 @@ const onSave = async () => {
         <div class="form-item">
             <div class="note-label">
                 <label>備註內容</label>
-                <button @click="formatNote" class="btn-auto">自動整理</button>
+            
             </div>
             <textarea v-model="form.add_note" placeholder="輸入備註" rows="2"></textarea>
         </div>

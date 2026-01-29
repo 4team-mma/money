@@ -75,7 +75,7 @@ const navigation = [
         <!-- Header -->
         <div class="sidebar-header">
           <RouterLink to="/dashboard" class="logo">
-            <div class="logo-icon"> <img src="../assets/logo.svg" alt="logo" width="48" height="48"></div>
+            <div class="logo-icon"> <img src="../assets/logo.svg" alt="logo" width="72" height="72"></div>
             <span class="logo-text">Money MMA</span>
           </RouterLink>
           <button class="close-button" @click="sidebarOpen = false">✕</button>
@@ -199,10 +199,9 @@ const navigation = [
 }
 
 .logo-icon {
-  background: linear-gradient(135deg, #c4e1f1, #7db0f3);
+  background: linear-gradient(135deg, #ffffff, #ffffff);
   padding: 0.5rem;
   border-radius: 8px;
-  font-size: 1.5rem;
 }
 
 .logo-text {

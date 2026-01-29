@@ -21,10 +21,10 @@ export const useCategoryStore = defineStore("category", {
     { id: 3, itemName: "孩子" },
     ],
     tags: [
-    { id: 1, itemName: '一般', color: '#004B97' },
-    { id: 2, itemName: '旅遊', color: '#22c55e' },
-    { id: 3, itemName: '必要', color: '#3b82f6' },
-    { id: 4, itemName: '衝動', color: '#ef4444' },
+    { id: 1, itemName: '需要', color: '#004B97' },
+    { id: 2, itemName: '想要', color: '#22c55e' },
+    { id: 3, itemName: '旅遊', color: '#3b82f6' },
+
     ],
     }),
     persist: true, // 開啟持久化，重新整理就不會消失

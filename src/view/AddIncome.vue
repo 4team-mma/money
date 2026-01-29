@@ -15,7 +15,7 @@ import 'v-calendar/style.css'
 const { 
     form, handleCatoUpdate, handleAccountUpdate,
     handleMemberUpdate, handleTagUpdate, handleSave, 
-    handleSaveNext, formatNote,currentCurrency 
+    handleSaveNext,currentCurrency 
 } = useAddRecord(true)
 
 const accountStore = useAccountStore()
@@ -80,7 +80,9 @@ onMounted(async () => {
                 </div>
 
                 <div class="form-group">
-                    <label>備註</label>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label>備註: ({{ form.add_note.length }}/500)</label>
+                    </div>
                     <textarea v-model="form.add_note" placeholder="補充說明（選填）"></textarea>
                 </div>
 

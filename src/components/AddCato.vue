@@ -21,6 +21,9 @@ const selectedCategory = ref(categoryItems.value[0]) // 預設值
 const newAdd = ref('')
 const newIcon = ref('🍔')
 
+
+
+
 // 4. 🌟 核心監聽邏輯 (放在 props 定義之後)
 watch(() => props.modelValue, (newVal) => {
     if (!newVal) return;
@@ -52,22 +55,60 @@ const selectCategory = (item) => {
 }
 
 const addNewItem = () => {
-    if (!newAdd.value.trim()) return
-    const newItem = { id: Date.now(), itemName: newAdd.value, icon: newIcon.value }
-    categoryItems.value.push(newItem)
-    selectedCategory.value = newItem
-    emit('update:modelValue', newItem)
+    const name = newAdd.value.trim();
+    
+    // 🌟 1. 檢查名稱是否為空
+    if (!name) return;
+
+    // 🌟 2. 限制類別名稱長度 (對應 add_class VARCHAR(20))
+    if (name.length > 15) {
+        // 如果你有引入 ElMessage 
+        // ElMessage.warning('類別名稱太長囉，請控制在 15 字以內');
+        alert('類別名稱太長囉，請控制在 15 字以內');
+        return;
+    }
+
+    // 🌟 3. 限制圖示長度 (對應 add_class_icon VARCHAR(20))
+    // 雖然選單是固定的，但防止未來有其他輸入方式
+    if (newIcon.value.length > 10) { 
+        alert('圖示資料異常');
+        return;
+    }
+
+    const newItem = { 
+        id: Date.now(), 
+        itemName: name, 
+        icon: newIcon.value 
+    };
+
+    categoryItems.value.push(newItem);
+    selectedCategory.value = newItem;
+    emit('update:modelValue', newItem);
+    
+    // 重置
     newAdd.value = '';
     showAdd.value = false;
     showModal.value = false;
 }
 
 const removeItem = (id) => {
-    categoryItems.value = categoryItems.value.filter(item => item.id !== id)
-    if (selectedCategory.value?.id === id) {
-        const fallback = categoryItems.value[0] || null
-        selectedCategory.value = fallback
-        emit('update:modelValue', fallback)
+    // 1. 找出要被刪除的項目名稱，讓提示更親切
+    const targetItem = categoryItems.value.find(item => item.id === id);
+    const itemName = targetItem ? targetItem.itemName : '此項目';
+
+    // 2. 彈出二次確認視窗
+    const isConfirmed = confirm(`確定要刪除「${itemName}」類別嗎？`);
+
+    if (isConfirmed) {
+        // 執行刪除邏輯
+        categoryItems.value = categoryItems.value.filter(item => item.id !== id)
+        
+        // 3. 如果刪掉的是目前選中的，就跳回第一個預設值
+        if (selectedCategory.value?.id === id) {
+            const fallback = categoryItems.value[0] || null
+            selectedCategory.value = fallback
+            emit('update:modelValue', fallback)
+        }
     }
 }
 </script>
@@ -92,7 +133,10 @@ const removeItem = (id) => {
                             @click="selectCategory(item)">
                             <span class="card-icon">{{ item.icon }}</span>
                             <span class="card-name">{{ item.itemName }}</span>
-                            <span class="del-x" @click.stop="removeItem(item.id)">✕</span>
+                            <span 
+                            v-if="item.id > 100"
+                            class="del-x" 
+                            @click.stop="removeItem(item.id)">✕</span>
                         </div>
                     </div>
 
@@ -104,7 +148,9 @@ const removeItem = (id) => {
 
                         <div v-if="showAdd" class="expand-form">
                             <input v-model="newAdd" placeholder="輸入名稱..." class="full-input"
-                                @keyup.enter="addNewItem" />
+                                @keyup.enter="addNewItem"
+                                maxlength="15"
+                                />
                             <div class="icon-selector-grid">
                                 <span v-for="icon in iconOptions" :key="icon" @click="newIcon = icon"
                                     :class="{ active: newIcon === icon }" class="icon-option">

@@ -1,19 +1,45 @@
 <script setup>
-import { onMounted, watch } from 'vue'
+import { onMounted, watch,computed } from 'vue'
 import { useAddRecord } from '@/composables/useAddRecord'
 import { DatePicker } from 'v-calendar'
 import 'v-calendar/style.css'
 import Add_account from './AddAccount.vue'
-
+import { useAccountStore } from '@/stores/useAccountStore'
 const props = defineProps({ initialData: Object })
 const emit = defineEmits(['save-success', 'cancel'])
 
+const accountStore = useAccountStore() //  初始化 Store
+// 🌟 3. 封裝一個「同步資料」的函式
+const syncAccountData = async (data) => {
+    if (!data) return;
+
+    // 確保 Store 資料已載入
+    if (accountStore.accounts.length === 0) {
+        await accountStore.loadAccounts();
+    }
+
+    // 先帶入基礎文字資料（金額、日期、備註等）
+    setFormData(data);
+
+    // 關鍵：根據 initialData 裡的 ID，從 Store 找出完整物件並更新 form
+    const sourceAcc = accountStore.accounts.find(acc => acc.account_id === data.source_account_id);
+    const targetAcc = accountStore.accounts.find(acc => acc.account_id === data.account_id);
+
+    if (sourceAcc) handleSourceUpdate(sourceAcc);
+    if (targetAcc) handleAccountUpdate(targetAcc);
+}
+
+
 const { 
     form, setFormData, handleAccountUpdate, handleSourceUpdate, 
-    handleSave, formatNote, isSubmitting 
+    handleSave, isSubmitting 
 } = useAddRecord('transfer')
 
-onMounted(() => { if (props.initialData) setFormData(props.initialData) })
+onMounted(() => { 
+    syncAccountData(props.initialData); // 使用新的同步函式
+})
+
+// onMounted(() => { if (props.initialData) setFormData(props.initialData) })
 watch(() => props.initialData, (newVal) => {
     if (newVal && newVal.add_id !== form.add_id) {
         setFormData(newVal)
@@ -23,7 +49,36 @@ watch(() => props.initialData, (newVal) => {
 const onSave = async () => {
     const res = await handleSave()
     if (res?.success) emit('save-success')
+
 }
+const now_money = computed(() => {
+    const selected_account = form.source_account;
+
+    // 1. 如果完全沒選，顯示預設文字
+    if (!selected_account) return '請選擇帳戶';
+
+    // 2. 核心修正：從 Store 中即時對比最新的帳戶資料
+    // 這樣可以確保即使 source_account 是舊的，也能抓到 Store 裡最新載入的餘額
+    const accountId = typeof selected_account === 'object' 
+        ? selected_account.account_id 
+        : selected_account;
+
+    const latestInfo = accountStore.accounts.find(acc => acc.account_id === accountId);
+
+    if (latestInfo) {
+        const rawBalance = Number(latestInfo.current_balance || 0);
+        const integerBalance = Math.floor(rawBalance);
+        const formattedBalance = integerBalance.toLocaleString();
+        const currency = latestInfo.currency || 'NT$';
+        return `${currency} ${formattedBalance}`;
+    }
+
+    // 3. 如果正在載入中或找不到
+    return 'NT$ 0'; 
+});
+
+
+
 </script>
 
 <template>
@@ -45,6 +100,7 @@ const onSave = async () => {
                 <span class="currency">NT$</span>
                 <input v-model.number="form.add_amount" type="number" class="main-amount" />
             </div>
+            <div class="change-text">當前餘額 : {{ now_money }}</div>
         </div>
 
         <div v-if="form.add_id || props.initialData" class="form-grid">
@@ -61,7 +117,6 @@ const onSave = async () => {
         <div class="form-item">
             <div class="note-label">
                 <label>備註內容</label>
-                <button @click="formatNote" class="btn-auto">自動整理</button>
             </div>
             <textarea v-model="form.add_note" placeholder="輸入備註" rows="2"></textarea>
         </div>

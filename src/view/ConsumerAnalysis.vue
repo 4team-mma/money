@@ -74,7 +74,7 @@ const renderChart = (data) => {
             labels: data.map(item => item.category),
             datasets: [
                 {
-                    label: '我的花費 (TWD)',
+                    label: '我的花費 (NT$)',
                     data: data.map(item => item.my_spending),
                     backgroundColor: 'rgba(67, 56, 202, 0.7)',
                     borderRadius: 6,
@@ -144,7 +144,7 @@ onMounted(fetchDataAndRender);
                         <div class="stat-icon">💰</div>
                         <div class="stat-info">
                             <h3>本月總花費</h3>
-                            <p class="stat-value">${{ totalSpending.toLocaleString() }}  NT$</p>
+                            <p class="stat-value">${{ totalSpending.toLocaleString() }} </p>
                         </div>
                     </div>
                     <div class="card stat-card">
@@ -190,7 +190,7 @@ onMounted(fetchDataAndRender);
 .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
 .stat-card { display: flex; align-items: center; gap: 15px; }
 .stat-icon { font-size: 30px; }
-.stat-value { font-size: 22px; font-weight: 700; margin: 0; }
+.stat-value { font-size: 22px; font-weight: 700; margin: 0; text-align: center; }
 .stat-value.warning { color: #ef4444; }
 
 .chart-container { height: 350px; }

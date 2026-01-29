@@ -3,16 +3,16 @@ import Nav from '@/components/Nav.vue'
 import Add_bar from '@/components/AddBar.vue'
 import Add_account from '@/components/AddAccount.vue'
 import { useAddRecord } from '@/composables/useAddRecord'
-import { computed, onMounted } from 'vue';
-import { useAccountStore } from '@/stores/useAccountStore' 
+import { ref,computed, onMounted } from 'vue';
+import { useAccountStore } from '@/stores/useAccountStore'
 import { DatePicker } from 'v-calendar';
 import 'v-calendar/style.css';
 
-const accountStore = useAccountStore() 
-const { 
+const accountStore = useAccountStore()
+const {
     form, handleSourceUpdate, handleAccountUpdate,
-    handleMemberUpdate, handleTagUpdate, handleSave, 
-    handleSaveNext, formatNote,currentCurrency
+    handleMemberUpdate, handleTagUpdate, handleSave,
+    handleSaveNext, currentCurrency
 } = useAddRecord('transfer')
 
 onMounted(async () => {
@@ -21,8 +21,8 @@ onMounted(async () => {
 
     // 2. 🌟 預設值設定：轉出選第一個(台新)，轉入選第二個(一般錢包)
     if (accountStore.accounts.length >= 2) {
-        handleSourceUpdate(accountStore.accounts[0]) 
-        handleAccountUpdate(accountStore.accounts[1]) 
+        handleSourceUpdate(accountStore.accounts[0])
+        handleAccountUpdate(accountStore.accounts[1])
     }
 
     if (window.history.state?.date) {
@@ -30,7 +30,36 @@ onMounted(async () => {
     }
 })
 
-// 🌟 依照要求修改的邏輯：
+const now_money = computed(() => {
+    //指向「轉出帳戶 (source_account)」
+    const selected_account = form.source_account;
+
+    // 2. 如果 selected_account 是一個完整的物件 (通常 handleSourceUpdate 會傳入物件)
+    if (typeof selected_account === 'object' && selected_account !== null) {
+        // 確保餘額是數字，並用 Math.floor 去掉小數點
+        const rawBalance = selected_account.current_balance ?? 0;
+        const integerBalance = Math.floor(rawBalance);
+        //
+        const formattedBalance = integerBalance.toLocaleString();
+        const currency = selected_account.currency || 'NT$';
+        // 加上 toLocaleString() 讓金額顯示千分位，如 1,500
+        return `${currency} ${formattedBalance}`;
+    }
+
+    // 3. 如果 selected_account 只是 ID (相容性處理)
+    if (accountStore.accounts.length > 0) {
+        const found = accountStore.accounts.find(acc => acc.account_id == selected_account);
+        if (found) {
+            const balance = found.current_balance ?? 0;
+            const currency = found.currency || 'NT$';
+            return `${currency} ${balance.toLocaleString()}`;
+        }
+    }
+
+    return '金額讀取失敗';
+});
+
+// 
 // 轉出 (From) 帳戶：列出「全部」帳戶
 const allFromAccounts = computed(() => accountStore.accounts)
 
@@ -48,49 +77,45 @@ const filteredToAccounts = computed(() => {
             <div class="card">
                 <div class="header">
                     <h2>新增轉帳</h2>
-                    <DatePicker v-model="form.add_date" mode="date" :popover="{ visibility: 'click' }" :transition="'none'" :masks="{ title: 'YYYY年 MMM' }">
+                    <DatePicker v-model="form.add_date" mode="date" :popover="{ visibility: 'click' }"
+                        :transition="'none'" :masks="{ title: 'YYYY年 MMM' }">
                         <template #default="{ togglePopover, inputValue, inputEvents }">
                             <div class="date-input-container">
-                                <button type="button" @click="togglePopover" style="border:0; cursor:pointer">🗓</button>
-                                <input :value="inputValue || ''" v-on="inputEvents" readonly class="date-display-input" />
+                                <button type="button" @click="togglePopover"
+                                    style="border:0; cursor:pointer">🗓</button>
+                                <input :value="inputValue || ''" v-on="inputEvents" readonly
+                                    class="date-display-input" />
                             </div>
                         </template>
                     </DatePicker>
                 </div>
 
                 <div class="form-group">
-                    <label>轉帳金額</label>
-                    <input v-model.number="form.add_amount" type="number" 
-                    :placeholder="`${currentCurrency}`"
-                    class="amount-input" />
+                    <label >轉帳金額</label>
+                    <input v-model.number="form.add_amount" type="number" :placeholder="`${currentCurrency}`"
+                        class="amount-input" />
+                    <div class="change-text">當前餘額 : {{ now_money }}</div>
                 </div>
 
                 <div class="grid">
                     <div class="form-group">
                         <label>從 (轉出帳戶)</label>
-                        <Add_account 
-                            :accounts-data="allFromAccounts"
-                            :account="form.source_account"
-                            @update:account="handleSourceUpdate" 
-                        />
+                        <Add_account :accounts-data="allFromAccounts" :account="form.source_account"
+                            @update:account="handleSourceUpdate" />
                     </div>
 
                     <div class="form-group">
                         <label>到 (轉入帳戶)</label>
-                        <Add_account 
-                            :accounts-data="filteredToAccounts"
-                            :account="form.account"
-                            @update:account="handleAccountUpdate" 
-                        />
+                        <Add_account :accounts-data="filteredToAccounts" :account="form.account"
+                            @update:account="handleAccountUpdate" />
                     </div>
 
                 </div>
                 <div class="form-group">
-                    <div>
-                        <label>備註 </label>
-                        <button @click="formatNote" class="btn btn-info" style="margin-left: 20px;">自動整理</button>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label>備註: ({{ form.add_note.length }}/500)</label>
                     </div>
-                    <textarea v-model="form.add_note" placeholder="轉帳說明（選填）"></textarea>
+                    <textarea v-model="form.add_note" placeholder="補充說明（選填）"></textarea>
                 </div>
 
                 <div class="actions">
@@ -163,7 +188,7 @@ label {
 /* 網格佈局 */
 .grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr)); 
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
     width: 100%;
 }
@@ -209,4 +234,12 @@ textarea {
     border: 0px;
     cursor: pointer;
 }
+
+.change-text {
+    font-size: 12px;
+    color: #64748b;
+    margin: 0;
+}
+
+
 </style>

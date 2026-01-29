@@ -44,10 +44,18 @@ const selectCategory = (item) => {
     showModal.value = false
     emit('update:modelValue', item)
 }
-
 const addNewItem = () => {
-    if (!newAdd.value.trim()) return
-    const newItem = { id: Date.now(), itemName: newAdd.value }
+    const name = newAdd.value.trim();
+    if (!name) return
+
+    // 🌟 1. 核心限制：對應 add_member VARCHAR(10)
+    // 扣除一些 buffer，建議限制在 8 個字以內
+    if (name.length > 8) {
+        alert('成員名稱太長囉，請控制在 8 個字以內');
+        return;
+    }
+
+    const newItem = { id: Date.now(), itemName: name }
     categoryItems.value.push(newItem)
 
     selectedCategory.value = newItem
@@ -59,11 +67,16 @@ const addNewItem = () => {
 }
 
 const removeItem = (id) => {
-    categoryItems.value = categoryItems.value.filter(i => i.id !== id)
-    if (selectedCategory.value?.id === id) {
-        const fallback = categoryItems.value[0] || null
-        selectedCategory.value = fallback
-        emit('update:modelValue', fallback)
+    // 🌟 2. 加入刪除二次確認
+    const targetItem = categoryItems.value.find(item => item.id === id);
+    if (confirm(`確定要刪除成員「${targetItem?.itemName}」嗎？`)) {
+        categoryItems.value = categoryItems.value.filter(i => i.id !== id)
+        
+        if (selectedCategory.value?.id === id) {
+            const fallback = categoryItems.value[0] || null
+            selectedCategory.value = fallback
+            emit('update:modelValue', fallback)
+        }
     }
 }
 </script>
@@ -94,7 +107,11 @@ const removeItem = (id) => {
 
                     <div class="add-section">
                         <div class="add-form" style="margin-top:0">
-                            <input v-model="newAdd" placeholder="輸入新成員名稱" @keyup.enter="addNewItem" />
+                            <input v-model="newAdd" 
+                            placeholder="輸入新成員名稱" 
+                            @keyup.enter="addNewItem"
+                            maxlength="8"
+                            />
                             <button class="btn-submit" @click="addNewItem">新增成員</button>
                         </div>
                     </div>

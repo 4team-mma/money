@@ -74,8 +74,8 @@ onMounted(async () => {
 
         <aside class="sidebar-glass" :style="{ backgroundColor: currentStyle.sidebarBg, borderColor: currentStyle.border }">
             <div class="brand-zone">
-                <div class="logo-icon"><span class="icon"><img src="../assets/logo.svg" width="48" height="48"></span></div>
-                <div class="brand-info"><h2>Money MMA</h2><span class="badge" :style="{ background: currentStyle.primary }">ADMIN PANEL</span></div>
+                <div class="logo-icon"><span class="icon"><img src="../assets/logo.svg" width="72" height="72"></span></div>
+                <div class="brand-info"><h2>MMA</h2><span class="badge" :style="{ background: currentStyle.primary }">ADMIN PANEL</span></div>
             </div>
             <nav class="nav-menu">
                 <button v-for="t in tabs" :key="t.id" class="nav-link" :class="{ 'is-active': activeTab === t.id }"

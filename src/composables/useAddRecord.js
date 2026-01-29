@@ -128,7 +128,16 @@ export function useAddRecord(initialType = false) {
         if (!form.add_amount || form.add_amount <= 0) {
             ElMessage.warning('請輸入有效的金額')
             return false
-        }
+        }if (form.add_amount >= 1000000000) {   //資料庫預設上限
+        ElMessage.warning('金額超過系統單筆上限')
+        return false
+    }
+    // 備註長度限制：配合 VARCHAR(500)
+    // 我們在送出前最後檢查一次，避免超過 500 字
+    if (form.add_note && form.add_note.length > 500) {
+        ElMessage.warning(`備註內容太長了 (目前 ${form.add_note.length}/500 字)`)
+        return false
+    }
 
         const d = form.add_date
         const safeDateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -215,18 +224,7 @@ export function useAddRecord(initialType = false) {
         finally { isSubmitting.value = false }
     }
 
-    const formatNote = () => {
-        if (!form.add_note) return
-        const rawLines = form.add_note.split('\n').map(l => l.trim()).filter(l => l.length > 0)
-        const result = []
-        for (let line of rawLines) {
-            const isPrice = line.includes('$') || line.includes('＄')
-            if (isPrice && result.length > 0) result[result.length - 1] += ` ➔ ${line}`
-            else result.push(`🔹 ${line}`)
-        }
-        form.add_note = `【整理明細】\n${result.join('\n')}`
-        ElMessage.success('排版已優化')
-    }
+ 
 
     return {
         form,
@@ -239,7 +237,6 @@ export function useAddRecord(initialType = false) {
         handleSave,
         handleSaveNext,
         isSubmitting,
-        formatNote,
         currentCurrency // 回傳給 Vue 元件使用
     }
 }
