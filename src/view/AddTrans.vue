@@ -12,7 +12,7 @@ const accountStore = useAccountStore()
 const { 
     form, handleSourceUpdate, handleAccountUpdate,
     handleMemberUpdate, handleTagUpdate, handleSave, 
-    handleSaveNext, formatNote,currentCurrency
+    handleSaveNext, currentCurrency
 } = useAddRecord('transfer')
 
 onMounted(async () => {
@@ -88,7 +88,7 @@ const filteredToAccounts = computed(() => {
                 <div class="form-group">
                     <div>
                         <label>備註 </label>
-                        <button @click="formatNote" class="btn btn-info" style="margin-left: 20px;">自動整理</button>
+                    
                     </div>
                     <textarea v-model="form.add_note" placeholder="轉帳說明（選填）"></textarea>
                 </div>
