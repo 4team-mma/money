@@ -120,7 +120,8 @@ const submitEdit = async () => {
                 <input type="number" placeholder="0" v-model.number="account.initial" class="textarea">
             </div>
             <br>
-                <h4 class="acc_button_word_small">不計入資產:</h4>
+                <h4 class="acc_button_word_small" v-if="debtTypeValues.includes(account.type)">不計入負債:</h4>
+                <h4 class="acc_button_word_small" v-else>不計入資產:</h4>
                 <span class="form-check form-switch ">
                     <input class="form-check-input" type="checkbox" role="switch" id="switchCheckDefault" v-model="account.exclude">
                 </span>
