@@ -4,6 +4,7 @@ import { statsApi } from '@/api/stats'
 import Chart from 'chart.js/auto'
 import Nav from '@/components/Nav.vue'
 import Chart_Preface from '@/components/ChartPreface.vue'
+import { getLocalDate, getLocalDateString } from '@/utils/dateHelper'
 
 const dailyChartRef = ref(null)
 const chartInstance = shallowRef(null)
@@ -13,9 +14,10 @@ const rawTrendData = ref([])
 const is_loading = ref(false)
 
 const period = ref('month')
-// 🌟 預設日期初始化 (與支出圖表一致)
-const startDate = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0])
-const endDate = ref(new Date().toISOString().split('T')[0])
+// 初始化日期 (使用本地時間)
+const now = new Date();
+const startDate = ref(getLocalDateString(new Date(now.getFullYear(), now.getMonth(), 1)));
+const endDate = ref(getLocalDate());
 
 const loadData = async () => {
     is_loading.value = true
@@ -40,9 +42,8 @@ onMounted(() => {
     const now = new Date()
 
     // 預設：月（最近 12 個月）
-    startDate.value = new Date(now.getFullYear(), now.getMonth() - 11, 1)
-        .toISOString().split('T')[0]
-    endDate.value = new Date().toISOString().split('T')[0]
+    startDate.value = getLocalDateString(new Date(now.getFullYear(), now.getMonth() - 11, 1))
+    endDate.value = getLocalDate()
     loadData()
 })
 
