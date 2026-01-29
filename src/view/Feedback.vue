@@ -25,18 +25,18 @@
 const fetchUserData = async () => {
     try {
         // 這裡調用你後端獲取個人資料的 API
-        // 假設回傳格式是 { data: { username: "你的名字" } }
+        // 假設回傳格式是 { data: { name: "你的名字" } }
         const response = await getProfile(); 
         
-        if (response && response.username) {
-            form.name = response.username;
-        } else if (response.data && response.data.username) {
-            form.name = response.data.username;
+        if (response && response.name) {
+            form.name = response.name;
+        } else if (response.data && response.data.name) {
+            form.name = response.data.name;
         }
     } catch (error) {
         console.error("抓取使用者資料失敗：", error);
         // 如果 API 失敗，可以嘗試從 localStorage 拿當作備案
-        form.name = localStorage.getItem('username') || '';
+        form.name = localStorage.getItem('name') || '';
     }
 };
 
@@ -92,7 +92,7 @@ const handleFormSubmit = async () => {
             <form @submit.prevent="handleFormSubmit">
 
             <label>
-                帳戶名稱 
+                暱稱
                 <input 
             type="text" 
             v-model="form.name" 
