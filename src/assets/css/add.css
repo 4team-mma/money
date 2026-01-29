@@ -172,3 +172,20 @@
 h2{
     padding-bottom: 10px;
 }
+
+
+
+/* 1. 當前選中狀態：藍底白字 (你之前要的) */
+.t-btn-group .btn.active {
+    background-color: #0d6efd !important;
+    color: white !important;
+    border-color: #0d6efd !important;
+}
+
+/* 2. 滑鼠移過去 (Hover) 狀態：顯示白框 */
+.t-btn-group .btn:hover {
+    background-color: #0d6efd !important; /* 保持透明或原色，不要變藍 */
+    color: white !important;              /* 字體保持藍色 */
+    border: 2px solid white !important;      /* 關鍵：顯現白框  */
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.5); /* 選配：加一點點發光感更明顯 */
+}
