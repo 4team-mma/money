@@ -1,12 +1,12 @@
 <script setup>
-    import { ref, onMounted, onUnmounted } from "vue";
-    // 🌟 1. 引入你寫好的萬用編輯表單組件
-    import EditTransactionForm from "@/components/EditTransactionForm.vue";
+    import { ref, onMounted, onUnmounted, computed } from "vue";
+    import EditTransferForm from './EditTransferForm.vue'
+    import EditRecordForm from './EditRecordForm.vue'
+    import { useAddRecord } from '@/composables/useAddRecord'
 
     const props = defineProps({
         selectedDate: String,
-        transactions: Array,
-        activeId: Number,
+        transactions: Array
     });
 
     const emit = defineEmits(["deleteTransaction", "refreshList"]);
@@ -43,13 +43,21 @@
     // 🌟 2. 用來存放「目前正在編輯的那一筆資料」
     const selectedTransaction = ref(null);
 
-    /**
-     * 開啟編輯 Modal
-     */
+    const { setFormData } = useAddRecord(); 
+
+    // 2. 修改你的 openEditModal
     const openEditModal = (item) => {
-        selectedTransaction.value = { ...item }; // 存入點選的那一筆
+        // 1. 這裡的 item 已經是 map 過後的格式，直接存入
+        selectedTransaction.value = { ...item };
+        
+        // 2. 呼叫解構出來的 setFormData
+        // 它會自動處理 form.account = { account_id: data.account_id, ... } 的邏輯
+        setFormData(item);
+        
         showModal.value = true;
     };
+
+
 
     /**
      * 處理儲存成功後的動作
@@ -58,6 +66,13 @@
         showModal.value = false; // 關閉視窗
         emit("refreshList"); // 🌟 通知父層（Book.vue）重新抓資料，畫面才會更新
     };
+
+    // 計算目前該顯示哪一個組件
+    const currentFormComponent = computed(() => {
+        return selectedTransaction.value?.add_type === 'transfer' 
+            ? EditTransferForm 
+            : EditRecordForm
+    })
 </script>
 
 <template>
@@ -68,7 +83,7 @@
             <div v-for="(t, index) in transactions" :key="index" class="transaction-item">
                 <!-- 左側：內容 -->
                 <div class="transaction-info">
-                    <div class="transaction-icon" :class="t.add_type ? 'income' : 'expense'">
+                    <div class="transaction-icon" :class="{ 'income': t.add_type === true, 'expense': t.add_type === false, 'transfer': t.add_type === 'transfer' }">
                         <span v-if="t.add_class_icon">{{ t.add_class_icon }}</span>
                         <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <polyline v-if="t.add_type" points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
@@ -76,19 +91,39 @@
                         </svg>
                     </div>
                     <div>
-                        <div class="transaction-name">{{ t.add_class }}</div>
+                        <div class="transaction-name">
+                            <!-- 如果是轉帳，顯示從哪到哪 -->
+                            <template v-if="t.add_type === 'transfer'">
+                                {{ t.source_account }} ➔ {{ t.account_name }}
+                            </template>
+                            <template v-else>
+                                {{ t.add_class }}
+                            </template>
+                        </div>
                         <div class="transaction-category">
-                            {{ t.add_member }}<span v-if="t.add_note"> | {{ t.add_note }}</span>
+                            <template v-if="t.add_type === 'transfer'">
+                                {{ t.add_note }}
+                            </template>
+                            <template v-else>
+                                {{ t.add_member }}<span v-if="t.add_note"> | {{ t.add_note }}</span>
+                            </template>
                         </div>
                     </div>
                 </div>
 
                 <!-- 右側：金額與自定義選單 -->
                 <div class="transaction-details">
-                    <div class="transaction-amount" :class="{ income: t.add_type }">
-                        {{ t.add_type ? '+' : '-' }}{{ t.currency }} {{ formatNumber(t.add_amount) }}
-                    </div>
-                    <div class="transaction-account-name">{{ t.account_name }}</div>
+                    <template v-if="t.add_type === 'transfer'">
+                        <div class="transaction-amount">
+                            {{ t.currency }} {{ formatNumber(t.add_amount) }}
+                        </div>
+                    </template>
+                    <template v-else>
+                        <div class="transaction-amount" :class="{ income: t.add_type }">
+                            {{ t.add_type ? '+' : '-' }}{{ t.currency }} {{ formatNumber(t.add_amount) }}
+                        </div>
+                        <div class="transaction-account-name">{{ t.account_name }}</div>
+                    </template>
                 </div>
 
                 <!-- 🌟 純 Vue 下拉選單結構 -->
@@ -102,7 +137,7 @@
                     <!-- 使用 Vue 的 v-if 控制顯示 -->
                     <ul v-if="activeMenuIndex === index" class="custom-dropdown-menu">
                         <li @click="openEditModal(t)">編輯</li>
-                        <li class="delete-opt" @click="emit('deleteTransaction', t.add_id)">刪除</li>
+                        <li class="delete-opt" @click="emit('deleteTransaction', t.add_type, t.add_id)">刪除</li>
                     </ul>
                 </div>
             </div>
@@ -112,13 +147,17 @@
     <!-- 編輯彈窗 -->
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
         <div class="modal-card">
-            <EditTransactionForm 
+            <!-- 使用動態組件 -->
+            <component 
+                :is="currentFormComponent"
+                :key="selectedTransaction?.add_id"
                 :initialData="selectedTransaction" 
                 @save-success="handleSaveSuccess" 
                 @cancel="showModal = false" 
             />
         </div>
     </div>
+
 </template>
 
 <style scoped>

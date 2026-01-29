@@ -3,100 +3,58 @@ import { onMounted, watch } from 'vue'
 import { useAddRecord } from '@/composables/useAddRecord'
 import { DatePicker } from 'v-calendar'
 import 'v-calendar/style.css'
-
-// 引入你的所有子組件
-import Add_cato from './AddCato.vue'
-import Add_cato_inn from './AddCatoInn.vue'
 import Add_account from './AddAccount.vue'
-import Add_member from './AddMember.vue'
-import Add_tag from './AddTag.vue'
 
-const props = defineProps({
-    initialData: Object // 隊友傳進來的舊資料
-})
-
+const props = defineProps({ initialData: Object })
 const emit = defineEmits(['save-success', 'cancel'])
 
 const { 
-    form, setFormData, handleCatoUpdate, handleAccountUpdate,
-    handleSourceUpdate, handleMemberUpdate, handleTagUpdate, 
+    form, setFormData, handleAccountUpdate, handleSourceUpdate, 
     handleSave, formatNote, isSubmitting 
-} = useAddRecord()
+} = useAddRecord('transfer')
 
-onMounted(() => {
-    if (props.initialData) {
-        setFormData(props.initialData)
-    }
-})
-
-// 監聽隊友傳進來的資料變化
+onMounted(() => { if (props.initialData) setFormData(props.initialData) })
 watch(() => props.initialData, (newVal) => {
-    if (newVal) setFormData(newVal)
+    if (newVal && newVal.add_id !== form.add_id) {
+        setFormData(newVal)
+    }
 }, { deep: true })
 
 const onSave = async () => {
     const res = await handleSave()
-    if (res?.success) {
-        emit('save-success')
-    }
+    if (res?.success) emit('save-success')
 }
 </script>
+
 <template>
     <div class="edit-form-wrap">
         <div class="edit-header">
-            <h3>{{ form.add_type === 'transfer' ? '編輯轉帳' : (form.add_type ? '編輯收入' : '編輯支出') }}</h3>
-            
-            <DatePicker v-model="form.add_date" mode="date" :popover="{ visibility: 'click' }" :masks="{ title: 'YYYY年 MMM' }">
+            <h3>編輯轉帳</h3>
+            <DatePicker v-model="form.add_date" mode="date" :masks="{ title: 'YYYY年 MMM' }">
                 <template #default="{ togglePopover, inputValue }">
                     <div class="date-trigger" @click="togglePopover">
-                        <span class="icon">🗓️</span>
-                        <span>{{ inputValue }}</span>
+                        <span class="icon">🗓️</span><span>{{ inputValue }}</span>
                     </div>
                 </template>
             </DatePicker>
         </div>
 
         <div class="form-item">
-            <label>{{ form.add_type === 'transfer' ? '轉帳金額' : '交易金額' }}</label>
+            <label>轉帳金額</label>
             <div class="amount-input-box">
                 <span class="currency">NT$</span>
-                <input v-model.number="form.add_amount" type="number" placeholder="0" class="main-amount" />
+                <input v-model.number="form.add_amount" type="number" class="main-amount" />
             </div>
         </div>
 
-        <div class="form-grid">
-            <template v-if="form.add_type === 'transfer'">
-                <div class="form-item">
-                    <label>從 (轉出帳戶)</label>
-                    <Add_account :account="form.source_account" @update:account="handleSourceUpdate" />
-                </div>
-                <div class="form-item">
-                    <label>到 (轉入帳戶)</label>
-                    <Add_account :account="form.account" @update:account="handleAccountUpdate" />
-                </div>
-            </template>
-
-            <template v-else>
-                <div class="form-item">
-                    <label>{{ form.add_type ? '收入類別' : '消費類別' }}</label>
-                    <Add_cato_inn v-if="form.add_type === true" :modelValue="form.add_class" @update:model-value="handleCatoUpdate" />
-                    <Add_cato v-else :modelValue="form.add_class" @update:model-value="handleCatoUpdate" />
-                </div>
-
-                <div class="form-item">
-                    <label>帳戶</label>
-                    <Add_account :account="form.account" @update:account="handleAccountUpdate" />
-                </div>
-            </template>
-
+        <div v-if="form.add_id || props.initialData" class="form-grid">
             <div class="form-item">
-                <label>成員</label>
-                <Add_member :modelValue="form.add_member" @update:model-value="handleMemberUpdate" />
+                <label>從 (轉出帳戶)</label>
+                <Add_account :account="form.source_account" @update:account="handleSourceUpdate" />
             </div>
-
             <div class="form-item">
-                <label>標籤</label>
-                <Add_tag :modelValue="form.add_tag" @update:model-value="handleTagUpdate" />
+                <label>到 (轉入帳戶)</label>
+                <Add_account :account="form.account" @update:account="handleAccountUpdate" />
             </div>
         </div>
 
@@ -105,13 +63,13 @@ const onSave = async () => {
                 <label>備註內容</label>
                 <button @click="formatNote" class="btn-auto">自動整理</button>
             </div>
-            <textarea v-model="form.add_note" placeholder="輸入備註（選填）" rows="2"></textarea>
+            <textarea v-model="form.add_note" placeholder="輸入備註" rows="2"></textarea>
         </div>
 
         <div class="actions">
             <button class="btn-cancel" @click="emit('cancel')">取消</button>
             <button class="btn-submit" @click="onSave" :disabled="isSubmitting">
-                {{ isSubmitting ? '處理中...' : '更新紀錄' }}
+                {{ isSubmitting ? '處理中...' : '更新轉帳' }}
             </button>
         </div>
     </div>
