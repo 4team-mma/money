@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue' // 🌟 引入 watch
+import { ref, watch,onMounted } from 'vue' 
 import { useCategoryStore } from '@/stores/useCategoryStore'
 import { storeToRefs } from 'pinia'
 
@@ -20,13 +20,13 @@ const selectedCategory = ref(categoryItems.value[0])
 const newAdd = ref('')
 
 /**
- * 🌟 核心監聽邏輯：支援編輯模式
- * 當父組件傳入成員資料時，自動從 Store 清單找回對應的物件
+ * 🌟 核心監聽邏輯：支援編輯模式與自定義成員復原
+ * 使用 async 確保在 Store 持久化資料載入後再進行比對
  */
-watch(() => props.modelValue, (newVal) => {
+watch(() => props.modelValue, async(newVal) => {
     if (!newVal) return;
 
-    // 判斷傳進來的是成員名稱字串還是物件
+    // 取得目標名稱
     const targetName = typeof newVal === 'object' ? newVal.itemName : newVal;
     
     // 從成員清單中查找
@@ -34,10 +34,27 @@ watch(() => props.modelValue, (newVal) => {
     
     if (found) {
         selectedCategory.value = found;
-    } else if (typeof newVal === 'object') {
-        selectedCategory.value = newVal;
+    } else {
+        // 🌟 關鍵防禦：若資料庫有這筆成員，但 Store 裡沒有（例如換電腦或清空緩存）
+        // 我們手動重建它，並利用你的 addCustomMember action 存入 Store
+        const tempId = Date.now() + Math.random();
+        const newTempMember = { 
+            id: tempId, 
+            itemName: targetName 
+        };
+        
+        // 呼叫你的 Store Action 確保資料同步
+        categoryStore.addCustomMember(newTempMember);
+        selectedCategory.value = newTempMember;
     }
 }, { immediate: true });
+onMounted(() => {
+    // 若沒有傳入值且目前沒選中，預設選第一筆 (自己)
+    if (!props.modelValue && categoryItems.value.length > 0) {
+        selectedCategory.value = categoryItems.value[0];
+        emit('update:modelValue', selectedCategory.value);
+    }
+});
 
 const selectCategory = (item) => {
     selectedCategory.value = item
