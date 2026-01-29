@@ -112,11 +112,11 @@ const filteredToAccounts = computed(() => {
 
                 </div>
                 <div class="form-group">
-                    <div>
-                        <label>備註 </label>
-
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label>備註: ({{ form.add_note.length }}/200)</label> <button @click="formatNote"
+                            class="btn btn-info" style="font-size: 12px;">自動整理</button>
                     </div>
-                    <textarea v-model="form.add_note" placeholder="轉帳說明（選填）"></textarea>
+                    <textarea v-model="form.add_note" placeholder="補充說明（選填）"></textarea>
                 </div>
 
                 <div class="actions">

@@ -89,7 +89,7 @@ onMounted(async () => {
                 <div class="form-group">
                     <label>支出金額</label>
                     <input v-model.number="form.add_amount" type="number" :placeholder="`${currentCurrency}`"
-                        class="amount-input" />
+                        class="amount-input" max="999999999" />
                 </div>
 
                 <div class="grid">
@@ -117,9 +117,9 @@ onMounted(async () => {
 
 
                 <div class="form-group">
-                    <div style="">
-                        <label>備註: </label>
-                        <button @click="formatNote" class="btn btn-info" style="margin-left: 20px;">自動整理</button>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label>備註: ({{ form.add_note.length }}/200)</label> <button @click="formatNote"
+                            class="btn btn-info" style="font-size: 12px;">自動整理</button>
                     </div>
                     <textarea v-model="form.add_note" placeholder="補充說明（選填）"></textarea>
                 </div>
