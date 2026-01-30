@@ -31,7 +31,7 @@ const displayItems = computed(() => {
 const accountForm = reactive({
     name: '',
     type: 'bank',
-    currency: 'TWD',
+    currency: 'NT $',
     initial: 0,
     exclude: false,
     icon: '💰'
@@ -62,11 +62,26 @@ onMounted(async () => {
 })
 
 // 監聽外部傳入 (用於編輯)
-watch(() => props.account, (newVal) => {
-    if (!newVal) return;
+watch(() => props.account,async(newVal) => {
+    //當清空瀏覽紀錄時回傳什麼
+    if (!newVal) {
+        selectedCategory.value = null;
+        return;
+    }
+    // 確保 Store 資料已經載入，否則 find 會失敗
+    if (categoryItems.value.length === 0) {
+        await accountStore.loadAccounts();
+    }
+    //取得目標 ID
     const targetId = typeof newVal === 'object' ? newVal.account_id : newVal;
+    //從清單中找回完整物件
     const found = categoryItems.value.find(acc => acc.account_id === targetId);
-    if (found) selectedCategory.value = found;
+    if (found) {
+        selectedCategory.value = found;
+    } else if (typeof newVal === 'object') {
+        // 防呆：如果 Store 裡真的找不到，但傳進來的是物件，就先直接用它
+        selectedCategory.value = newVal;
+    }
 }, { immediate: true });
 
 const selectCategory = (item) => {
@@ -130,7 +145,7 @@ const addNewItem = async () => {
                     <div v-if="loading" class="loading-box">載入中...</div>
                     <div v-else class="item-grid-four">
                         <div v-for="item in displayItems" :key="item.account_id" 
-                             class="grid-card" @click="selectCategory(item)">
+                            class="grid-card" @click="selectCategory(item)">
                             <span class="card-icon">{{ item.icon || item.account_icon }}</span>
                             <span class="card-name">{{ item.itemName || item.account_name }}</span>
                         </div>
@@ -166,7 +181,7 @@ const addNewItem = async () => {
                                     <input type="number" v-model.number="accountForm.initial" />
                                 </div>
                                 <div class="input-item-check">
-                                    <label>計入資產:</label>
+                                    <label>不計入資產:</label>
                                     <input type="checkbox" v-model="accountForm.exclude" />
                                 </div>
                             </div>
@@ -174,9 +189,9 @@ const addNewItem = async () => {
                                 <label>選擇圖示:</label>
                                 <div class="mini-icon-grid">
                                     <span v-for="icon in iconOptions" :key="icon" 
-                                          @click="accountForm.icon = icon"
-                                          :class="{ active: accountForm.icon === icon }"
-                                          class="mini-icon">
+                                        @click="accountForm.icon = icon"
+                                        :class="{ active: accountForm.icon === icon }"
+                                        class="mini-icon">
                                         {{ icon }}
                                     </span>
                                 </div>

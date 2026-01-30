@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue' // 🌟 確保引入 onMounted
+import { ref, computed, watch, onMounted } from 'vue' // 
 import { useCategoryStore } from '@/stores/useCategoryStore'
 import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
@@ -13,7 +13,7 @@ const { tags: categoryItems } = storeToRefs(categoryStore)
 const selectedIds = ref([]) // 初始為空，交給監聽器或掛載邏輯處理
 const newAdd = ref('')
 const newColor = ref('#ef4444')
-const colors = ['#ef4444', '#3b82f6','#004B97', '#22c55e', '#f97316', '#a855f7', '#ec4899']
+const colors = ['#ef4444', '#3b82f6', '#004B97', '#22c55e', '#f97316', '#a855f7', '#ec4899']
 
 const props = defineProps({
     modelValue: [Array, String]
@@ -33,17 +33,35 @@ watch(() => props.modelValue, (newVal) => {
         targetNames = newVal.map(i => typeof i === 'object' ? i.itemName : i);
     }
 
-    const matchedIds = categoryItems.value
-        .filter(tag => targetNames.includes(tag.itemName))
-        .map(tag => tag.id);
+    const matchedIds = [];
 
-    if (matchedIds.length > 0) {
-        selectedIds.value = matchedIds;
-    }
+    targetNames.forEach(name => {
+        // 1. 先去 Store 找看看有沒有現成的標籤
+        const found = categoryItems.value.find(tag => tag.itemName === name);
+
+        if (found) {
+            matchedIds.push(found.id);
+        } else {
+            // 2. 🌟 關鍵修正：如果在 Store 找不到 (代表自定義標籤因重新整理消失了)
+            // 我們手動幫它重建一個臨時標籤，並加回 Store，這樣畫面就能顯示「可可愛愛」
+            const tempId = Date.now() + Math.random(); // 產生臨時 ID
+            const newTempTag = {
+                id: tempId,
+                itemName: name,
+                color: '#94a3b8' // 給個預設的灰色 先暫時用這個方法QQ
+            };
+            // 將這個消失的自定義標籤塞回 Store 的 tags 陣列中
+            categoryStore.tags.push(newTempTag);
+            matchedIds.push(tempId);
+        }
+    });
+    // 最後更新選中的 ID 列表
+    selectedIds.value = matchedIds;
 }, { immediate: true });
 
+
 /**
- * 🌟 修正：組件掛載時的預設值處理
+ * 組件掛載時的預設值處理
  */
 onMounted(() => {
     // 如果是「新增模式」(沒有傳入 modelValue) 且目前沒選中任何標籤
@@ -114,7 +132,7 @@ const addNewItem = () => {
     const newItem = { id: Date.now(), itemName: name, color: newColor.value }
     categoryStore.addCustomTag(newItem)
     selectedIds.value.push(newItem.id)
-    newAdd.value = ''; 
+    newAdd.value = '';
     showAdd.value = false
     emit('update:modelValue', selectedItems.value)
 }
@@ -165,8 +183,7 @@ const remainingChars = computed(() => {
                     <div class="add-section">
                         <div class="add-form">
                             <input v-model="newAdd" placeholder="新增標籤名稱" class="tag-input" @keyup.enter="addNewItem"
-                            maxlength="15"
-                            />
+                                maxlength="15" />
                             <div class="color-picker-wrapper">
                                 <div v-for="c in colors" :key="c" @click="newColor = c">
                                     <span class="color-dot-large" :style="{ backgroundColor: c }"
