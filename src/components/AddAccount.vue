@@ -31,7 +31,7 @@ const displayItems = computed(() => {
 const accountForm = reactive({
     name: '',
     type: 'bank',
-    currency: 'TWD',
+    currency: 'NT $',
     initial: 0,
     exclude: false,
     icon: '💰'
