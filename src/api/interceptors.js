@@ -43,7 +43,10 @@ service.interceptors.response.use(
     // 請求失敗，判斷錯誤類型
     if (error.response) {
       // 1. 伺服器有回應，但狀態碼非 2xx (如 401, 404, 500)
-      const { status } = error.response;
+      const { status,data } = error.response;
+      // 💡 使用 ?. 防止當 data 為空時崩潰
+      const errorMsg = data?.detail || data?.msg || "伺服器異常";
+
       switch (status) {
         case 401:
           // 顯示後端傳來的 "帳號或密碼錯誤"
@@ -65,7 +68,7 @@ service.interceptors.response.use(
           ElMessage.error("請求過於頻繁，請稍後再試");
           break;
         case 500:
-          ElMessage.error("伺服器內部錯誤");
+          ElMessage.error("後端數據校驗失敗，請檢查欄位");
           break;
         case 502:
         case 503:
