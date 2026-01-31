@@ -35,134 +35,81 @@ const monthlyStats = ref({
 const fetchTransactions = async (page = 1) => {
   isLoading.value = true
   try {
-    console.log("🚀 開始同步抓取資料...")
+    const pageSize = 10;
+    const params = { page, page_size: pageSize, search: searchQuery.value };
 
+    // 同步抓取收支與轉帳
     const [recordsRes, transfersRes] = await Promise.all([
-      api.get('/records/', { params: { page, page_size: 100, search: searchQuery.value } }),
+      api.get('/records/', { params }),
       api.get('/transfers/')
-    ])
+    ]);
 
-    // 💡 核心修正：同時相容「攔截器已處理」與「未處理」的資料格式
-    const rawRecords = Array.isArray(recordsRes) ? recordsRes : (recordsRes.data?.data || recordsRes.data || [])
-    const rawTransfers = Array.isArray(transfersRes) ? transfersRes : (transfersRes.data?.data || transfersRes.data || [])
+    // 💡 關鍵防呆：自動偵測後端回傳格式 (處理 interceptor 的差異)
+    // 確保我們拿到的是陣列，或是包含 data 陣列的物件
+    const recData = recordsRes.data?.data || recordsRes.data || recordsRes || [];
+    const traData = transfersRes.data?.data || transfersRes.data || transfersRes || [];
 
-    console.log(`📊 解析結果 -> 收支: ${rawRecords.length} 筆, 轉帳: ${rawTransfers.length} 筆`)
+    // 💡 搜尋過濾邏輯：只有在搜尋「轉帳」相關字眼時才顯示轉帳紀錄
+    const isSearchingTransfer = searchQuery.value && 
+      (searchQuery.value.includes('轉') || searchQuery.value.includes('帳'));
+    
+    let filteredTransfers = traData;
+    if (searchQuery.value && !isSearchingTransfer) {
+      filteredTransfers = [];
+    }
 
-    // 1. 標準化收支紀錄
-    const recordData = rawRecords.map(item => ({
+    // 1. 標準化「收支紀錄」：大標題是類別，小標題是備註
+    const recordList = recData.map(item => ({
       id: `r-${item.add_id}`,
-      display_note: item.add_note || item.add_class,
+      display_title: item.add_class,        // 🌟 類別當大標題
+      display_note: item.add_note || '',     // 🌟 備註當次標題
       display_date: item.add_date,
       display_amount: Number(item.add_amount) || 0,
       display_icon: item.add_class_icon || '📝',
       display_type: item.add_type ? 'income' : 'expense',
-      display_category: item.add_class,
       display_member: item.add_member,
       is_transfer: false
-    }))
+    }));
 
-    // ✨ --- 新增：計算統計值 (不影響 transactions) ---
-    const now = new Date()
-    const currentYear = now.getFullYear()
-    const currentMonth = now.getMonth()
+    // 2. 標準化「轉帳紀錄」
+    const transferList = filteredTransfers.map(item => ({
+      id: `t-${item.transaction_id}`,
+      display_title: '帳戶互轉',             // 🌟 轉帳大標題
+      display_note: `${item.from_account_name} ➔ ${item.to_account_name}`, // 🌟 流向當備註
+      display_date: item.transaction_date,
+      display_amount: Number(item.amount) || 0,
+      display_icon: '🔄',
+      display_type: 'transfer',
+      display_member: item.transaction_note || '',
+      is_transfer: true
+    }));
 
-    // 算出上個月的年月份 (處理 1 月跨到去年 12 月的情況)
-    const lastMonthDate = new Date(currentYear, currentMonth - 1, 1)
-    const lastYear = lastMonthDate.getFullYear()
-    const lastMonth = lastMonthDate.getMonth()
+    // 3. 合併並按日期排序
+    const combined = [...recordList, ...transferList].sort((a, b) => 
+      new Date(b.display_date) - new Date(a.display_date)
+    );
 
-    let mIncome = 0, mExpense = 0 // 本月
-    let lIncome = 0, lExpense = 0 // 上月
+    // 顯示前 10 筆
+    transactions.value = combined.slice(0, pageSize);
 
-    recordData.forEach(item => {
-    const d = new Date(item.display_date)
-    const itemYear = d.getFullYear()
-    const itemMonth = d.getMonth()
+    // 💡 解決分頁不見的問題：
+    // 之前會不見是因為你拿「抓回來的筆數(10)」去除以 10，結果等於 1 頁就隱藏了。
+    // 我們必須從後端回傳的 pagination 裡拿「真正的總筆數」。
+    const serverTotalRows = recordsRes.data?.pagination?.total_rows || recordsRes.pagination?.total_rows || recData.length;
+    const totalCount = serverTotalRows + (searchQuery.value && !isSearchingTransfer ? 0 : traData.length);
 
-    // 1. 本月統計
-    if (itemYear === currentYear && itemMonth === currentMonth) {
-      if (item.display_type === 'income') mIncome += item.display_amount
-      if (item.display_type === 'expense') mExpense += item.display_amount
-    } 
-    // 2. 上月統計
-    else if (itemYear === lastYear && itemMonth === lastMonth) {
-      if (item.display_type === 'income') lIncome += item.display_amount
-      if (item.display_type === 'expense') lExpense += item.display_amount
-    }
-  })
+    pagination.value = {
+      current_page: page,
+      total_pages: Math.ceil(totalCount / pageSize) || 1,
+      total_rows: totalCount
+    };
 
-    // 3. 計算增長率公式：((本月 - 上月) / 上月) * 100
-    const calcChange = (current, last) => {
-    if (last === 0) {
-      return current > 0 ? '100.0' : '0.0'; // 如果上月是0，這月有錢，就是100%
-    }
-    // 使用標準成長率公式
-    return (((current - last) / last) * 100).toFixed(1);
-  }
-
-  monthlyStats.value = {
-    income: mIncome,
-    incomeChange: calcChange(mIncome, lIncome),
-    expense: mExpense,
-    expenseChange: calcChange(mExpense, lExpense),
-    balance: mIncome - mExpense,
-    savingsRate: mIncome > 0 ? (((mIncome - mExpense) / mIncome) * 100).toFixed(1) : 0
-  }
-
-
-// 2. 標準化轉帳紀錄
-const transferData = rawTransfers.map(item => {
-    
-    // 步驟 A: 拿這筆轉帳的「來源帳戶ID」去「帳戶清單」裡面找對應的帳戶物件
-    // 這裡的 accounts.value 就是您從 /accounts/ 抓回來且已經整理好的資料
-    const foundAccount = accounts.value.find(acc => acc.id === item.from_account_id);
-    
-    // 步驟 B: 決定要顯示什麼 icon
-    // 如果 foundAccount 存在 (找到了)，就用它的 icon
-    // 如果沒找到 (可能帳戶被刪了)，就用預設的 '🔄'
-    const iconToUse = foundAccount ? foundAccount.icon : '🔄';
-
-    return {
-        id: `t-${item.transaction_id}`,
-        display_note: `帳戶互轉`, 
-        display_date: item.transaction_date,
-        display_amount: Number(item.amount) || 0,
-        
-        // 步驟 C: 把剛剛決定好的 icon 放進去顯示欄位
-        display_icon: iconToUse, 
-        
-        display_type: 'transfer',
-        display_category: '轉帳',
-        display_member: `${item.from_account_name || '未知'} ➔ ${item.to_account_name || '未知'}`,
-        is_transfer: true
-    }
-})
-
-    // 3. 合併排序 (從新到舊)
-    const combined = [...recordData, ...transferData].sort((a, b) => {
-      return new Date(b.display_date) - new Date(a.display_date)
-    })
-
-    // 🌟 更新顯示 (改取前 20 筆)
-    transactions.value = combined.slice(0, 20)
-
-    // 4. 分頁資訊處理
-    if (recordsRes.data?.pagination) {
-      pagination.value = recordsRes.data.pagination
-    } else {
-      // 若攔截器點掉了一層，手動建立基礎分頁結構防止 UI 報錯
-      pagination.value = {
-        current_page: page,
-        total_pages: Math.ceil(rawRecords.length / 10) || 1,
-        total_rows: rawRecords.length
-      }
-    }
-    console.log("✅ 最終 transactions 長度:", transactions.value.length)
+    console.log("✅ 成功更新 transactions，總筆數:", totalCount);
 
   } catch (error) {
-    console.error("❌ Dashboard 抓取失敗:", error)
+    console.error("❌ 抓取失敗:", error);
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
 }
 
@@ -285,9 +232,9 @@ const formatNumber = (num) => {
 // 在 onMounted 裡面同時呼叫兩個 API
 onMounted(async () => {
   // 1. 先等待帳戶資料載入 (為了拿到 icon 字典)
-  await fetchDashboardData(); 
+  await fetchDashboardData();
   // 2. 接著才載入交易紀錄 (這時候就可以去對應 icon 了)
-  fetchTransactions();    
+  fetchTransactions();
 })
 
 </script>
@@ -318,7 +265,8 @@ onMounted(async () => {
             </div>
             <div class="card-content">
               <div class="amount">NT$ {{ formatNumber(monthlyStats.income) }}</div>
-              <p class="change-text">{{ monthlyStats.incomeChange >= 0 ? '增加' : '減少' }} {{ Math.abs(monthlyStats.incomeChange) }}%</p>
+              <p class="change-text">{{ monthlyStats.incomeChange >= 0 ? '增加' : '減少' }} {{
+                Math.abs(monthlyStats.incomeChange) }}%</p>
             </div>
           </div>
 
@@ -332,7 +280,8 @@ onMounted(async () => {
             </div>
             <div class="card-content">
               <div class="amount">NT$ {{ formatNumber(monthlyStats.expense) }}</div>
-              <p class="change-text">{{ monthlyStats.expenseChange >= 0 ? '增加' : '減少' }} {{ Math.abs(monthlyStats.expenseChange) }}%</p>
+              <p class="change-text">{{ monthlyStats.expenseChange >= 0 ? '增加' : '減少' }} {{
+                Math.abs(monthlyStats.expenseChange) }}%</p>
             </div>
           </div>
 
@@ -427,52 +376,61 @@ onMounted(async () => {
 
         <!-- Recent Transactions & Notifications -->
         <div class="bottom-grid">
-<div class="card transactions-card">
-  <div class="card-inner-header">
-    <h3 class="card-inner-title">最近交易</h3>
-    <p class="card-description">您可以搜尋備註、類別或成員~</p>
-    <div class="search-box">
-      <input v-model="searchQuery" @input="handleSearch" type="text" placeholder="搜尋紀錄..." class="search-input" />
-    </div>
-  </div>
+          <div class="card transactions-card">
+            <div class="card-inner-header">
+              <h3 class="card-inner-title">最近交易</h3>
+              <p class="card-description">您可以搜尋備註、類別或成員~</p>
+              <div class="search-box">
+                <input v-model="searchQuery" @input="handleSearch" type="text" placeholder="搜尋紀錄..."
+                  class="search-input" />
+              </div>
+            </div>
 
-  <div class="card-body">
-    <div v-if="isLoading" class="loading-state">載入中...</div>
+            <div class="card-body">
+              <div v-if="isLoading" class="loading-state">載入中...</div>
 
-    <div v-else class="transactions-list">
-      <div v-if="transactions.length === 0" class="no-data">找不到相關紀錄</div>
+              <div v-else class="transactions-list">
+                <div v-if="transactions.length === 0" class="no-data">找不到相關紀錄</div>
 
-      <div v-for="t in transactions" :key="t.id" class="transaction-item" :class="{ 'is-transfer-row': t.is_transfer }">
-        <div class="transaction-info">
-          <div class="transaction-icon" :class="t.display_type">
-            <span>{{ t.display_icon }}</span>
-          </div>
-          <div>
-            <div class="transaction-name">{{ t.display_note || '無備註' }}</div>
-            <div class="transaction-category">
-              <span class="tag">{{ t.display_category }}</span>
-              <span class="member-tag" v-if="t.display_member"> {{ t.display_member }}</span>
+                <div v-for="t in transactions" :key="t.id" class="transaction-item"
+                  :class="{ 'is-transfer-row': t.is_transfer }">
+                  <div class="transaction-info">
+                    <div class="transaction-icon" :class="t.display_type">
+                      <span>{{ t.display_icon }}</span>
+                    </div>
+                    <div>
+                      <div class="transaction-name">{{ t.display_title }}</div>
+
+                      <div class="transaction-category">
+                        <span v-if="t.display_note" class="note-text">{{ t.display_note }}</span>
+                        <!-- <span class="tag">{{ t.display_category }}</span> -->
+                        <span class="member-tag" v-if="t.display_member">
+                          <i class="glyphicon glyphicon-user"></i> {{ t.display_member }}
+                        </span>
+
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="transaction-details">
+                    <div class="transaction-amount" :class="t.display_type">
+                      {{ t.display_type === 'income' ? '+' : (t.display_type === 'expense' ? '-' : '') }}
+                      NT$ {{ formatNumber(t.display_amount) }}
+                    </div>
+                    <div class="transaction-date">{{ t.display_date }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pagination-container" v-if="pagination.total_pages > 1">
+                <button @click="goToPage(pagination.current_page - 1)" :disabled="pagination.current_page === 1"
+                  class="page-btn">上一頁</button>
+                <span class="page-info">第 {{ pagination.current_page }} / {{ pagination.total_pages }} 頁</span>
+                <button @click="goToPage(pagination.current_page + 1)"
+                  :disabled="pagination.current_page === pagination.total_pages" class="page-btn">下一頁</button>
+              </div>
             </div>
           </div>
-        </div>
-
-        <div class="transaction-details">
-          <div class="transaction-amount" :class="t.display_type">
-            {{ t.display_type === 'income' ? '+' : (t.display_type === 'expense' ? '-' : '') }}
-            NT$ {{ formatNumber(t.display_amount) }}
-          </div>
-          <div class="transaction-date">{{ t.display_date }}</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="pagination-container" v-if="pagination.total_pages > 1">
-      <button @click="goToPage(pagination.current_page - 1)" :disabled="pagination.current_page === 1" class="page-btn">上一頁</button>
-      <span class="page-info">第 {{ pagination.current_page }} / {{ pagination.total_pages }} 頁</span>
-      <button @click="goToPage(pagination.current_page + 1)" :disabled="pagination.current_page === pagination.total_pages" class="page-btn">下一頁</button>
-    </div>
-  </div>
-</div>
 
           <div class="card">
             <div class="card-inner-header">
