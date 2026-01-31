@@ -23,6 +23,11 @@ import ConsumerAnalysis from "@/view/ConsumerAnalysis.vue";
 import SalaryAnalysis from "@/view/SalaryAnalysis.vue";
 import SettingAccount from "@/view/SettingAccount.vue";
 import SettingOutput from "@/view/SettingOutput.vue";
+import SettingAlert from "@/view/SettingAlert.vue";
+import SettingBudgetConfig from "@/view/SettingBudgetConfig.vue";
+import SettingUserProfile from "@/view/SettingUserProfile.vue";
+import BudgetManager from "@/view/BudgetManager.vue";
+
 
 const routes = [
   {
@@ -146,6 +151,30 @@ const routes = [
     path: "/SettingOutput",
     component: SettingOutput,
     name: "SettingOutput",
+  }
+  ,
+    {
+    path: "/SettingAlert",
+    component: SettingAlert,
+    name: "SettingAlert",
+  }
+  ,
+    {
+    path: "/SettingBudgetConfig",
+    component: SettingBudgetConfig,
+    name: "SettingBudgetConfig",
+  }
+  ,
+    {
+    path: "/SettingUserProfile",
+    component: SettingUserProfile,
+    name: "SettingUserProfile",
+  }
+  ,
+    {
+    path: "/BudgetManager",
+    component: BudgetManager,
+    name: "BudgetManager",
   }
 
 ];

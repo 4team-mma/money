@@ -51,6 +51,7 @@ const navigation = [
   { name: '行事曆', to: '/Book', icon: '🗓' },
   { name: '儀表板', to: '/dashboard', icon: '📊' },
   { name: '帳戶管理', to: '/Account', icon: '⛺' },
+  { name: '理財儲蓄', to: '/BudgetManager', icon: '🫠' },
   { name: '記一筆', to: '/Add', icon: '➕' },
   { name: '圖表分析', to: '/Chart', icon: '📈' },
   { name: '消費趨勢', to: '/ConsumerAnalysis', icon: '⛽' },
