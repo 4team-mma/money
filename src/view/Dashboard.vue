@@ -23,13 +23,22 @@ const pagination = ref({
   has_prev: false
 })
 
+const monthlyStats = ref({
+  income: 0,
+  incomeChange: 0, // 較上月增加 %
+  expense: 0,
+  expenseChange: 0, // 較上月減少 %
+  balance: 0,
+  savingsRate: 0
+})
+
 const fetchTransactions = async (page = 1) => {
   isLoading.value = true
   try {
     console.log("🚀 開始同步抓取資料...")
 
     const [recordsRes, transfersRes] = await Promise.all([
-      api.get('/records/', { params: { page, page_size: 10, search: searchQuery.value } }),
+      api.get('/records/', { params: { page, page_size: 100, search: searchQuery.value } }),
       api.get('/transfers/')
     ])
 
@@ -51,6 +60,56 @@ const fetchTransactions = async (page = 1) => {
       display_member: item.add_member,
       is_transfer: false
     }))
+
+    // ✨ --- 新增：計算統計值 (不影響 transactions) ---
+    const now = new Date()
+    const currentYear = now.getFullYear()
+    const currentMonth = now.getMonth()
+
+    // 算出上個月的年月份 (處理 1 月跨到去年 12 月的情況)
+    const lastMonthDate = new Date(currentYear, currentMonth - 1, 1)
+    const lastYear = lastMonthDate.getFullYear()
+    const lastMonth = lastMonthDate.getMonth()
+
+    let mIncome = 0, mExpense = 0 // 本月
+    let lIncome = 0, lExpense = 0 // 上月
+
+    recordData.forEach(item => {
+    const d = new Date(item.display_date)
+    const itemYear = d.getFullYear()
+    const itemMonth = d.getMonth()
+
+    // 1. 本月統計
+    if (itemYear === currentYear && itemMonth === currentMonth) {
+      if (item.display_type === 'income') mIncome += item.display_amount
+      if (item.display_type === 'expense') mExpense += item.display_amount
+    } 
+    // 2. 上月統計
+    else if (itemYear === lastYear && itemMonth === lastMonth) {
+      if (item.display_type === 'income') lIncome += item.display_amount
+      if (item.display_type === 'expense') lExpense += item.display_amount
+    }
+  })
+
+    // 3. 計算增長率公式：((本月 - 上月) / 上月) * 100
+    const calcChange = (current, last) => {
+    if (last === 0) {
+      return current > 0 ? '100.0' : '0.0'; // 如果上月是0，這月有錢，就是100%
+    }
+    // 使用標準成長率公式
+    return (((current - last) / last) * 100).toFixed(1);
+  }
+
+  monthlyStats.value = {
+    income: mIncome,
+    incomeChange: calcChange(mIncome, lIncome),
+    expense: mExpense,
+    expenseChange: calcChange(mExpense, lExpense),
+    balance: mIncome - mExpense,
+    savingsRate: mIncome > 0 ? (((mIncome - mExpense) / mIncome) * 100).toFixed(1) : 0
+  }
+
+
 // 2. 標準化轉帳紀錄
 const transferData = rawTransfers.map(item => {
     
@@ -258,8 +317,8 @@ onMounted(async () => {
               </svg>
             </div>
             <div class="card-content">
-              <div class="amount">NT$ {{ formatNumber(currentMonth.income) }}</div>
-              <p class="change-text">較上月增加 12.5%</p>
+              <div class="amount">NT$ {{ formatNumber(monthlyStats.income) }}</div>
+              <p class="change-text">{{ monthlyStats.incomeChange >= 0 ? '增加' : '減少' }} {{ Math.abs(monthlyStats.incomeChange) }}%</p>
             </div>
           </div>
 
@@ -272,8 +331,8 @@ onMounted(async () => {
               </svg>
             </div>
             <div class="card-content">
-              <div class="amount">NT$ {{ formatNumber(currentMonth.expense) }}</div>
-              <p class="change-text">較上月減少 8.3%</p>
+              <div class="amount">NT$ {{ formatNumber(monthlyStats.expense) }}</div>
+              <p class="change-text">{{ monthlyStats.expenseChange >= 0 ? '增加' : '減少' }} {{ Math.abs(monthlyStats.expenseChange) }}%</p>
             </div>
           </div>
 
@@ -287,8 +346,8 @@ onMounted(async () => {
               </svg>
             </div>
             <div class="card-content">
-              <div class="amount balance">NT$ {{ formatNumber(currentMonth.balance) }}</div>
-              <p class="change-text">儲蓄率 38.4%</p>
+              <div class="amount balance">NT$ {{ formatNumber(monthlyStats.balance) }}</div>
+              <p class="change-text">儲蓄率 {{ monthlyStats.savingsRate }}%</p>
             </div>
           </div>
         </div>
