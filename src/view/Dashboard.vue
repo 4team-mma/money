@@ -32,6 +32,33 @@ const monthlyStats = ref({
   savingsRate: 0
 })
 
+
+// 🌟 新增：抓取後端統計路由 /records/stats/monthly
+const fetchMonthlyStats = async () => {
+  try {
+    // 假設你的 api 檔已經定義好 getCurrentStats，或是直接寫路徑
+    const response = await api.get('/records/stats/monthly');
+    const data = response.data?.data || response.data || response;
+
+    // 將後端數據映射到前端變數
+    // 這裡假設後端回傳包含：total_income, income_change, total_expense, expense_change, balance
+    monthlyStats.value = {
+      income: Number(data.total_income) || 0,
+      incomeChange: data.income_change || 0,
+      expense: Number(data.total_expense) || 0,
+      expenseChange: data.expense_change || 0,
+      balance: Number(data.net_savings) || 0,
+      // 儲蓄率公式：(收入 - 支出) / 收入 * 100
+      savingsRate: data.total_income > 0 
+        ? ((data.net_savings / data.total_income) * 100).toFixed(1) 
+        : 0
+    };
+    console.log("📊 統計數據更新成功:", monthlyStats.value);
+  } catch (error) {
+    console.error("❌ 抓取統計數據失敗:", error);
+  }
+}
+
 const fetchTransactions = async (page = 1) => {
   isLoading.value = true
   try {
@@ -231,6 +258,7 @@ const formatNumber = (num) => {
 
 // 在 onMounted 裡面同時呼叫兩個 API
 onMounted(async () => {
+  fetchMonthlyStats();
   // 1. 先等待帳戶資料載入 (為了拿到 icon 字典)
   await fetchDashboardData();
   // 2. 接著才載入交易紀錄 (這時候就可以去對應 icon 了)
