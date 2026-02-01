@@ -1,0 +1,8 @@
+'Frontend page (前端頁面)':
+  - any: ['src/view/**/*']
+
+'Components':
+  - any: ['src/components/**/*']
+
+'UI/Style':
+  - any: ['src/assets/**/*', 'public/**/*']
