@@ -1,13 +1,8 @@
-# 🌟 根據你的前端結構 (image_26ff92.png) 調整
 'Frontend page (前端頁面)':
-  - src/view/**/* # 🌟 注意：你的截圖顯示是單數 view 而非 views
+  - any: ['src/view/**/*']
 
 'Components':
-  - src/components/**/*
+  - any: ['src/components/**/*']
 
 'UI/Style':
-  - src/assets/**/*
-  - public/**/*
-
-'State Management':
-  - src/stores/**/*
+  - any: ['src/assets/**/*', 'public/**/*']
