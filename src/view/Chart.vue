@@ -132,20 +132,41 @@ const renderChart = () => {
             }]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { 
-                legend: { display: false },
-                tooltip: { mode: 'index', intersect: false }
-            },
-            scales: {
-                y: { 
-                    // 確保 0 軸一定會顯示，方便觀察變色點
-                    beginAtZero: false, 
-                    ticks: { callback: (val) => 'NT$' + val.toLocaleString() } 
-                }
+    responsive: true,
+    maintainAspectRatio: false,
+
+    plugins: { 
+        legend: { display: false },
+        tooltip: { 
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+                label: (ctx) =>
+                    `NT$${ctx.parsed.y.toLocaleString()}`
             }
         }
+    },
+
+    scales: {
+        y: { 
+            // 保留原本行為：不強制從 0 開始
+            beginAtZero: false,
+
+            title: {
+                display: true,
+                text: '金額（NT$）',
+                padding: {
+                    bottom: 12
+                }
+            },
+
+            ticks: { 
+                callback: (val) => val.toLocaleString()
+            }
+        }
+    }
+}
+
     })
 }
 
@@ -197,21 +218,21 @@ onMounted(async () => {
             <h3>淨資產趨勢</h3>
             <span class="date">{{ today }}</span>
             <hr>
-            
             <div class="chart-card">
-                <div class="chart-header">
-                    <span class="label-text">檢視期間單位：</span>
+                <div class="chart-header chart-description">
+                    <span>檢視期間單位：</span>
                     <select class="my-select" v-model="period">
                         <option value="month">月</option>
                         <option value="year">年</option>
                         <option value="custom">自訂</option>
                     </select>
-                    <div v-if="period === 'custom'" class="custom-date-group">
-                        <input type="date" v-model="startDate" class="custom-input"/>
-                        <span class="separator">～</span>
-                        <input type="date" v-model="endDate" class="custom-input"/>
+                    <div v-if="period === 'custom'" style="display: inline-block; margin-left: 10px;">
+                        <input type="date" v-model="startDate" class="custom-select"/>
+                        <span>～</span>
+                        <input type="date" v-model="endDate" class="custom-select"/>
                     </div>
                 </div>
+                <br>
                 <div class="chart-wrapper">
                     <canvas ref="dailyChartRef"></canvas>
                     <div v-if="isLoading" class="loading-overlay">數據加載中...</div>
@@ -246,28 +267,22 @@ onMounted(async () => {
 @import '../assets/css/dashboard.css';
 
 .dashboard-container_1 {
-    padding: 24px;
-    max-width: 1300px;
+    padding: 12px 24px 24px 24px;
+    max-width: 1400px;
     margin: 0 auto;
+    background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%);
     min-height: 100vh;
 }
 
 .chart-card {
-    background: #ffffff;
+    background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
     border-radius: 16px;
     padding: 24px;
     border: 1px solid #e5e7eb;
-    margin-bottom: 30px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 .chart-header {
     margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 14px;
-    color: #64748b;
 }
 
 .chart-wrapper {
@@ -276,11 +291,37 @@ onMounted(async () => {
     width: 100%;
 }
 
-.my-select, .custom-input {
-    padding: 4px 8px;
-    border: 1px solid #cbd5e1;
+.my-select {
+    width: 5em;
+    /* 約 3 個中文字 */
+    padding: 1px 0px 1px 0px;
+    border: 0.5px solid #94a3b8;
+    /* 邊框顏色 */
     border-radius: 6px;
-    color: #475569;
+    /* 框內背景色 */
+    background-color: #ffffff;
+    /* 文字設定 */
+    font-size: 13px;
+    color: #94a3b8;
+    text-align: center;
+}
+
+.custom-select {
+    width: 10em;
+    padding: 1px 0px 1px 0px;
+    border: 0.5px solid #94a3b8;
+    border-radius: 6px;
+    background-color: #ffffff;
+    font-size: 13px;
+    color: #94a3b8;
+    text-align: center;
+    letter-spacing: 0.15em;
+    margin-top: 5pt;
+}
+
+.custom-select:focus {
+    border-color: #94a3b8;
+    outline: none;
 }
 
 .loading-overlay {
@@ -294,19 +335,45 @@ onMounted(async () => {
 }
 
 .money-table {
+    table-layout: fixed;
     width: 100%;
+    max-width: 1290px;
+    margin: 20px;
+    font-variant-numeric: tabular-nums;
+    width: 100%;
+    margin-left: 1px;
+    line-height: 30px;
+    font-size: 14px;
     border-collapse: collapse;
     text-align: center;
 }
 
 .money-table th {
-    background-color: #779fbf;
+    background-color: #779FBF;
     color: white;
-    padding: 12px;
+    border-bottom: 1px solid rgba(119, 159, 191, 0.35);
+    /* 每列底線 */
 }
 
 .money-table td {
-    padding: 12px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid rgba(119, 159, 191, 0.35);
+    /* 每列底線 */
 }
+
+/* 最上面（thead 第一列）不要線 */
+.money-table thead tr:first-child th {
+    border-top: none;
+}
+
+/* 最下面（tbody 最後一列）不要線 */
+.money-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.chart-description {
+    font-size: 13px;
+    color: #94a3b8;
+    margin: 0;
+}
+
 </style>
