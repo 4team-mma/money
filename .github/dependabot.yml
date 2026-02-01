@@ -8,4 +8,8 @@ updates:
       interval: "weekly"
     # 這裡確保它會處理 pnpm 的鎖定檔
     versioning-strategy: increase
+    groups:
+      python-dependencies:
+        patterns:
+          - "*" # 將所有 Python 套件更新合併成一個 PR
 
