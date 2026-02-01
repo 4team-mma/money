@@ -164,7 +164,10 @@ const renderChart = () => {
             plugins: {
                 legend: {
                     display: true,
-                    position: 'top'
+                    position: 'top',
+                    labels: {
+                        padding: 20
+                    }
                 },
                 tooltip: {
                     mode: 'index',
@@ -273,32 +276,6 @@ const today = computed(() => {
 </template>
 <style scoped>
 @import '../assets/css/dashboard.css';
-
-.PageTurn {
-    display: flex;
-    justify-content: center;
-}
-
-h2 {
-    text-align: center;
-    margin-top: 20px;
-    margin-bottom: 20px;
-}
-
-.page {
-    max-width: 820px;
-    margin: 0 auto;
-    /* padding: 24px; */
-    background: linear-gradient(135deg, rgba(69, 179, 243, 0.05), rgba(161, 187, 243, 0.05));
-    padding: 1rem;
-    border-radius: 12px;
-    /* height: 100vh; */
-}
-
-.charts-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120x, 1fr));
-}
 
 .chart-card {
     background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
