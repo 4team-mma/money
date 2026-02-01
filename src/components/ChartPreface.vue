@@ -100,7 +100,7 @@ const monthlyMOMStats = computed(() => {
 
     const incomeChangeText = incomeDiff > 0 ? `增加 ${formatNumber(incomeDiff)}`
         : incomeDiff < 0 ? `減少 ${formatNumber(Math.abs(incomeDiff))}`
-            : `持平 NT$0`
+            : `持平`
 
     const expenseChangeText = expenseDiff > 0 ? `增加 ${formatNumber(expenseDiff)}`
         : expenseDiff < 0 ? `減少 ${formatNumber(Math.abs(expenseDiff))}`
