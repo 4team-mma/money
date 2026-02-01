@@ -1,0 +1,11 @@
+# 依賴項安全性檢查:自動偵測並提醒你們升級有漏洞的套件。
+version: 2
+updates:
+  # 前端 Vue (pnpm)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # 這裡確保它會處理 pnpm 的鎖定檔
+    versioning-strategy: increase
+
