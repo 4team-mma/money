@@ -47,7 +47,7 @@ onMounted(() => {
     loadData()
 })
 
-const displayTrendData = computed(() => {
+const baseTrendData = computed(() => {
     // === 月：逐月匯總（最近 12 個月） ===
     if (period.value === 'month') {
         const map = {}
@@ -77,7 +77,6 @@ const displayTrendData = computed(() => {
                 a.year !== b.year ? a.year - b.year : a.month - b.month
             )
             .slice(-12)
-            .reverse()
     }
 
     // === 年：逐年匯總 ===
@@ -113,11 +112,23 @@ const displayTrendData = computed(() => {
     }))
 })
 
+const legendSpacingPlugin = {
+    id: 'legendSpacing',
+    beforeInit(chart) {
+        const fitValue = chart.legend.fit;
+        chart.legend.fit = function fit() {
+            fitValue.bind(chart.legend)();
+            this.height += 20; // ⭐ 控制圖例和圖表的距離
+        };
+    }
+};
+
+
 // 圖
 const renderChart = () => {
     if (!dailyChartRef.value) return
 
-    const chartData = displayTrendData.value
+    const chartData = baseTrendData.value
     if (!chartData || chartData.length === 0) return
 
     // 銷毀舊的 instance
@@ -149,11 +160,47 @@ const renderChart = () => {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { position: 'top' } },
-            scales: { y: { beginAtZero: true } }
-        }
+
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: (ctx) =>
+                            `${ctx.dataset.label}：NT$${ctx.parsed.y.toLocaleString()}`
+                    }
+                }
+            },
+
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    title: {
+                        display: true,
+                        text: '金額（NT$）',
+                        padding: {
+                            bottom: 20
+                        }
+                    },
+                    ticks: {
+                        callback: (value) => value.toLocaleString()
+                    }
+                }
+            }
+        },
+        plugins: [legendSpacingPlugin]
     })
 }
+
+// 表
+const tableTrendData = computed(() => {
+    return [...baseTrendData.value].reverse()
+})
+
 
 // 🌟 保留自訂區間監聽
 watch([startDate, endDate], () => {
@@ -204,18 +251,18 @@ const today = computed(() => {
             <table class="money-table">
                 <thead>
                     <tr>
-                        <th class="text_left">期間</th>
-                        <th class="text_right">收入</th>
+                        <th>期間</th>
+                        <th>收入</th>
                         <th>支出</th>
                         <th>淨額</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="row in displayTrendData" :key="row.date">
-                        <td class="text_left">{{ row.date }}</td>
-                        <td class="text_right">NT${{ row.income.toLocaleString() }}</td>
-                        <td class="text_right">NT${{ row.expense.toLocaleString() }}</td>
-                        <td class="text_right" :style="{ color: row.net >= 0 ? '#10b981' : '#ef4444' }">
+                    <tr v-for="row in tableTrendData" :key="row.date">
+                        <td>{{ row.date }}</td>
+                        <td>NT${{ row.income.toLocaleString() }}</td>
+                        <td>NT${{ row.expense.toLocaleString() }}</td>
+                        <td :style="{ color: row.net >= 0 ? '#10b981' : '#ef4444' }">
                             {{ row.net > 0 ? '+' : '' }}{{ row.net.toLocaleString() }}
                         </td>
                     </tr>
@@ -315,23 +362,6 @@ h2 {
 .custom-select:focus {
     border-color: #94a3b8;
     outline: none;
-}
-
-
-
-
-/* 文字趨勢_日期的格式 */
-.TitleForm {
-    font-size: 18px;
-    background-color: #779FBF;
-    color: white;
-    margin: 20px;
-    padding: 3px;
-    line-height: 30px;
-    font-weight: 700;
-    letter-spacing: 0.5em;
-    text-indent: 1em;
-    text-align: center;
 }
 
 /* 表格格式 */
