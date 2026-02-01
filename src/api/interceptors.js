@@ -68,7 +68,7 @@ service.interceptors.response.use(
           ElMessage.error("請求過於頻繁，請稍後再試");
           break;
         case 500:
-          ElMessage.error("後端數據校驗失敗，請檢查欄位");
+          ElMessage.error("伺服器內部錯誤");
           break;
         case 502:
         case 503:
