@@ -275,21 +275,14 @@ onMounted(async () => {
 }
 
 .chart-card {
-    background: #ffffff;
+    background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
     border-radius: 16px;
     padding: 24px;
     border: 1px solid #e5e7eb;
-    margin-bottom: 30px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 .chart-header {
     margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 14px;
-    color: #64748b;
 }
 
 .chart-wrapper {
@@ -324,6 +317,11 @@ onMounted(async () => {
     text-align: center;
     letter-spacing: 0.15em;
     margin-top: 5pt;
+}
+
+.custom-select:focus {
+    border-color: #94a3b8;
+    outline: none;
 }
 
 .loading-overlay {
