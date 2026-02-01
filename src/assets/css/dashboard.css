@@ -134,6 +134,27 @@
 
 .card-inner-header {
   margin-bottom: 20px;
+  align-items: center; /* 水平居中核心 */
+  
+}
+/* 搜尋框容器：限制寬度並居中 */
+.search-box {
+  width: 100%;
+  max-width: 400px; /* 限制寬度，避免太長變醜 */
+  position: relative;
+  display: flex;          /* 讓 div 內部也啟動 Flex */
+  justify-content: center; /* 🌟 確保內部的 input 也在這個 div 的中間 */
+  margin: 0 auto;
+}
+.search-input {
+  margin-top: 10px;
+  text-align: center;
+  border: 1.5px solid #e4e7ed;
+  border-radius: 25px; /* 圓角感 */
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  background-color: #f8f9fb;
+  outline: none;
 }
 
 .card-inner-title {
@@ -141,13 +162,17 @@
   font-weight: 600;
   color: #1e293b;
   margin: 0 0 4px 0;
+  text-align: center;
 }
 
 .card-description {
   font-size: 13px;
   color: #94a3b8;
   margin: 0;
+  text-align: center;
 }
+
+
 
 .card-body {
   display: flex;
@@ -552,4 +577,67 @@
     border-radius: 4px;
     color: #64748b;
     margin-left: 5px;
+}
+
+.transaction-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #2c3e50;
+}
+
+.note-text {
+    font-size: 0.85rem;
+    color: #7f8c8d;
+    margin-right: 8px;
+}
+
+.member-tag {
+    background: #f0f2f5;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: #606266;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-top: 20px;
+  padding: 10px;
+}
+
+.page-btn {
+  padding: 8px 16px;
+  border: 1px solid #e0e0e0;
+  background: #ffffff;
+  color: #606266;
+  border-radius: 20px; /* 圓角設計 */
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.page-btn:hover:not(:disabled) {
+  background: #409eff;
+  color: white;
+  border-color: #409eff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(64, 158, 255, 0.3);
+}
+
+.page-btn:disabled {
+  background: #f5f7fa;
+  color: #c0c4cc;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.page-info {
+  font-size: 14px;
+  color: #909399;
+  font-family: 'Inter', sans-serif;
 }
