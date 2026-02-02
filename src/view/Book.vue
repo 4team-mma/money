@@ -47,14 +47,15 @@
                         source_account: t.from_account.account_name,
                         account_name: t.to_account.account_name,
                         add_note: t.transaction_note,
+                        created_at: t.created_at,
                         currency: t.from_account.currency || 'NT$',
                     }));
                     combinedData = [...combinedData, ...formattedTransfers];
                 }
 
                 // 3. 更新狀態
-                // 排序：按日期降序
-                transactions.value = combinedData.sort((a, b) => new Date(b.add_date) - new Date(a.add_date));
+                // 由新到舊排序 (最新的在最上面)
+                transactions.value = combinedData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                 
                 monthlyIncome.value = resRecords.monthly_income;
                 monthlyExpenses.value = resRecords.monthly_expenses;
@@ -73,28 +74,51 @@
     // 當年份或月份改變時，重新抓取 API
     watch([year, month], () => {
         fetchTransactions();
-        console.log(transactions.value);
     });
 
     const selectDate = (day) => {
+        // 更新選中的日期
         selectedDate.value = getLocalDateString(day.date);
+        
+        // 自動切換回「按日顯示」模式
+        displayMode.value = 'day';
     };
 
+    // 顯示模式狀態
+    const displayMode = ref('day'); // 'day' 或 'month'
+
     // 選擇日期的事件清單
-    const selectedDateTransactions = computed(() => transactions.value.filter(e => e.add_date === selectedDate.value));
+    const selectedDateTransactions = computed(() => {
+        // 如果是月模式，直接回傳當月所有交易
+        if (displayMode.value === 'month') {
+            return transactions.value;
+        }
+        // 如果是日模式，且有選中日期，則過濾該日資料
+        if (selectedDate.value) {
+            return transactions.value.filter(e => e.add_date === selectedDate.value);
+        }
+        // 預設（如剛進入頁面且為日模式）回傳今日資料
+        return transactions.value.filter(e => e.add_date === today);
+    });
+
+    // 處理子組件傳回的切換請求
+    const handleChangeView = (payload) => {
+        displayMode.value = payload.mode;   // 切換到 'day'
+        selectedDate.value = payload.date;  // 設定選中的日期
+    };
 
     // v-calendar attributes (含重複事件)
     const calendarAttributes = computed(() => {
         const attr = transactions.value.map(e => {
             let color = "red";
-            let amount = e.add_amount;
+            let amount = e.add_amount*1;
             if (e.add_type === true) color = "green";
             if (e.add_type === 'transfer') color = "blue"; // 轉帳用藍色區分
 
             return {
                 dates: new Date(e.add_date),
                 bar: { color: color },
-                popover: { label: `${e.add_class} ${e.currency} ${e.add_amount.toLocaleString()}` },
+                popover: { label: `${e.add_class} ${e.currency} ${amount.toLocaleString()}` },
             };
         });
         attr.push({ key: "today", dates: today, highlight: { color: "orange", fillMode: "outline" } });
@@ -137,6 +161,10 @@
 <template>
     <Nav>
         <h1 class="page-title">行事曆</h1>
+        <div class="view-mode-selector">
+            <button :class="{ active: displayMode === 'day' }" @click="displayMode = 'day'">按日顯示</button>
+            <button :class="{ active: displayMode === 'month' }" @click="displayMode = 'month'">按月顯示</button>
+        </div>
         <div class="calendar-page-layout">
             <div class="calendar-grid">
                 <BookCalendarSection
@@ -150,8 +178,10 @@
                 <BookTransactionDetails
                     :selectedDate="selectedDate"
                     :transactions="selectedDateTransactions"
+                    :displayMode="displayMode"
                     @deleteTransaction="deleteTransaction"
                     @refreshList="refreshList"
+                    @change-view="handleChangeView"
                 />
             </div>
             <BookSummaryCard
@@ -184,5 +214,34 @@
         .calendar-grid {
             grid-template-columns: 1fr; /* 手機版改單欄 */
         }
+    }
+
+    /* 檢視模式切換器 */
+    .view-mode-selector {
+        display: flex;
+        gap: 0; /* 讓按鈕連在一起 */
+        margin-bottom: 20px;
+        background: #f1f5f9;
+        padding: 4px;
+        border-radius: 8px;
+        width: fit-content;
+    }
+
+    .view-mode-selector button {
+        padding: 6px 16px;
+        border-radius: 6px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        color: #64748b;
+        transition: all 0.2s;
+    }
+
+    .view-mode-selector button.active {
+        background: #ffffff;
+        color: #0f172a;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 </style>

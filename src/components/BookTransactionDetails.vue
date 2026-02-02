@@ -6,18 +6,85 @@
 
     const props = defineProps({
         selectedDate: String,
-        transactions: Array
+        transactions: Array,
+        displayMode: String
     });
 
-    const emit = defineEmits(["deleteTransaction", "refreshList"]);
+    const emit = defineEmits(["deleteTransaction", "refreshList", "change-view"]);
+
+    // 點擊日期標題的處理函數
+    const handleDateClick = (date) => {
+        // 只有在月模式時點擊才有效
+        if (props.displayMode === 'month') {
+            emit("change-view", { mode: 'day', date: date });
+        }
+    };
+
+    // 根據目前資料是否有跨日期，決定是否顯示日期標籤
+    const groupedTransactions = computed(() => {
+        const groups = {};
+        filteredTransactions.value.forEach(t => {
+            const itemDate = t.add_date; // 取得日期
+            if (!groups[itemDate]) {
+                groups[itemDate] = {
+                    date: itemDate,
+                    list: [],
+                    dayTransfer: 0,
+                    dayIncome: 0,
+                    dayExpense: 0
+                };
+            }
+            groups[itemDate].list.push(t);
+
+            // 加總每日小計
+            if (t.add_type === 'transfer') {
+                groups[itemDate].dayTransfer += Number(t.add_amount);
+            } else if (t.add_type === true) {
+                groups[itemDate].dayIncome += Number(t.add_amount);
+            } else if (t.add_type === false) {
+                groups[itemDate].dayExpense += Number(t.add_amount);
+            }
+        });
+        
+        // 由新到舊排序
+        return Object.keys(groups)
+            .sort((a, b) => b.localeCompare(a))
+            .map(key => groups[key]);
+    });
+
+    // 標題顯示邏輯
+    const displayTitle = computed(() => {
+        if (props.selectedDate) return props.selectedDate;
+        // 如果沒有 selectedDate，取第一筆資料的年份月份
+        if (props.transactions && props.transactions.length > 0) {
+            return props.transactions[0].add_date?.substring(0, 7) + " 全月紀錄";
+        }
+        return "請選擇日期";
+    });
+
+    // 定義頁籤狀態：'all' (收支+轉帳), 'record' (收支), 'transfer' (轉帳)
+    const currentTab = ref('all');
+
+    // 根據頁籤過濾資料
+    const filteredTransactions = computed(() => {
+        if (currentTab.value === 'record') {
+            // 只留收支 (add_type 是 boolean true/false)
+            return props.transactions.filter(t => typeof t.add_type === 'boolean');
+        } else if (currentTab.value === 'transfer') {
+            // 只留轉帳 (add_type 為 'transfer')
+            return props.transactions.filter(t => t.add_type === 'transfer');
+        }
+        // 預設顯示全部
+        return props.transactions;
+    });
 
     // 控制哪一個項目的下拉選單是開啟的 (存儲 index)
     const activeMenuIndex = ref(null);
 
     // 切換選單顯示/隱藏
-    const toggleMenu = (event, index) => {
+    const toggleMenu = (event, id) => {
         event.stopPropagation(); // 防止點擊事件冒泡
-        activeMenuIndex.value = activeMenuIndex.value === index ? null : index;
+        activeMenuIndex.value = activeMenuIndex.value === id ? null : id;
     };
 
     // 點擊頁面其他地方時關閉選單
@@ -77,71 +144,99 @@
 
 <template>
     <div class="details-section">
-        <h3 class="details-title">{{ selectedDate || "請選擇日期" }}</h3>
+        <h3 class="details-title">{{ displayTitle }}</h3>
 
-        <div v-if="transactions.length > 0" class="transactions-scroll">
-            <div v-for="(t, index) in transactions" :key="index" class="transaction-item">
-                <!-- 左側：內容 -->
-                <div class="transaction-info">
-                    <div class="transaction-icon" :class="{ 'income': t.add_type === true, 'expense': t.add_type === false, 'transfer': t.add_type === 'transfer' }">
-                        <span v-if="t.add_class_icon">{{ t.add_class_icon }}</span>
-                        <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <polyline v-if="t.add_type" points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                            <polyline v-else points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
-                        </svg>
-                    </div>
-                    <div>
-                        <div class="transaction-name">
-                            <!-- 如果是轉帳，顯示從哪到哪 -->
-                            <template v-if="t.add_type === 'transfer'">
-                                {{ t.source_account }} ➔ {{ t.account_name }}
-                            </template>
-                            <template v-else>
-                                {{ t.add_class }}
-                            </template>
-                        </div>
-                        <div class="transaction-category">
-                            <template v-if="t.add_type === 'transfer'">
-                                {{ t.add_note }}
-                            </template>
-                            <template v-else>
-                                {{ t.add_member }}<span v-if="t.add_note"> | {{ t.add_note }}</span>
-                            </template>
-                        </div>
+        <!-- 頁籤切換器 -->
+        <div class="tab-container">
+            <button :class="{ active: currentTab === 'all' }" @click="currentTab = 'all'">全部</button>
+            <button :class="{ active: currentTab === 'record' }" @click="currentTab = 'record'">收支</button>
+            <button :class="{ active: currentTab === 'transfer' }" @click="currentTab = 'transfer'">轉帳</button>
+        </div>
+
+        <div v-if="groupedTransactions.length > 0" class="transactions-scroll">
+            <div v-for="group in groupedTransactions" :key="group.date" class="date-group">
+                <!-- 如果是「按月顯示」，顯示日期分隔線 -->
+                <div v-if="displayMode === 'month'" class="date-divider clickable" @click="handleDateClick(group.date)" title="切換至此日檢視">
+                    <span class="divider-date">{{ group.date }} 🔍</span>
+                    <div class="divider-totals">
+                        <span v-if="group.dayIncome > 0" class="day-income">收入: {{ formatNumber(group.dayIncome) }}</span>
+                        <span v-if="group.dayExpense > 0" class="day-expense">支出: {{ formatNumber(group.dayExpense) }}</span>
+                        <span v-if="group.dayTransfer > 0">轉帳: {{ formatNumber(group.dayTransfer) }}</span>
                     </div>
                 </div>
 
-                <!-- 右側：金額與自定義選單 -->
-                <div class="transaction-details">
-                    <template v-if="t.add_type === 'transfer'">
-                        <div class="transaction-amount">
-                            {{ t.currency }} {{ formatNumber(t.add_amount) }}
+                <!-- 內層：交易項目 -->
+                <div v-for="(t, index) in group.list" :key="t.add_id" class="transaction-item">
+                    <!-- 左側：內容 -->
+                    <div class="transaction-info">
+                        <div class="transaction-icon" :class="{ 'income': t.add_type === true, 'expense': t.add_type === false, 'transfer': t.add_type === 'transfer' }">
+                            <span v-if="t.add_class_icon">{{ t.add_class_icon }}</span>
+                            <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <polyline v-if="t.add_type" points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                                <polyline v-else points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+                            </svg>
                         </div>
-                    </template>
-                    <template v-else>
-                        <div class="transaction-amount" :class="{ income: t.add_type }">
-                            {{ t.add_type ? '+' : '-' }}{{ t.currency }} {{ formatNumber(t.add_amount) }}
+                        <div>
+                            <div class="transaction-name">
+                                <!-- 如果是轉帳，顯示從哪到哪 -->
+                                <template v-if="t.add_type === 'transfer'">
+                                    {{ t.source_account }} ➔ {{ t.account_name }}
+                                </template>
+                                <template v-else>
+                                    {{ t.add_class }}
+                                </template>
+                            </div>
+                            <div class="transaction-category">
+                                <template v-if="t.add_type === 'transfer'">
+                                    {{ t.add_note }}
+                                </template>
+                                <template v-else>
+                                    {{ t.add_member }}<span v-if="t.add_note"> | {{ t.add_note }}</span>
+                                    <div v-if="t.add_tag" class="tag-group">
+                                        <span v-for="tag in t.add_tag.split(',')" :key="tag" class="tag-item">
+                                            {{ tag.trim() }}
+                                        </span>
+                                    </div>
+                                </template>
+                            </div>
                         </div>
-                        <div class="transaction-account-name">{{ t.account_name }}</div>
-                    </template>
-                </div>
+                    </div>
 
-                <!-- 🌟 純 Vue 下拉選單結構 -->
-                <div class="custom-dropdown">
-                    <button class="menu-btn" @click="toggleMenu($event, index)">
-                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
-                        </svg>
-                    </button>
-                    
-                    <!-- 使用 Vue 的 v-if 控制顯示 -->
-                    <ul v-if="activeMenuIndex === index" class="custom-dropdown-menu">
-                        <li @click="openEditModal(t)">編輯</li>
-                        <li class="delete-opt" @click="emit('deleteTransaction', t.add_type, t.add_id)">刪除</li>
-                    </ul>
+                    <!-- 右側：金額與自定義選單 -->
+                    <div class="transaction-details">
+                        <template v-if="t.add_type === 'transfer'">
+                            <div class="transaction-amount">
+                                {{ t.currency }} {{ formatNumber(t.add_amount) }}
+                            </div>
+                        </template>
+                        <template v-else>
+                            <div class="transaction-amount" :class="{ income: t.add_type }">
+                                {{ t.add_type ? '+' : '-' }}{{ t.currency }} {{ formatNumber(t.add_amount) }}
+                            </div>
+                            <div class="transaction-account-name">{{ t.account_name }}</div>
+                        </template>
+                    </div>
+
+                    <!-- 🌟 純 Vue 下拉選單結構 -->
+                    <div class="custom-dropdown">
+                        <button class="menu-btn" @click="toggleMenu($event, t.add_id)">
+                            <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                            </svg>
+                        </button>
+                        
+                        <!-- 使用 Vue 的 v-if 控制顯示 -->
+                        <ul v-if="activeMenuIndex === t.add_id" class="custom-dropdown-menu">
+                            <li @click="openEditModal(t)">編輯</li>
+                            <li class="delete-opt" @click="emit('deleteTransaction', t.add_type, t.add_id)">刪除</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- 若過濾後沒資料的顯示 -->
+        <div v-else class="no-data">目前沒有相關紀錄</div>
     </div>
 
     <!-- 編輯彈窗 -->
