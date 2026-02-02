@@ -4,15 +4,16 @@ on:
   issues:
     types: [opened]
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, labeled] # 增加 labeled 以確保標籤打上後觸發
 
 permissions:
   contents: read
   issues: write
   pull-requests: write
+  repository-projects: write 
 
 jobs:
-  label-everything:
+  label-and-project:
     runs-on: ubuntu-latest
     steps:
       - name: 0. 複製專案程式碼
@@ -41,3 +42,11 @@ jobs:
                 labels: labels
               });
             }
+
+      # 🌟 這裡使用你剛剛在 money 倉庫設定好的 Secret
+      - name: 3. 自動加入數位財務管理系統
+        if: github.event_name == 'pull_request'
+        uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: https://github.com/orgs/4team-mma/projects/1
+          github-token: ${{ secrets.MY_NEW_PROJECT_TOKEN }}
