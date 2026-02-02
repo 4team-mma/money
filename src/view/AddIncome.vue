@@ -10,6 +10,7 @@ import { onMounted } from 'vue';
 import { useAccountStore } from '@/stores/useAccountStore'
 import { DatePicker } from 'v-calendar'
 import 'v-calendar/style.css'
+import {computed} from 'vue'
 
 // 🌟 修正：傳入 true 代表收入模式
 const { 
@@ -30,6 +31,9 @@ onMounted(async () => {
     if (window.history.state?.date) {
         form.add_date = window.history.state?.date;
     }
+})
+const now_money = computed(()=>{
+    return accountStore.formatAccountBalance(form.account)
 })
 </script>
 
@@ -61,11 +65,13 @@ onMounted(async () => {
                     <div class="form-group">
                         <label>收入類別</label>
                         <Add_cato_inn @update:model-value="handleCatoUpdate" />
+                        <div class="change-text">-可自定義類別-</div>
                     </div>
 
                     <div class="form-group">
-                        <label>帳戶 (存入)</label>
+                        <label>帳戶</label>
                         <Add_account v-model:account="form.account" @update:model-value="handleAccountUpdate" />
+                        <div class="change-text">餘額 : {{ now_money }}</div>
                     </div>
 
                     <div class="form-group">

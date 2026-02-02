@@ -29,35 +29,14 @@ onMounted(async () => {
         form.add_date = window.history.state?.date;
     }
 })
-
+// 這邊是轉出帳戶，使用form.source_account是原始帳戶，這個是在trans定義的。
 const now_money = computed(() => {
-    //指向「轉出帳戶 (source_account)」
-    const selected_account = form.source_account;
-
-    // 2. 如果 selected_account 是一個完整的物件 (通常 handleSourceUpdate 會傳入物件)
-    if (typeof selected_account === 'object' && selected_account !== null) {
-        // 確保餘額是數字，並用 Math.floor 去掉小數點
-        const rawBalance = selected_account.current_balance ?? 0;
-        const integerBalance = Math.floor(rawBalance);
-        //
-        const formattedBalance = integerBalance.toLocaleString();
-        const currency = selected_account.currency || 'NT$';
-        // 加上 toLocaleString() 讓金額顯示千分位，如 1,500
-        return `${currency} ${formattedBalance}`;
-    }
-
-    // 3. 如果 selected_account 只是 ID (相容性處理)
-    if (accountStore.accounts.length > 0) {
-        const found = accountStore.accounts.find(acc => acc.account_id == selected_account);
-        if (found) {
-            const balance = found.current_balance ?? 0;
-            const currency = found.currency || 'NT$';
-            return `${currency} ${balance.toLocaleString()}`;
-        }
-    }
-
-    return '金額讀取失敗';
+    return accountStore.formatAccountBalance(form.source_account)
 });
+// 這邊是轉入帳戶，使用form.account是錢變多的帳戶
+const money_in = computed(()=>{
+    return accountStore.formatAccountBalance(form.account)
+})
 
 // 
 // 轉出 (From) 帳戶：列出「全部」帳戶
@@ -91,10 +70,9 @@ const filteredToAccounts = computed(() => {
                 </div>
 
                 <div class="form-group">
-                    <label >轉帳金額</label>
+                    <label>轉帳金額</label>
                     <input v-model.number="form.add_amount" type="number" :placeholder="`${currentCurrency}`"
                         class="amount-input" />
-                    <div class="change-text">當前餘額 : {{ now_money }}</div>
                 </div>
 
                 <div class="grid">
@@ -102,15 +80,17 @@ const filteredToAccounts = computed(() => {
                         <label>從 (轉出帳戶)</label>
                         <Add_account :accounts-data="allFromAccounts" :account="form.source_account"
                             @update:account="handleSourceUpdate" />
+                        <div class="change-text">餘額 : {{ now_money }}</div>
                     </div>
 
                     <div class="form-group">
                         <label>到 (轉入帳戶)</label>
                         <Add_account :accounts-data="filteredToAccounts" :account="form.account"
                             @update:account="handleAccountUpdate" />
+                        <div class="change-text">餘額 : {{ money_in }}</div>
                     </div>
-
                 </div>
+
                 <div class="form-group">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <label>備註: ({{ form.add_note.length }}/500)</label>
@@ -235,11 +215,7 @@ textarea {
     cursor: pointer;
 }
 
-.change-text {
-    font-size: 12px;
-    color: #64748b;
-    margin: 0;
-}
+
 
 
 </style>
