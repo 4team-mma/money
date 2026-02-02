@@ -13,6 +13,8 @@ import { ref, onMounted, computed } from 'vue';
 import { DatePicker } from 'v-calendar';
 import 'v-calendar/style.css';
 
+
+
 // 🌟 1. 修正順序：先定義 Store，這樣下面的 computed 才能用
 const accountStore = useAccountStore()
 
@@ -24,7 +26,10 @@ const {
 } = useAddRecord(false)
 
 
-// 修改 add.vue 裡面的這一段
+//引用餘額近來(錢多的=轉入帳戶)
+const now_money = computed(()=>{
+    return accountStore.formatAccountBalance(form.account)
+})
 
 // 修改 Add.vue 的 computed
 
@@ -96,13 +101,16 @@ onMounted(async () => {
                     <div class="form-group">
                         <label>消費類別</label>
                         <Add_cato @update:model-value="handleCatoUpdate" />
+                        <div class="change-text">-可自定義類別-</div>
                     </div>
 
                     <div class="form-group">
                         <label>帳戶</label>
                         <Add_account v-model:account="form.account" />
+                        <div class="change-text">餘額 : {{ now_money }}</div>
+                        
                     </div>
-
+        
                     <div class="form-group">
                         <label>成員</label>
                         <Add_member @update:model-value="handleMemberUpdate" />

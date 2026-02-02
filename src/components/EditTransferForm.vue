@@ -77,6 +77,9 @@ const now_money = computed(() => {
     return 'NT$ 0'; 
 });
 
+const in_money = computed(()=>{
+    return accountStore.formatAccountBalance(form.account)
+})
 
 
 </script>
@@ -100,23 +103,25 @@ const now_money = computed(() => {
                 <span class="currency">NT$</span>
                 <input v-model.number="form.add_amount" type="number" class="main-amount" />
             </div>
-            <div class="change-text">當前餘額 : {{ now_money }}</div>
+            
         </div>
 
         <div v-if="form.add_id || props.initialData" class="form-grid">
             <div class="form-item">
                 <label>從 (轉出帳戶)</label>
                 <Add_account :account="form.source_account" @update:account="handleSourceUpdate" />
+                <div class="change-text">餘額 : {{ now_money }}</div>
             </div>
             <div class="form-item">
                 <label>到 (轉入帳戶)</label>
                 <Add_account :account="form.account" @update:account="handleAccountUpdate" />
+                <div class="change-text">餘額 : {{ in_money }}</div>
             </div>
         </div>
 
         <div class="form-item">
             <div class="note-label">
-                <label>備註內容</label>
+                <label>備註: ({{ form.add_note.length }}/500)</label>
             </div>
             <textarea v-model="form.add_note" placeholder="輸入備註" rows="2"></textarea>
         </div>
@@ -131,6 +136,8 @@ const now_money = computed(() => {
 </template>
 
 <style scoped>
+@import '../assets/css/add.css';
+
 .edit-form-wrap { padding: 10px; font-family: sans-serif; }
 .edit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .date-trigger { cursor: pointer; background: #f8fafc; padding: 6px 12px; border-radius: 6px; border: 1px solid #e2e8f0; }

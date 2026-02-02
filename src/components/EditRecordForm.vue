@@ -1,6 +1,7 @@
 <script setup>
-import { onMounted, watch } from 'vue'
+import { onMounted, watch,computed } from 'vue'
 import { useAddRecord } from '@/composables/useAddRecord'
+import { useAccountStore } from '@/stores/useAccountStore'
 import { DatePicker } from 'v-calendar'
 import 'v-calendar/style.css'
 import Add_cato from './AddCato.vue'
@@ -12,19 +13,44 @@ import Add_tag from './AddTag.vue'
 const props = defineProps({ initialData: Object })
 const emit = defineEmits(['save-success', 'cancel'])
 
+const accountStore = useAccountStore()
+
 const { 
     form, setFormData, handleCatoUpdate, handleAccountUpdate,
     handleMemberUpdate, handleTagUpdate, 
     handleSave, isSubmitting 
 } = useAddRecord()
 
-onMounted(() => { if (props.initialData) setFormData(props.initialData) })
-watch(() => props.initialData, (newVal) => { if (newVal) setFormData(newVal) })
+// 🌟 2. 引用餘額方式：參考 Add.vue
+// 這裡多加一個 accountStore.accounts 的判斷，確保資料抓回來後會自動觸發更新
+const now_money = computed(() => {
+    // 如果 Store 還在讀取或清單是空的，先顯示讀取中
+    if (accountStore.accounts.length === 0) return '讀取中...';
+    return accountStore.formatAccountBalance(form.account);
+})
+
+// 🌟 3. 初始化邏輯：嚴格遵守先抓資料、再填表單
+onMounted(async () => {
+    // 先確保帳戶清單最新
+    await accountStore.loadAccounts();
+
+    if (props.initialData) {
+        setFormData(props.initialData);
+    }
+});
+
+// 監聽外部資料變動 (例如點選了另一筆紀錄進行編輯)
+watch(() => props.initialData, (newVal) => {
+    if (newVal) {
+        setFormData(newVal);
+    }
+}, { immediate: true });
 
 const onSave = async () => {
     const res = await handleSave()
     if (res?.success) emit('save-success')
 }
+
 </script>
 
 <template>
@@ -54,14 +80,18 @@ const onSave = async () => {
                 <Add_cato_inn v-if="form.add_type === true" :modelValue="form.add_class" @update:model-value="handleCatoUpdate" />
                 <Add_cato v-else :modelValue="form.add_class" @update:model-value="handleCatoUpdate" />
             </div>
+
             <div class="form-item">
                 <label>帳戶</label>
                 <Add_account :account="form.account" @update:account="handleAccountUpdate" />
+                <div class="change-text">餘額 : {{ now_money }}</div>
             </div>
+
             <div class="form-item">
                 <label>成員</label>
                 <Add_member :modelValue="form.add_member" @update:model-value="handleMemberUpdate" />
             </div>
+
             <div class="form-item">
                 <label>標籤</label>
                 <Add_tag :modelValue="form.add_tag" @update:model-value="handleTagUpdate" />
@@ -70,8 +100,7 @@ const onSave = async () => {
 
         <div class="form-item">
             <div class="note-label">
-                <label>備註內容</label>
-            
+                <label>備註內容 ({{ form.add_note?.length || 0 }}/500)</label>
             </div>
             <textarea v-model="form.add_note" placeholder="輸入備註" rows="2"></textarea>
         </div>
@@ -86,6 +115,7 @@ const onSave = async () => {
 </template>
 
 <style scoped>
+@import '../assets/css/add.css';
 .edit-form-wrap { padding: 10px; font-family: sans-serif; }
 .edit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .date-trigger { cursor: pointer; background: #f8fafc; padding: 6px 12px; border-radius: 6px; border: 1px solid #e2e8f0; }
