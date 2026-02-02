@@ -49,8 +49,8 @@ const fetchMonthlyStats = async () => {
       expenseChange: data.expense_change || 0,
       balance: Number(data.net_savings) || 0,
       // 儲蓄率公式：(收入 - 支出) / 收入 * 100
-      savingsRate: data.total_income > 0 
-        ? ((data.net_savings / data.total_income) * 100).toFixed(1) 
+      savingsRate: data.total_income > 0
+        ? ((data.net_savings / data.total_income) * 100).toFixed(1)
         : 0
     };
     console.log("📊 統計數據更新成功:", monthlyStats.value);
@@ -77,9 +77,9 @@ const fetchTransactions = async (page = 1) => {
     const traData = transfersRes.data?.data || transfersRes.data || transfersRes || [];
 
     // 💡 搜尋過濾邏輯：只有在搜尋「轉帳」相關字眼時才顯示轉帳紀錄
-    const isSearchingTransfer = searchQuery.value && 
+    const isSearchingTransfer = searchQuery.value &&
       (searchQuery.value.includes('轉') || searchQuery.value.includes('帳'));
-    
+
     let filteredTransfers = traData;
     if (searchQuery.value && !isSearchingTransfer) {
       filteredTransfers = [];
@@ -88,31 +88,35 @@ const fetchTransactions = async (page = 1) => {
     // 1. 標準化「收支紀錄」：大標題是類別，小標題是備註
     const recordList = recData.map(item => ({
       id: `r-${item.add_id}`,
-      display_title: item.add_class,        // 🌟 類別當大標題
-      display_note: item.add_note || '',     // 🌟 備註當次標題
+      display_title: item.add_class,
+      display_note: item.add_note || '',      // 🌟 原始備註 (灰色)
       display_date: item.add_date,
       display_amount: Number(item.add_amount) || 0,
       display_icon: item.add_class_icon || '📝',
       display_type: item.add_type ? 'income' : 'expense',
-      display_member: item.add_member,
+      display_member: item.add_member || '',  // 🌟 成員 (藍色)
+      display_tag: item.add_tag || '',        // 🌟 標籤 (紅框)
+      display_flow: '',                       // 一般紀錄無流向
       is_transfer: false
     }));
 
     // 2. 標準化「轉帳紀錄」
     const transferList = filteredTransfers.map(item => ({
       id: `t-${item.transaction_id}`,
-      display_title: '帳戶互轉',             // 🌟 轉帳大標題
-      display_note: `${item.from_account_name} ➔ ${item.to_account_name}`, // 🌟 流向當備註
+      display_title: '帳戶互轉',
+      display_flow: `${item.from_account_name} ➔ ${item.to_account_name}`, // 🌟 搬到這裡 (深綠)
       display_date: item.transaction_date,
       display_amount: Number(item.amount) || 0,
       display_icon: '🔄',
       display_type: 'transfer',
-      display_member: item.transaction_note || '',
+      display_note: item.transaction_note || '', // 🌟 搬回備註 (灰色)
+      display_member: '',
+      display_tag: '',
       is_transfer: true
     }));
 
     // 3. 合併並按日期排序
-    const combined = [...recordList, ...transferList].sort((a, b) => 
+    const combined = [...recordList, ...transferList].sort((a, b) =>
       new Date(b.display_date) - new Date(a.display_date)
     );
 
@@ -430,12 +434,17 @@ onMounted(async () => {
                       <div class="transaction-name">{{ t.display_title }}</div>
 
                       <div class="transaction-category">
-                        <span v-if="t.display_note" class="note-text">{{ t.display_note }}</span>
-                        <!-- <span class="tag">{{ t.display_category }}</span> -->
-                        <span class="member-tag" v-if="t.display_member">
+                        <span v-if="t.display_tag" class="tag-frame">{{ t.display_tag }}</span>
+
+                        <span v-if="t.display_member" class="member-label">
                           <i class="glyphicon glyphicon-user"></i> {{ t.display_member }}
                         </span>
 
+                        <span v-if="t.is_transfer && t.display_flow" class="transfer-flow">
+                          {{ t.display_flow }}
+                        </span>
+
+                        <span v-if="t.display_note" class="note-text">{{ t.display_note }}</span>
                       </div>
                     </div>
                   </div>
@@ -516,4 +525,49 @@ onMounted(async () => {
 
 <style scoped>
 @import '../assets/css/dashboard.css';
+
+/* 備註：純文字 */
+.note-text {
+  font-size: 12px;
+  color: #64748b;
+  margin-right: 8px;
+}
+/* 備註：純文字灰色 */
+.note-text {
+  font-size: 12px;
+  color: #64748b;
+  margin-right: 8px;
+}
+
+/* 標籤：紅色方框 */
+.tag-frame {
+  font-size: 11px;
+  color: #ef4444;
+  border: 1px solid #fca5a5;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-right: 8px;
+  background-color: #fef2f2;
+}
+
+/* 成員：淡藍色文字 */
+.member-label {
+  font-size: 12px;
+  color: #3b82f6;
+  font-weight: 500;
+  margin-right: 8px;
+}
+/* 修正原本可能有的灰色背景 */
+.transaction-category span {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* 🌟 轉帳帳戶流向：深綠色 */
+.transfer-flow {
+  font-size: 12px;
+  color: #15803d; /* 深綠色 */
+  font-weight: 600;
+  margin-right: 8px;
+}
 </style>
