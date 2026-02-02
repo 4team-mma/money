@@ -6,6 +6,30 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    # 這裡確保它會處理 pnpm 的鎖定檔
-    versioning-strategy: increase
+      day: "sunday"
+    
+    versioning-strategy: lockfile-only
+    open-pull-requests-limit: 5
+
+    # 修正後的群組設定
+    groups:
+      frontend-security:
+        applies-to: security-updates # 這裡改用這個屬性，不要用 update-types
+        patterns:
+          - "*"
+
+  # 後端 FastAPI (uv)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+
+    open-pull-requests-limit: 5
+
+    groups:
+      backend-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
