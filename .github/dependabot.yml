@@ -1,11 +1,23 @@
 # 依賴項安全性檢查:自動偵測並提醒你們升級有漏洞的套件。
 version: 2
 updates:
-  # 前端 Vue (pnpm)
+  # 前端 Vue (pnpm 專案在 GitHub 識別為 npm 生態)
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
-    # 這裡確保它會處理 pnpm 的鎖定檔
-    versioning-strategy: increase
+      day: "sunday" # 建議設定在週日，週一上班再處理，不影響開發中途
+    
+    # 調整版本策略：
+    # lockfile-only 表示只更新鎖定檔中的小版本修補，不輕易更動 package.json 的大版本定義
+    versioning-strategy: lockfile-only
+
+    # 限制 PR 數量，避免一次出來太多更新讓你壓力很大
+    open-pull-requests-limit: 5
+
+    # 如果只想看安全性更新，可以加入以下群組設定
+    groups:
+      frontend-security:
+        update-types:
+          - "security"
 
