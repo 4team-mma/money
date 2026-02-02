@@ -1,8 +1,14 @@
 'Frontend page (前端頁面)':
-  - any: ['src/view/**/*']
+  - any: 
+      - 'src/view/**/*'
+      - 'package.json'   # <--- 務必加上，機器人才認得 pnpm 更新
+      - 'pnpm-lock.yaml' # 
 
 'Components':
-  - any: ['src/components/**/*']
+  - any: 
+      - 'src/components/**/*'
 
 'UI/Style':
-  - any: ['src/assets/**/*', 'public/**/*']
+  - any: 
+      - 'src/assets/**/*'
+      - 'public/**/*'
