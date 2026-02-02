@@ -121,7 +121,7 @@ const in_money = computed(()=>{
 
         <div class="form-item">
             <div class="note-label">
-                <label>備註內容</label>
+                <label>備註: ({{ form.add_note.length }}/500)</label>
             </div>
             <textarea v-model="form.add_note" placeholder="輸入備註" rows="2"></textarea>
         </div>
