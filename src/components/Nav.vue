@@ -35,6 +35,7 @@ const navigation = [
   { name: '消費趨勢', to: '/ConsumerAnalysis', icon: '⛽' },
   { name: '薪資趨勢', to: '/SalaryAnalysis', icon: '💵' },
   { name: '成就系統', to: '/Achievements', icon: '🏆' },
+    { name: '成就測試', to: '/Achievements_new', icon: '🏆' },
   { name: '問題回饋', to: '/Feedback', icon: '❓' },
   { name: '設定', to: '/Settings', icon: '⚙️' }
 ]
