@@ -27,7 +27,7 @@ import SettingAlert from "@/view/SettingAlert.vue";
 import SettingBudgetConfig from "@/view/SettingBudgetConfig.vue";
 import SettingUserProfile from "@/view/SettingUserProfile.vue";
 import BudgetManager from "@/view/BudgetManager.vue";
-
+import Achievements_new from "@/view/Achievements_new.vue";
 
 const routes = [
   {
@@ -175,6 +175,12 @@ const routes = [
     path: "/BudgetManager",
     component: BudgetManager,
     name: "BudgetManager",
+  } 
+  ,
+    {
+    path: "/Achievements_new",
+    component: Achievements_new,
+    name: "Achievements_new",
   }
 
 ];

@@ -370,6 +370,11 @@
 .transaction-icon.expense {
   background: rgba(239, 68, 68, 0.1);
 }
+/* icon背景色🐈 */
+.transaction-icon.income { background: rgba(54, 173, 114, 0.158); color: #1cb17f; }
+.transaction-icon.expense { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.transaction-icon.transfer { background: rgba(68, 199, 239, 0.158); color: #31bdfd; }
+
 
 .transaction-icon svg {
   width: 16px;
