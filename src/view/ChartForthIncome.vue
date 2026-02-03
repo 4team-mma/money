@@ -33,14 +33,15 @@ const categoryTableData = ref([])
 const is_loading = ref(false)
 
 // 分組狀態
-const groupBy = ref('add_class') // 預設依類別 (add_class, account, add_member)
+const groupBy = ref('add_class') // 預設依類別 (add_class, account, add_member, add_tag)
 
 // 根據 groupBy 的值回傳對應的表格標題
 const tableLabel = computed(() => {
     const labelMap = {
         'add_class': '類別',
         'account': '帳戶',
-        'add_member': '成員'
+        'add_member': '成員',
+        'add_tag': '標籤'
     }
     return labelMap[groupBy.value] || '項目'
 })
@@ -83,21 +84,36 @@ const renderChart = () => {
     if (chartInstance) chartInstance.destroy()
     const chartData = categoryTableData.value
     if (chartData.length === 0) return
-
+    // 判斷是否為標籤模式
+    const isTagMode = groupBy.value === 'add_tag'
+    
     chartInstance = new Chart(dailyChartRef.value, {
-        type: 'doughnut',
+        // 標籤用橫向長條圖 (indexAxis: 'y')，其他維持圓餅圖
+        type: isTagMode ? 'bar' : 'doughnut',
         data: {
             labels: chartData.map(i => i.category),
             datasets: [{
+                label: '支出金額', // 長條圖需要 label
                 data: chartData.map(i => i.amount),
-                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'],
-                borderWidth: 2
+                backgroundColor: isTagMode ? '#36A2EB' : ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'],
+                borderWidth: 1,
+                borderRadius: isTagMode ? 4 : 0 // 加點圓角的長條圖
             }]
         },
         options: { 
             responsive: true, 
             maintainAspectRatio: false, 
-            plugins: { legend: { position: 'right' } } 
+            indexAxis: isTagMode ? 'y' : 'x', // 讓長條圖橫向轉動
+            plugins: { 
+                legend: { 
+                    display: !isTagMode, // 標籤模式下關閉圖例（因為 Y 軸已經有名字）
+                    position: 'right' 
+                } 
+            },
+            scales: isTagMode ? {
+                x: { beginAtZero: true, grid: { display: false } },
+                y: { grid: { display: false } }
+            } : {}
         }
     })
 }
@@ -149,6 +165,7 @@ watch([period, startDate, endDate, groupBy], (newVal, oldVal) => {
                                 <option value="add_class">按類別</option>
                                 <option value="account">按帳戶</option>
                                 <option value="add_member">按成員</option>
+                                <option value="add_tag">按標籤</option>
                             </select>
                             <!-- 下拉選單 -->
                             <span>檢視期間：</span>
