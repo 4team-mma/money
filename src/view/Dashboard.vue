@@ -437,7 +437,7 @@ onMounted(async () => {
                         <span v-if="t.display_tag" class="tag-frame">{{ t.display_tag }}</span>
 
                         <span v-if="t.display_member" class="member-label">
-                          <i class="glyphicon glyphicon-user"></i> {{ t.display_member }}
+                          <i class="glyphicon glyphicon-user"></i> {{ t.display_member }} /
                         </span>
 
                         <span v-if="t.is_transfer && t.display_flow" class="transfer-flow">
@@ -542,18 +542,18 @@ onMounted(async () => {
 /* 標籤：紅色方框 */
 .tag-frame {
   font-size: 11px;
-  color: #ef4444;
-  border: 1px solid #fca5a5;
+  color: #777373;
+  border: 1px solid #ffffff;
   padding: 1px 6px;
   border-radius: 4px;
   margin-right: 8px;
-  background-color: #fef2f2;
+  background-color: #f5efbf;
 }
 
 /* 成員：淡藍色文字 */
 .member-label {
   font-size: 12px;
-  color: #3b82f6;
+  color: #adb9cc;
   font-weight: 500;
   margin-right: 8px;
 }
@@ -566,7 +566,7 @@ onMounted(async () => {
 /* 🌟 轉帳帳戶流向：深綠色 */
 .transfer-flow {
   font-size: 12px;
-  color: #15803d; /* 深綠色 */
+  color: #0d63aa; /* 深綠色 */
   font-weight: 600;
   margin-right: 8px;
 }
