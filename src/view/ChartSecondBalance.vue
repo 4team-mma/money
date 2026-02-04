@@ -41,8 +41,12 @@ const loadData = async () => {
 onMounted(() => {
     const now = new Date()
 
-    // 預設：月（最近 12 個月）
+    // 預設：月（最近 1 個月）
     startDate.value = getLocalDateString(new Date(now.getFullYear(), now.getMonth() - 11, 1))
+    // const start = new Date()
+    // start.setMonth(now.getMonth() - 1)
+    // startDate.value = getLocalDateString(start)
+
     endDate.value = getLocalDate()
     loadData()
 })
@@ -204,11 +208,24 @@ const tableTrendData = computed(() => {
     return [...baseTrendData.value].reverse()
 })
 
+function validateDateRange() {
+    if (startDate.value && endDate.value) {
+        if (startDate.value > endDate.value) {
+            alert("結束日期不能早於起始日期！")
+            // 自動把結束日期調整為起始日期
+            endDate.value = startDate.value
+        }
+    }
+}
 
 // 🌟 保留自訂區間監聽
 watch([startDate, endDate], () => {
+    if (period.value === 'custom') {
+        validateDateRange()
+    }
     loadData()
 })
+
 
 // 🌟 新增簡化的 period 監聽，用於月/年切換表格 & 圖表
 watch(period, async () => {
@@ -241,8 +258,10 @@ const today = computed(() => {
                         <option value="custom">自訂</option>
                     </select>
                     <div v-if="period === 'custom'" style="display: inline-block; margin-left: 10px;">
+                        <span>起始日期 </span>
                         <input type="date" v-model="startDate" class="custom-select" />
                         <span> ～ </span>
+                        <span>結束日期 </span>
                         <input type="date" v-model="endDate" class="custom-select" />
                     </div>
                 </div>
