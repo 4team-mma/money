@@ -107,11 +107,21 @@ const renderChart = () => {
     })
 }
 
+function validateDateRange() {
+    if (startDate.value && endDate.value) {
+        if (startDate.value > endDate.value) {
+            alert("結束日期不能早於起始日期！")
+            // 自動把結束日期調整為起始日期
+            endDate.value = startDate.value
+        }
+    }
+}
+
 watch([period, startDate, endDate, groupBy], (newVal, oldVal) => {
-    // 日期重設邏輯
     const currentNow = new Date();
-    // 檢查是不是 period 變了 (newVal[0] 是 period 的新值, oldVal[0] 是舊值)
+
     const periodChanged = newVal[0] !== oldVal[0];
+
     if (periodChanged && period.value === 'month') {
         startDate.value = getLocalDateString(new Date(currentNow.getFullYear(), currentNow.getMonth(), 1));
         endDate.value = getLocalDate();
@@ -121,8 +131,15 @@ watch([period, startDate, endDate, groupBy], (newVal, oldVal) => {
         endDate.value = getLocalDate();
         return;
     }
-    loadData()
+
+    // 🌟 只有在 custom 模式才做日期合法性檢查
+    if (period.value === 'custom') {
+        validateDateRange();
+    }
+
+    loadData();
 })
+
 
 const today = computed(() => {
     const now = new Date();
@@ -156,8 +173,10 @@ const today = computed(() => {
                                 <option value="custom">自訂</option>
                             </select>
                             <div v-if="period === 'custom'" >
+                                <span>起始日期 </span>
                                 <input type="date" v-model="startDate" class="custom-select" />
                                 <span style="margin: 0 5px;">～</span>
+                                <span>結束日期 </span>
                                 <input type="date" v-model="endDate" class="custom-select" />
                             </div>
                         </div>
