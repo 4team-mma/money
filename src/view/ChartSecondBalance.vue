@@ -41,12 +41,8 @@ const loadData = async () => {
 onMounted(() => {
     const now = new Date()
 
-    // 預設：月（最近 1 個月）
+    // 預設：月（最近 1 年）
     startDate.value = getLocalDateString(new Date(now.getFullYear(), now.getMonth() - 11, 1))
-    // const start = new Date()
-    // start.setMonth(now.getMonth() - 1)
-    // startDate.value = getLocalDateString(start)
-
     endDate.value = getLocalDate()
     loadData()
 })
@@ -222,6 +218,7 @@ function validateDateRange() {
 watch([startDate, endDate], () => {
     if (period.value === 'custom') {
         validateDateRange()
+        nextTick(() => renderChart())
     }
     loadData()
 })
