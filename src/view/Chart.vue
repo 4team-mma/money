@@ -170,6 +170,16 @@ const renderChart = () => {
     })
 }
 
+function validateDateRange() {
+    if (startDate.value && endDate.value) {
+        if (startDate.value > endDate.value) {
+            alert("結束日期不能早於起始日期！")
+            // 自動把結束日期調整為起始日期
+            endDate.value = startDate.value
+        }
+    }
+}
+
 // --- 監聽與生命週期 ---
 // 監聽表格資料變化時重新渲染
 watch(tableData, async () => {
@@ -180,6 +190,7 @@ watch(tableData, async () => {
 // 專門監聽自訂日期變動，強制渲染
 watch([startDate, endDate], () => {
     if (period.value === 'custom') {
+        validateDateRange()
         nextTick(() => renderChart())
     }
 })
@@ -194,7 +205,7 @@ onMounted(async () => {
         yearlyData.value = data.yearly || []
         dailyData.value = data.daily || [] // 接收後端每日資料
 
-        // 預設自訂日期的範圍 (最近一個月)
+        // 預設自訂日期的範圍
         const end = new Date()
         const start = new Date()
         start.setMonth(start.getMonth() - 1)
@@ -209,6 +220,9 @@ onMounted(async () => {
         isLoading.value = false
     }
 })
+
+
+
 </script>
 
 <template>
@@ -227,8 +241,10 @@ onMounted(async () => {
                         <option value="custom">自訂</option>
                     </select>
                     <div v-if="period === 'custom'" style="display: inline-block; margin-left: 10px;">
+                        <span>起始日期 </span>
                         <input type="date" v-model="startDate" class="custom-select"/>
-                        <span>～</span>
+                        <span> ～ </span>
+                        <span>結束日期 </span>
                         <input type="date" v-model="endDate" class="custom-select"/>
                     </div>
                 </div>
