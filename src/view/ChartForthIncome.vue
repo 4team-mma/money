@@ -118,26 +118,35 @@ const renderChart = () => {
     })
 }
 
-// 監控邏輯：確保切換時也是本地時間
+function validateDateRange() {
+    if (startDate.value && endDate.value) {
+        if (startDate.value > endDate.value) {
+            alert("結束日期不能早於起始日期！")
+            // 自動把結束日期調整為起始日期
+            endDate.value = startDate.value
+        }
+    }
+}
+
 watch([period, startDate, endDate, groupBy], (newVal, oldVal) => {
-    // 取得執行當下的本地時間
     const currentNow = new Date();
-    // 檢查是不是 period 變了 (newVal[0] 是 period 的新值, oldVal[0] 是舊值)
     const periodChanged = newVal[0] !== oldVal[0];
 
-    // 「只有在 period 真的發生改變時」才重置日期
     if (periodChanged && period.value === 'month') {
         startDate.value = getLocalDateString(new Date(currentNow.getFullYear(), currentNow.getMonth(), 1));
         endDate.value = getLocalDate();
-        return; // 修改 startDate 會再次觸發 watch，所以這裡直接 return
+        return;
     } else if (periodChanged && period.value === 'year') {
         startDate.value = `${currentNow.getFullYear()}-01-01`;
         endDate.value = getLocalDate();
-        return; // 同上
+        return;
     }
-    // 如果選的是 'custom'，不自動重置日期，直接執行下方 loadData()
-    // 如果是日期改變 (startDate/endDate) 或分組改變 (groupBy)
-    // 或是從 custom 選回 month 已經完成日期賦值後第二次進來的 watch
+
+    // 🌟 新增：只有在 custom 時做日期合法性檢查
+    if (period.value === 'custom') {
+        validateDateRange();
+    }
+
     loadData();
 });
 
@@ -175,8 +184,10 @@ watch([period, startDate, endDate, groupBy], (newVal, oldVal) => {
                                 <option value="custom">自訂</option>
                             </select>
                             <div v-if="period === 'custom'">
+                                <span>起始日期 </span>
                                 <input type="date" v-model="startDate" class="custom-select" />
                                 <span style="margin: 0 6px;">～</span>
+                                <span>結束日期 </span>
                                 <input type="date" v-model="endDate" class="custom-select" />
                             </div>
                         </div>
