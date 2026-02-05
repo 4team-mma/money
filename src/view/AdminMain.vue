@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { useCategoryStore } from '@/stores/categoryStats'
 import AdminsComments from './AdminsComments.vue'
+import AdminModel from './AdminModel.vue'
 
 // 接收父組件狀態
 const props = defineProps({
@@ -46,20 +47,7 @@ const subTabs = [
     { id: 'xp', label: 'XP等級榜', icon: '✨' }
 ]
 
-/* ========================
-   模型控制中心：AI 設定
-   ======================== */
-const selectedAiModel = ref('gemini') // 預設選擇 gemini
-const aiSettings = ref({
-    geminiKey: '',
-    geminiVersion: 'gemini-1.5-pro',
-    ollamaHost: 'http://localhost:11434',
-    ollamaModel: 'llama3'
-})
 
-const testConnection = () => {
-    alert(`正在測試 ${selectedAiModel.value} 連線...`)
-}
 
 /* ========================
    初始載入
@@ -369,76 +357,18 @@ const normalUsersFiltered = computed(() => {
                         </div>
                     </div>
                 </section>
-
+<!-- 模型區塊 -->
                 <section v-if="activeTab === 'api'" class="tab-content animate-fade-in">
-                    <div class="section-header">
-                        <h3>🤖 AI 模型控制中心</h3>
-                        <p class="opacity-60">配置用於自動化記帳分類與財務健康分析的 AI 大腦</p>
-                    </div>
-
-                    <div class="model-config-grid">
-                        <div class="config-sidebar">
-                            <div class="model-card" :class="{ active: selectedAiModel === 'gemini' }" @click="selectedAiModel = 'gemini'">
-                                <div class="model-icon">✨</div>
-                                <div class="model-info">
-                                    <span class="model-name">Google Gemini</span>
-                                    <span class="model-desc">雲端高性能 LLM</span>
-                                </div>
-                            </div>
-                            <div class="model-card" :class="{ active: selectedAiModel === 'ollama' }" @click="selectedAiModel = 'ollama'">
-                                <div class="model-icon">🦙</div>
-                                <div class="model-info">
-                                    <span class="model-name">Ollama (Local)</span>
-                                    <span class="model-desc">本地私有化部署</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="config-detail-card">
-                            <div v-if="selectedAiModel === 'gemini'">
-                                <div class="card-title-row">
-                                    <h4>Gemini Cloud 設定</h4>
-                                    <span class="badge-online">已啟用 Google API</span>
-                                </div>
-                                <div class="input-group">
-                                    <label>Gemini API Key</label>
-                                    <input type="password" v-model="aiSettings.geminiKey" placeholder="貼上您的 API 金鑰..." class="mma-input" />
-                                </div>
-                                <div class="input-group">
-                                    <label>模型版本</label>
-                                    <select v-model="aiSettings.geminiVersion" class="mma-input">
-                                        <option value="gemini-1.5-pro">Gemini 1.5 Pro (推薦)</option>
-                                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (極速)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div v-if="selectedAiModel === 'ollama'">
-                                <div class="card-title-row">
-                                    <h4>Ollama 本地設定</h4>
-                                    <span class="badge-offline">本地內網通訊</span>
-                                </div>
-                                <div class="input-group">
-                                    <label>伺服器端點 (Host)</label>
-                                    <input type="text" v-model="aiSettings.ollamaHost" placeholder="http://localhost:11434" class="mma-input" />
-                                </div>
-                                <div class="input-group">
-                                    <label>指定模型名稱 (Model)</label>
-                                    <input type="text" v-model="aiSettings.ollamaModel" placeholder="llama3 / mistral / qwen" class="mma-input" />
-                                </div>
-                            </div>
-
-                            <div class="config-actions">
-                                <button class="btn-mma-secondary" @click="testConnection">⚡ 測試連線</button>
-                                <button class="btn-mma-primary" :style="{ background: currentStyle.primary }">💾 儲存並套用</button>
-                            </div>
-                        </div>
-                    </div>
+                <AdminModel :currentStyle="currentStyle" />
                 </section>
+<!-- 模型區塊結尾 -->
 
+
+<!-- 回饋區塊 -->
                 <section v-if="activeTab === 'feedback'" class="tab-content">
                     <AdminsComments />
                 </section>
+<!-- 回饋區塊結尾 -->
 
                 <section v-if="activeTab === 'system'" class="tab-content">
                     <div class="section-header">

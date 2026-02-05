@@ -28,6 +28,7 @@ import SettingBudgetConfig from "@/view/SettingBudgetConfig.vue";
 import SettingUserProfile from "@/view/SettingUserProfile.vue";
 import BudgetManager from "@/view/BudgetManager.vue";
 import Achievements_new from "@/view/Achievements_new.vue";
+import AdminModel from "@/view/AdminModel.vue";
 
 const routes = [
   {
@@ -182,6 +183,14 @@ const routes = [
     component: Achievements_new,
     name: "Achievements_new",
   }
+  ,
+    {
+    path: "/AdminModel",
+    component: AdminModel,
+    name: "AdminModel",
+  }
+
+
 
 ];
 
