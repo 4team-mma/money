@@ -437,14 +437,18 @@ onMounted(async () => {
                         <span v-if="t.display_tag" class="tag-frame">{{ t.display_tag }}</span>
 
                         <span v-if="t.display_member" class="member-label">
-                          <i class="glyphicon glyphicon-user"></i> {{ t.display_member }} /
+                          <i class="glyphicon glyphicon-user"></i> {{ t.display_member }} 
                         </span>
+
+                        <span v-if="t.display_note" class="note-text">
+                            <span v-if="t.display_member" class="note-divider" > | </span>
+                          {{ t.display_note }}</span>
 
                         <span v-if="t.is_transfer && t.display_flow" class="transfer-flow">
                           {{ t.display_flow }}
                         </span>
 
-                        <span v-if="t.display_note" class="note-text">{{ t.display_note }}</span>
+                        
                       </div>
                     </div>
                   </div>
@@ -546,7 +550,7 @@ onMounted(async () => {
   border: 1px solid #ffffff;
   padding: 1px 6px;
   border-radius: 4px;
-  margin-right: 8px;
+  margin-right: 4px;
   background-color: #f5efbf;
 }
 
@@ -570,4 +574,15 @@ onMounted(async () => {
   font-weight: 600;
   margin-right: 8px;
 }
+.note-divider{
+  /* 💡 左右各給 10px 的間距，保證絕對對齊 */
+  margin-right: 6px;
+  
+  /* 💡 讓顏色淡一點，看起來比較有質感 */
+  color: #ccc; 
+  
+  /* 💡 確保這條線不會被滑鼠反白選取到，操作感更好 */
+  user-select: none;
+}
+
 </style>
