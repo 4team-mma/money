@@ -225,7 +225,7 @@ const removeItem = (id) => {
 .add-section-box {
     border-top: 1px solid var(--border-color); /* 原本 #f1f5f9 */
     padding: 15px 20px;
-    background: var(--bg-body); /* 確保底部區塊背景正確 */
+    background: var(--bg-card); /* 確保底部區塊背景正確 */
 }
 
 .toggle-btn {
