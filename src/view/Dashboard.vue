@@ -14,6 +14,8 @@ const transactions = ref([])
 // })
 const searchQuery = ref('')
 const isLoading = ref(false)
+const accounts = ref([]);
+const isAccountsLoading = ref(false);
 // 1. 確保初始結構完整，防止初次渲染崩潰
 const pagination = ref({
   current_page: 1,
@@ -33,7 +35,7 @@ const monthlyStats = ref({
 })
 
 
-// 🌟 新增：抓取後端統計路由 /records/stats/monthly
+// 🌟 帳戶總覽：抓取後端統計路由 /records/stats/monthly
 const fetchMonthlyStats = async () => {
   try {
     // 假設你的 api 檔已經定義好 getCurrentStats，或是直接寫路徑
@@ -49,8 +51,8 @@ const fetchMonthlyStats = async () => {
       expenseChange: data.expense_change || 0,
       balance: Number(data.net_savings) || 0,
       // 儲蓄率公式：(收入 - 支出) / 收入 * 100
-      savingsRate: data.total_income > 0
-        ? ((data.net_savings / data.total_income) * 100).toFixed(1)
+      savingsRate: data.total_income > 0 
+        ? ((data.net_savings / data.total_income) * 100).toFixed(1) 
         : 0
     };
     console.log("📊 統計數據更新成功:", monthlyStats.value);
@@ -59,6 +61,74 @@ const fetchMonthlyStats = async () => {
   }
 }
 
+// 1.計算總淨資產
+// 邏輯：將 accounts 陣列中所有的 balance 加總
+const fetchDashboardData = async () => {
+  isAccountsLoading.value = true;
+  try {
+    const response = await accountApi.getList(); // 這對應到你的 GET /api/accounts/
+    const rawData = response.data ? response.data : response;
+
+    if (Array.isArray(rawData)) {
+      // 確保將後端欄位轉換成前端 Template 期待的欄位 (id, name, balance, icon 等)
+      accounts.value = rawData.map(acc => ({
+        id: acc.account_id,       // 假設後端欄位名
+        name: acc.account_name,   // 假設後端欄位名
+        balance: Number(acc.current_balance),     // 這裡就是你路由回傳的餘額
+        icon: acc.account_icon || '💰',
+        exclude: acc.exclude_from_assets   // 如果有排除計算的欄位
+      }));
+    }
+    console.log("💰 帳戶資料更新，當前淨資產:", totalNetWorth.value);
+  } catch (error) {
+    console.error("載入帳戶失敗:", error);
+  } finally {
+    isAccountsLoading.value = false;
+  }
+};
+
+// 確保你有這個抓取帳戶資料的函式（補上之前漏掉的邏輯）
+const formatNumber = (num) => {
+  return num ? num.toLocaleString() : 0
+}
+
+const totalNetWorth = computed(() => {
+  if (!accounts.value.length) return 0;
+  return accounts.value.reduce((sum, acc) => {
+    // 如果該帳戶標記為「排除」，則不計入總資產
+    if (acc.exclude) return sum; 
+    return sum + (Number(acc.balance) || 0);
+  }, 0);
+});
+
+
+
+// 2. 經常收支帳戶 (根據最近交易紀錄出現頻率)
+const frequentAccounts = computed(() => {
+  if (transactions.value.length === 0) return accounts.value.slice(0, 3);
+  
+  // 統計交易紀錄中每個帳戶名稱出現的次數
+  const counts = {};
+  transactions.value.forEach(t => {
+    // 這裡從交易紀錄的備註或相關欄位比對，若無精確對應，則依交易出現順序
+    const name = t.display_member; // 假設 member 裡存的是帳戶相關訊息，或改用其他匹配邏輯
+    counts[name] = (counts[name] || 0) + 1;
+  });
+
+  return [...accounts.value]
+    .sort((a, b) => (counts[b.name] || 0) - (counts[a.name] || 0))
+    .slice(0, 3);
+});
+
+// 3. 最近編輯或新增的帳戶 (利用 accounts 本身的順序或 id)
+const recentAccounts = computed(() => {
+  // 通常 id 越大或在陣列越後面代表越新，我們直接取最後加入的前三筆
+  return [...accounts.value].reverse().slice(0, 3);
+});
+
+
+
+//🌟最近交易
 const fetchTransactions = async (page = 1) => {
   isLoading.value = true
   try {
@@ -77,9 +147,9 @@ const fetchTransactions = async (page = 1) => {
     const traData = transfersRes.data?.data || transfersRes.data || transfersRes || [];
 
     // 💡 搜尋過濾邏輯：只有在搜尋「轉帳」相關字眼時才顯示轉帳紀錄
-    const isSearchingTransfer = searchQuery.value &&
+    const isSearchingTransfer = searchQuery.value && 
       (searchQuery.value.includes('轉') || searchQuery.value.includes('帳'));
-
+    
     let filteredTransfers = traData;
     if (searchQuery.value && !isSearchingTransfer) {
       filteredTransfers = [];
@@ -88,35 +158,31 @@ const fetchTransactions = async (page = 1) => {
     // 1. 標準化「收支紀錄」：大標題是類別，小標題是備註
     const recordList = recData.map(item => ({
       id: `r-${item.add_id}`,
-      display_title: item.add_class,
-      display_note: item.add_note || '',      // 🌟 原始備註 (灰色)
+      display_title: item.add_class,        // 🌟 類別當大標題
+      display_note: item.add_note || '',     // 🌟 備註當次標題
       display_date: item.add_date,
       display_amount: Number(item.add_amount) || 0,
       display_icon: item.add_class_icon || '📝',
       display_type: item.add_type ? 'income' : 'expense',
-      display_member: item.add_member || '',  // 🌟 成員 (藍色)
-      display_tag: item.add_tag || '',        // 🌟 標籤 (紅框)
-      display_flow: '',                       // 一般紀錄無流向
+      display_member: item.add_member,
       is_transfer: false
     }));
 
     // 2. 標準化「轉帳紀錄」
     const transferList = filteredTransfers.map(item => ({
       id: `t-${item.transaction_id}`,
-      display_title: '帳戶互轉',
-      display_flow: `${item.from_account_name} ➔ ${item.to_account_name}`, // 🌟 搬到這裡 (深綠)
+      display_title: '帳戶互轉',             // 🌟 轉帳大標題
+      display_note: `${item.from_account_name} ➔ ${item.to_account_name}`, // 🌟 流向當備註
       display_date: item.transaction_date,
       display_amount: Number(item.amount) || 0,
       display_icon: '🔄',
       display_type: 'transfer',
-      display_note: item.transaction_note || '', // 🌟 搬回備註 (灰色)
-      display_member: '',
-      display_tag: '',
+      display_member: item.transaction_note || '',
       is_transfer: true
     }));
 
     // 3. 合併並按日期排序
-    const combined = [...recordList, ...transferList].sort((a, b) =>
+    const combined = [...recordList, ...transferList].sort((a, b) => 
       new Date(b.display_date) - new Date(a.display_date)
     );
 
@@ -162,12 +228,6 @@ const goToPage = (page) => {
 
 
 
-// --- 以下為暫時預設的靜態資料，未來可由其他同學串接 ---
-const currentMonth = ref({
-  income: 85000,
-  expense: 52340,
-  balance: 32660
-})
 
 
 
@@ -178,87 +238,6 @@ const budgets = ref([
 ])
 
 
-
-// --- 1. 狀態定義 ---
-const accounts = ref([]);
-const isAccountsLoading = ref(false); // 💡 追蹤帳戶讀取狀態
-
-// --- 2. 核心邏輯：帳戶類型定義 ---
-// 根據你的需求，定義固定的五種類型
-const accountTypes = [
-  { value: 'bank', label: '銀行帳戶' },
-  { value: 'cash', label: '現金' },
-  { value: 'credit', label: '信用卡' },
-  { value: 'investment', label: '投資帳戶' },
-  { value: 'other', label: '其他' }
-]
-
-// --- 3. 數據轉換與清洗 (Map) ---
-// 負責將後端 Schema (account_id) 轉為前端慣用名稱 (id)
-const mapApiToAppTransactions = (apiData) => {
-  return apiData.map(item => ({
-    id: item.account_id,
-    name: item.account_name,
-    type: item.account_type,
-    currency: item.currency,
-    balance: Number(item.current_balance),
-    icon: item.account_icon,
-    exclude: item.exclude_from_assets
-  }));
-};
-
-// --- 4. 分組與計算 (Computed) ---
-const groupedAccounts = computed(() => {
-  // 1. 初始化分組物件，Key 使用 label
-  const groups = accountTypes.reduce((obj, typeObj) => {
-    obj[typeObj.label] = [];
-    return obj;
-  }, {});
-
-  accounts.value.forEach(acc => {
-    const rawType = acc.type ? acc.type.trim() : "";
-
-    // 2. 尋找匹配的類型定義
-    // 同時檢查是否等於 label (中文) 或 value (英文)
-    const matchedType = accountTypes.find(t =>
-      t.label === rawType ||
-      t.value === rawType ||
-      (rawType === "銀行" && t.value === "bank") // 額外防呆
-    );
-
-    if (matchedType) {
-      groups[matchedType.label].push(acc);
-    } else {
-      groups["其他"].push(acc);
-    }
-  });
-  return groups;
-});
-
-const fetchDashboardData = async () => {
-  isAccountsLoading.value = true;
-  try {
-    const response = await accountApi.getList();
-    const rawData = response.data ? response.data : response;
-
-    // 🚀 加入這行偵錯，按 F12 檢查 Console
-    console.log("後端回傳的原始類型清單:", rawData.map(a => a.account_type));
-
-    if (Array.isArray(rawData)) {
-      accounts.value = mapApiToAppTransactions(rawData);
-    }
-  } catch (error) {
-    console.error("載入帳戶失敗:", error);
-  } finally {
-    isAccountsLoading.value = false;
-  }
-};
-
-
-// 確保你有這個抓取帳戶資料的函式（補上之前漏掉的邏輯）
-const formatNumber = (num) => {
-  return num ? num.toLocaleString() : 0
-}
 
 // 在 onMounted 裡面同時呼叫兩個 API
 onMounted(async () => {
@@ -338,22 +317,29 @@ onMounted(async () => {
           <!-- Accounts Overview -->
           <div class="card accounts-card">
             <div class="card-inner-header">
-              <h3 class="card-inner-title">帳戶總覽</h3>
-              <p class="card-description">即時帳戶餘額</p>
+                <div>
+                  <h3 class="card-inner-title">帳戶總覽</h3>
+                  <p class="card-description">常用與最近異動帳戶</p>
+                </div>
             </div>
+            <br>
+                <div class="card-inner-title">
+                  <span style="font-size: 18px; color: #8c8c8c;">總淨資產</span>
+                  <span style="font-size: 30px; font-weight: 700; color: #2c3e50;"> NT$ {{ formatNumber(totalNetWorth) }} </span>
+                </div>
+            <br>
 
             <div class="card-body">
               <div v-if="isAccountsLoading" class="loading-state">載入中...</div>
               <div v-else class="type-groups-wrapper">
-                <div v-for="typeObj in accountTypes" :key="typeObj.value" class="account-type-section">
+                
+                <div class="account-type-section">
                   <div class="group-header">
-                    <span class="type-badge">{{ typeObj.label }}</span>
-                    <span class="type-count">{{ groupedAccounts[typeObj.label]?.length || 0 }} 個項目</span>
+                    <span class="type-badge frequent">常用收支</span>
+                    <span class="type-count">基於近期紀錄</span>
                   </div>
-
-                  <div v-if="groupedAccounts[typeObj.label] && groupedAccounts[typeObj.label].length > 0"
-                    class="accounts-list-vertical">
-                    <div v-for="acc in groupedAccounts[typeObj.label]" :key="acc.id" class="account-row-item">
+                  <div class="accounts-list-vertical">
+                    <div v-for="acc in frequentAccounts" :key="'freq-' + acc.id" class="account-row-item">
                       <div class="acc-main-info">
                         <div class="acc-icon-box">{{ acc.icon || '💰' }}</div>
                         <div class="acc-texts">
@@ -361,7 +347,6 @@ onMounted(async () => {
                             {{ acc.name }}
                             <span v-if="acc.exclude" class="exclude-mini-tag">排除</span>
                           </div>
-                          <!-- <div class="acc-currency-text">{{ acc.currency }}</div> -->
                         </div>
                       </div>
                       <div class="acc-balance-display" :class="{ 'is-negative': acc.balance < 0 }">
@@ -369,11 +354,31 @@ onMounted(async () => {
                       </div>
                     </div>
                   </div>
-
-                  <div v-else class="empty-type-msg">暫無 {{ typeObj.label }}</div>
                 </div>
-              </div>
 
+                <div class="section-divider" style="margin: 15px 0; border-top: 1px dashed #eee;"></div>
+
+                <div class="account-type-section">
+                  <div class="group-header">
+                    <span class="type-badge recent">最近異動</span>
+                    <span class="type-count">最新加入或修改</span>
+                  </div>
+                  <div class="accounts-list-vertical">
+                    <div v-for="acc in recentAccounts" :key="'rect-' + acc.id" class="account-row-item">
+                      <div class="acc-main-info">
+                        <div class="acc-icon-box">{{ acc.icon || '🗓️' }}</div>
+                        <div class="acc-texts">
+                          <div class="acc-name-text">{{ acc.name }}</div>
+                        </div>
+                      </div>
+                      <div class="acc-balance-display" :class="{ 'is-negative': acc.balance < 0 }">
+                        NT$ {{ formatNumber(acc.balance) }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
             </div>
           </div>
 
@@ -434,21 +439,12 @@ onMounted(async () => {
                       <div class="transaction-name">{{ t.display_title }}</div>
 
                       <div class="transaction-category">
-                        <span v-if="t.display_tag" class="tag-frame">{{ t.display_tag }}</span>
-
-                        <span v-if="t.display_member" class="member-label">
-                          <i class="glyphicon glyphicon-user"></i> {{ t.display_member }} 
+                        <span v-if="t.display_note" class="note-text">{{ t.display_note }}</span>
+                        <!-- <span class="tag">{{ t.display_category }}</span> -->
+                        <span class="member-tag" v-if="t.display_member">
+                          <i class="glyphicon glyphicon-user"></i> {{ t.display_member }}
                         </span>
 
-                        <span v-if="t.display_note" class="note-text">
-                            <span v-if="t.display_member" class="note-divider" > | </span>
-                          {{ t.display_note }}</span>
-
-                        <span v-if="t.is_transfer && t.display_flow" class="transfer-flow">
-                          {{ t.display_flow }}
-                        </span>
-
-                        
                       </div>
                     </div>
                   </div>
@@ -529,60 +525,4 @@ onMounted(async () => {
 
 <style scoped>
 @import '../assets/css/dashboard.css';
-
-/* 備註：純文字 */
-.note-text {
-  font-size: 12px;
-  color: #64748b;
-  margin-right: 8px;
-}
-/* 備註：純文字灰色 */
-.note-text {
-  font-size: 12px;
-  color: #64748b;
-  margin-right: 8px;
-}
-
-/* 標籤：紅色方框 */
-.tag-frame {
-  font-size: 11px;
-  color: #777373;
-  border: 1px solid #ffffff;
-  padding: 1px 6px;
-  border-radius: 4px;
-  margin-right: 4px;
-  background-color: #f5efbf;
-}
-
-/* 成員：淡藍色文字 */
-.member-label {
-  font-size: 12px;
-  color: #adb9cc;
-  font-weight: 500;
-  margin-right: 8px;
-}
-/* 修正原本可能有的灰色背景 */
-.transaction-category span {
-  display: inline-block;
-  vertical-align: middle;
-}
-
-/* 🌟 轉帳帳戶流向：深綠色 */
-.transfer-flow {
-  font-size: 12px;
-  color: #0d63aa; /* 深綠色 */
-  font-weight: 600;
-  margin-right: 8px;
-}
-.note-divider{
-  /* 💡 左右各給 10px 的間距，保證絕對對齊 */
-  margin-right: 6px;
-  
-  /* 💡 讓顏色淡一點，看起來比較有質感 */
-  color: #ccc; 
-  
-  /* 💡 確保這條線不會被滑鼠反白選取到，操作感更好 */
-  user-select: none;
-}
-
 </style>

@@ -17,6 +17,7 @@ const assetTypes = [
     { value: 'cash', label: '現金 (資產項)' },
     { value: 'bank', label: '銀行帳戶 (資產項)' },
     { value: 'investment', label: '投資帳戶 (資產項)' },
+    { value: 'savings', label: '儲蓄帳戶' },
     { value: 'other', label: '其他資產 (資產項)' }
 ];
 
