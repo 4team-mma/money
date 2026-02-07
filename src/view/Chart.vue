@@ -208,7 +208,7 @@ onMounted(async () => {
         // 預設自訂日期的範圍
         const end = new Date()
         const start = new Date()
-        start.setMonth(start.getMonth() - 1)
+        start.setMonth(start.getMonth() - 12)
         startDate.value = start.toISOString().split('T')[0]
         endDate.value = end.toISOString().split('T')[0]
 
