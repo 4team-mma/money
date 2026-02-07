@@ -102,18 +102,19 @@ const now_money = computed(()=>{
 </template>
 
 <style scoped>
-/* 引用共用樣式 */
+/* 引用共用 CSS */
 @import '../assets/css/add.css';
 
-
-
+/* 1. 卡片樣式 */
 .card {
-    background: #ffffff;
+    background: var(--bg-card); /* 原本 #ffffff */
     border-radius: 16px;
     padding: 24px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-card); /* 原本 0 10px 25px... */
+    border: 1px solid var(--border-color); /* 補上邊框 */
 }
 
+/* 2. 標題與日期 */
 .header {
     margin-bottom: 24px;
 }
@@ -121,14 +122,24 @@ const now_money = computed(()=>{
 .header h2 {
     margin: 0;
     font-size: 1.5rem;
+    color: var(--text-primary); /* 補上標題顏色 */
 }
 
-.date {
-    font-size: 0.9rem;
-    color: #64748b;
+.date-input-container button {
+    background: none;
+    font-size: 1.2rem;
 }
 
-/* 表單通用群組 */
+.date-display-input {
+    background: transparent;
+    border: none;
+    font-size: 1rem;
+    color: var(--text-secondary); /* 補上日期文字顏色 */
+    width: 120px;
+    cursor: pointer;
+}
+
+/* 3. 表單通用群組 */
 .form-group {
     display: flex;
     flex-direction: column;
@@ -141,24 +152,30 @@ const now_money = computed(()=>{
     align-self: flex-start;
     cursor: pointer;
     width: auto;
+    color: var(--text-primary); /* 確保檔案名稱可見 */
 }
 
 label {
     font-size: 0.85rem;
-    color: #475569;
+    color: var(--text-secondary); /* 原本 #475569 */
+    margin-bottom: 4px;
 }
 
-/* 金額輸入框樣式 */
+/* 4. 金額輸入框樣式 */
 .amount-input {
     height: 52px;
     font-size: 1.4rem;
     font-weight: 600;
     padding: 0 16px;
     border-radius: 12px;
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--border-color); /* 原本 #e2e8f0 */
+    background: var(--bg-input); /* 補上背景 */
+    color: var(--text-primary);  /* 補上文字 */
+    width: 100%;
+    box-sizing: border-box;
 }
 
-/* 二欄式網格佈局 */
+/* 5. 二欄式網格佈局 */
 .grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr)); 
@@ -173,16 +190,21 @@ label {
     }
 }
 
-/* 備註輸入框樣式 */
+/* 6. 備註輸入框樣式 */
 textarea {
     min-height: 120px;
     padding: 12px;
     border-radius: 12px;
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--border-color); /* 原本 #e2e8f0 */
+    background: var(--bg-input); /* 補上背景 */
+    color: var(--text-primary);  /* 補上文字 */
     resize: vertical;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: inherit;
 }
 
-/* 下方按鈕區 */
+/* 7. 下方按鈕區 */
 .actions {
     display: flex;
     justify-content: flex-end;
@@ -191,8 +213,8 @@ textarea {
 }
 
 .btn-primary {
-    background: #2563eb;
-    color: white;
+    background: var(--color-primary); /* 原本 #2563eb */
+    color: var(--text-inverse); /* 原本 white */
     padding: 10px 20px;
     border: 0;
     border-radius: 10px;
@@ -201,11 +223,17 @@ textarea {
 }
 
 .btn-secondary {
-    background: #e7eef5;
-    color: #334155;
+    background: var(--bg-hover); /* 原本 #e7eef5 */
+    color: var(--text-secondary); /* 原本 #334155 */
     padding: 10px 20px;
     border-radius: 10px;
-    border: 0;
+    border: 1px solid var(--border-color); /* 補上邊框 */
     cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-secondary:hover {
+    background: var(--border-color);
+    color: var(--text-primary);
 }
 </style>

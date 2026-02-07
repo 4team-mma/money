@@ -1,65 +1,117 @@
-/* @import './base.css';
+/* src/assets/css/main.css */
 
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-weight: normal;
+/* =========================================
+   1. 定義預設變數 (Light Mode - MMA 經典)
+   ========================================= */
+:root {
+    /* --- 背景類 --- */
+    --bg-body: #f8f9fa;       /* 頁面大背景 (淺灰) */
+    --bg-card: #ffffff;       /* 卡片、側邊欄背景 (白) */
+    --bg-sidebar: #ffffff;    /* 側邊欄背景 */
+    --bg-hover: rgba(0,0,0,0.05); /* 滑鼠移過去的底色 */
+    --bg-input: #ffffff;      /* 輸入框背景 */
+
+    /* --- 文字色 --- */
+    --text-primary: #1e293b;  /* 主要深色文字 */
+    --text-secondary: #64748b;/* 次要灰色文字 */
+    --text-inverse: #ffffff;  /* 反白文字 */
+
+    /* --- 品牌與功能色 --- */
+    --color-primary: #3b82f6; /* 品牌藍 */
+    --color-success: #10b981; /* 成功綠 */
+    --color-danger: #ef4444;  /* 危險紅 */
+
+    /* --- 邊框與陰影 --- */
+    --border-color: #e2e8f0;
+    --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-a,
-.green {
-  text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
+/* =========================================
+   2. 深色主題 (Dark Mode - 極客深邃)
+   ========================================= */
+[data-theme="dark"] {
+    --bg-body: #0f172a;       /* 極深藍/黑 */
+    --bg-card: #1e293b;       /* 深灰藍 */
+    --bg-sidebar: #1e293b;
+    --bg-hover: rgba(255,255,255,0.1);
+    --bg-input: #334155;
+
+    --text-primary: #f1f5f9;  /* 亮白 */
+    --text-secondary: #94a3b8;/* 淺灰 */
+    --text-inverse: #ffffff;
+
+    --color-primary: #60a5fa; /* 淺藍 */
+    --color-success: #34d399; /* 淺綠 */
+    --color-danger: #f87171;  /* 淺紅 */
+
+    --border-color: #334155;
+    --shadow-card: none;
 }
 
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
+/* =========================================
+   3. 森林主題 (Forest - 森林晨曦) [整合隊友]
+   ========================================= */
+[data-theme="forest"] {
+    --bg-body: #f0fdf4;       /* 極淺綠背景 */
+    --bg-card: #ffffff;
+    --bg-sidebar: #ffffff;
+    --bg-hover: #dcfce7;      /* 淺綠 Hover */
+    --bg-input: #ffffff;
+
+    --text-primary: #064e3b;  /* 深綠文字 */
+    --text-secondary: #047857;/* 次要綠文字 */
+    --text-inverse: #ffffff;
+
+    --color-primary: #10b981; /* 品牌綠 */
+    --color-success: #059669; 
+    --color-danger: #ef4444;
+
+    --border-color: #d1fae5;  /* 淺綠邊框 */
+    --shadow-card: 0 4px 6px -1px rgba(16, 185, 129, 0.1);
 }
 
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
+/* =========================================
+   4. 夕陽主題 (Sunset - 微醺夕陽) [整合隊友]
+   ========================================= */
+[data-theme="sunset"] {
+    --bg-body: #fffbeb;       /* 淺黃背景 */
+    --bg-card: #ffffff;
+    --bg-sidebar: #ffffff;
+    --bg-hover: #fef3c7;      /* 淺橘 Hover */
+    --bg-input: #ffffff;
 
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
-  } */
+    --text-primary: #78350f;  /* 深褐文字 */
+    --text-secondary: #92400e;/* 次要褐文字 */
+    --text-inverse: #ffffff;
 
-  body {
-  background-color: #f8f8e1;
-    padding-left: 2rem;
-    padding-right: 2rem;
+    --color-primary: #f59e0b; /* 品牌橘 */
+    --color-success: #10b981;
+    --color-danger: #ef4444;
+
+    --border-color: #fde68a;  /* 淺黃邊框 */
+    --shadow-card: 0 4px 6px -1px rgba(245, 158, 11, 0.1);
 }
 
-.nav {
-  display: flex;
-  justify-content: center;
-  gap: 60px; /* 自動產生間距 */
-  padding: 20px 0;
-  font-size: 18px;
-}
-.nav-link,
-.nav-link:visited,
-.nav-link:active {
-  color: #333;
-  text-decoration: none;
-  font-weight: 500;
-}
-
-/* hover 效果 */
-.nav-link:hover {
-  color: #409eff;
+/* =========================================
+   5. 通用基礎樣式
+   ========================================= */
+body {
+    background-color: var(--bg-body);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    margin: 0; 
+    padding: 0;
+    transition: background-color 0.3s ease, color 0.3s ease; /* 讓主題切換更滑順 */
 }
 
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* 確保所有標題置中 (您原本的設定) */
 h1 {
-  text-align: center;
+    text-align: center;
 }
-/* } */

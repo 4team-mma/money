@@ -155,11 +155,12 @@ const remainingChars = computed(() => {
 
 <template>
     <div class="picker-trigger" @click="showModal = true">
-        <div class="dot-group" v-if="selectedItems.length > 0">
+        <div class="tag-preview-group" v-if="selectedItems.length > 0">
             <span v-for="item in selectedItems" :key="item.id" class="color-dot"
                 :style="{ backgroundColor: item.color }"></span>
+            <span class="current-name">{{ displayText }}</span>
         </div>
-        <span class="current-name">{{ displayText }}</span>
+        <span v-else class="current-name">選擇標籤</span>
     </div>
 
     <Teleport to="body">
@@ -167,7 +168,7 @@ const remainingChars = computed(() => {
             <div v-if="showModal" class="modal-overlay" @click="showModal = false">
                 <div class="modal-content" @click.stop>
                     <div class="modal-header">
-                        <h3>選擇標籤 (剩餘容量: {{ remainingChars }} 字)</h3>
+                        <h3>選擇標籤 (剩餘: {{ remainingChars }} 字)</h3>
                         <button class="confirm-btn" @click="showModal = false">完成</button>
                     </div>
 
@@ -184,12 +185,14 @@ const remainingChars = computed(() => {
                         <div class="add-form">
                             <input v-model="newAdd" placeholder="新增標籤名稱" class="tag-input" @keyup.enter="addNewItem"
                                 maxlength="15" />
+                            
                             <div class="color-picker-wrapper">
-                                <div v-for="c in colors" :key="c" @click="newColor = c">
+                                <div v-for="c in colors" :key="c" @click="newColor = c" class="color-option">
                                     <span class="color-dot-large" :style="{ backgroundColor: c }"
                                         :class="{ 'is-selected': newColor === c }"></span>
                                 </div>
                             </div>
+                            
                             <button class="btn-submit-large" @click="addNewItem">新增並選取</button>
                         </div>
                     </div>
@@ -202,41 +205,48 @@ const remainingChars = computed(() => {
 <style scoped>
 @import '../assets/css/add.css';
 
-
-.dot-group {
+/* 標籤預覽群組 */
+.tag-preview-group {
     display: flex;
-    gap: 4px;
     align-items: center;
+    gap: 8px;
+    overflow: hidden; /* 防止標籤太多爆版 */
 }
 
-/* 顏色選擇圓點樣式 */
+/* 顏色選擇圓點容器 */
 .color-picker-wrapper {
     display: flex;
     justify-content: center;
     gap: 12px;
     margin: 15px 0;
+    flex-wrap: wrap; /* 防止手機版顏色太多擠爆 */
+}
+
+.color-option {
+    cursor: pointer;
 }
 
 .color-dot-large {
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    cursor: pointer;
     display: block;
     transition: transform 0.2s;
     border: 2px solid transparent;
 }
 
+/* 選中顏色的狀態 */
 .color-dot-large.is-selected {
-    outline: 2px solid #3b82f6;
+    /* 使用變數確保在深色模式下選中框也看得清楚 */
+    outline: 2px solid var(--color-primary); 
     outline-offset: 3px;
     transform: scale(1.1);
 }
 
 .btn-submit-large {
     width: 100%;
-    background-color: #3b82f6;
-    color: white;
+    background-color: var(--color-primary); /* 原本 #3b82f6 */
+    color: var(--text-inverse); /* 原本 white */
     border: none;
     padding: 12px;
     border-radius: 12px;
@@ -248,8 +258,21 @@ const remainingChars = computed(() => {
 .tag-input {
     width: 100%;
     padding: 12px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-color); /* 原本 #e2e8f0 */
     border-radius: 10px;
     box-sizing: border-box;
+    background: var(--bg-input); /* 補上輸入框背景 */
+    color: var(--text-primary);  /* 補上輸入框文字 */
+}
+
+/* 刪除按鈕微調 */
+.del-btn {
+    margin-left: 8px;
+    font-size: 10px;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+.del-btn:hover {
+    color: var(--color-danger);
 }
 </style>

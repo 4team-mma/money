@@ -110,7 +110,7 @@ const addNewItem = () => {
 </template>
 
 <style scoped>
-/* 引用共用 CSS */
+/* 引用共用 CSS (add.css) 保持不變 */
 @import '../assets/css/add.css';
 
 /* 內部微調：維持網格樣式一致性 */
@@ -119,10 +119,13 @@ const addNewItem = () => {
     grid-template-columns: repeat(4, 1fr);
     gap: 12px;
     padding: 20px;
+    /* 建議加上 max-height */
+    max-height: 40vh; 
+    overflow-y: auto;
 }
 
 .grid-card {
-    background: #f8fafc;
+    background: var(--bg-body); /* 原本 #f8fafc */
     border-radius: 12px;
     padding: 12px 5px;
     display: flex;
@@ -130,6 +133,12 @@ const addNewItem = () => {
     align-items: center;
     cursor: pointer;
     position: relative;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.grid-card:hover {
+    background: var(--bg-hover);
 }
 
 .card-icon {
@@ -137,10 +146,9 @@ const addNewItem = () => {
     margin-bottom: 4px;
 }
 
-
 .card-name {
     font-size: 0.85rem;
-    color: #64748b;
+    color: var(--text-secondary); /* 原本 #64748b */
 }
 
 .del-x {
@@ -148,13 +156,15 @@ const addNewItem = () => {
     top: 5px;
     right: 5px;
     font-size: 10px;
-    color: #cbd5e1;
+    color: var(--text-secondary); /* 原本 #cbd5e1 */
+    opacity: 0.5;
 }
 
 /* 新增區塊 */
 .add-section-box {
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid var(--border-color); /* 原本 #f1f5f9 */
     padding: 15px 20px;
+    background: var(--bg-card); /* 確保底部區塊背景正確 */
 }
 
 .toggle-btn {
@@ -164,7 +174,7 @@ const addNewItem = () => {
     border: none;
     background: none;
     font-weight: 600;
-    color: #2563eb;
+    color: var(--color-primary); /* 原本 #2563eb */
     cursor: pointer;
     padding-bottom: 10px;
 }
@@ -184,17 +194,22 @@ const addNewItem = () => {
     border-radius: 8px;
     transition: 0.2s;
     border: 2px solid transparent;
+    background: var(--bg-card); /* 補上 icon 背景 */
+}
+
+.icon-option:hover {
+    background: var(--bg-hover);
 }
 
 .icon-option.active {
-    border-color: #2563eb;
-    background: #eff6ff;
+    border-color: var(--color-primary); /* 原本 #2563eb */
+    background: var(--bg-hover); /* 原本 #eff6ff */
 }
 
 .btn-submit {
     width: 100%;
-    background: #2563eb;
-    color: white;
+    background: var(--color-primary); /* 原本 #2563eb */
+    color: var(--text-inverse); /* 原本 white */
     border: none;
     padding: 12px;
     border-radius: 12px;
@@ -205,18 +220,23 @@ const addNewItem = () => {
 .full-input {
     width: 100%;
     padding: 12px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-color); /* 原本 #e2e8f0 */
     border-radius: 10px;
     margin-top: 5px;
     box-sizing: border-box;
+    background: var(--bg-input); /* 補上輸入框背景 */
+    color: var(--text-primary);  /* 補上輸入框文字 */
 }
 
 .close-btn {
     background: none;
     border: none;
     font-size: 1.2rem;
-    color: #94a3b8;
+    color: var(--text-secondary); /* 原本 #94a3b8 */
     cursor: pointer;
+}
+.close-btn:hover {
+    color: var(--color-primary);
 }
 
 .rotate {
