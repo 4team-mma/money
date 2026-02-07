@@ -3,20 +3,15 @@ import { ref, onMounted, computed } from 'vue'
 import Nav from '@/components/Nav.vue';
 import api from '@/api'
 import { accountApi } from '@/api/account';
-import { getTransferList } from '@/api/transfer';
 
 // 💡 存放從 API 抓回來的「活資料」
 const transactions = ref([])
-// const pagination = ref({
-//     current_page: 1,
-//     total_pages: 1,
-//     total_rows: 0
-// })
 const searchQuery = ref('')
 const isLoading = ref(false)
 const accounts = ref([]);
 const isAccountsLoading = ref(false);
-// 1. 確保初始結構完整，防止初次渲染崩潰
+
+// 1. 分頁結構
 const pagination = ref({
   current_page: 1,
   total_pages: 1,
@@ -25,6 +20,7 @@ const pagination = ref({
   has_prev: false
 })
 
+// 2. 月度統計資料
 const monthlyStats = ref({
   income: 0,
   incomeChange: 0, // 較上月增加 %
@@ -34,52 +30,55 @@ const monthlyStats = ref({
   savingsRate: 0
 })
 
+// --- [隊友新增] 靜態預算資料 (若未來有 API 可替換) ---
+const budgets = ref([
+  { category: '飲食', spent: 8500, limit: 12000, color: 'color-1' },
+  { category: '交通', spent: 3200, limit: 5000, color: 'color-2' },
+  { category: '娛樂', spent: 6800, limit: 8000, color: 'color-3' }
+])
 
-// 🌟 帳戶總覽：抓取後端統計路由 /records/stats/monthly
+// ==========================================
+// 🚀 核心邏輯區 (整合隊友的 API 呼叫)
+// ==========================================
+
+// 1. 抓取月度統計
 const fetchMonthlyStats = async () => {
   try {
-    // 假設你的 api 檔已經定義好 getCurrentStats，或是直接寫路徑
     const response = await api.get('/records/stats/monthly');
     const data = response.data?.data || response.data || response;
 
-    // 將後端數據映射到前端變數
-    // 這裡假設後端回傳包含：total_income, income_change, total_expense, expense_change, balance
     monthlyStats.value = {
       income: Number(data.total_income) || 0,
       incomeChange: data.income_change || 0,
       expense: Number(data.total_expense) || 0,
       expenseChange: data.expense_change || 0,
       balance: Number(data.net_savings) || 0,
-      // 儲蓄率公式：(收入 - 支出) / 收入 * 100
       savingsRate: data.total_income > 0 
         ? ((data.net_savings / data.total_income) * 100).toFixed(1) 
         : 0
     };
-    console.log("📊 統計數據更新成功:", monthlyStats.value);
   } catch (error) {
     console.error("❌ 抓取統計數據失敗:", error);
   }
 }
 
-// 1.計算總淨資產
-// 邏輯：將 accounts 陣列中所有的 balance 加總
+// 2. [隊友新增] 抓取帳戶列表並清洗資料
 const fetchDashboardData = async () => {
   isAccountsLoading.value = true;
   try {
-    const response = await accountApi.getList(); // 這對應到你的 GET /api/accounts/
+    const response = await accountApi.getList();
     const rawData = response.data ? response.data : response;
 
     if (Array.isArray(rawData)) {
-      // 確保將後端欄位轉換成前端 Template 期待的欄位 (id, name, balance, icon 等)
+      // 轉換後端欄位為前端格式
       accounts.value = rawData.map(acc => ({
-        id: acc.account_id,       // 假設後端欄位名
-        name: acc.account_name,   // 假設後端欄位名
-        balance: Number(acc.current_balance),     // 這裡就是你路由回傳的餘額
+        id: acc.account_id,
+        name: acc.account_name,
+        balance: Number(acc.current_balance),
         icon: acc.account_icon || '💰',
-        exclude: acc.exclude_from_assets   // 如果有排除計算的欄位
+        exclude: acc.exclude_from_assets
       }));
     }
-    console.log("💰 帳戶資料更新，當前淨資產:", totalNetWorth.value);
   } catch (error) {
     console.error("載入帳戶失敗:", error);
   } finally {
@@ -87,31 +86,22 @@ const fetchDashboardData = async () => {
   }
 };
 
-// 確保你有這個抓取帳戶資料的函式（補上之前漏掉的邏輯）
-const formatNumber = (num) => {
-  return num ? num.toLocaleString() : 0
-}
-
+// 3. [隊友新增] 計算總淨資產 (Computed)
 const totalNetWorth = computed(() => {
   if (!accounts.value.length) return 0;
   return accounts.value.reduce((sum, acc) => {
-    // 如果該帳戶標記為「排除」，則不計入總資產
-    if (acc.exclude) return sum; 
+    if (acc.exclude) return sum; // 排除不計入資產的帳戶
     return sum + (Number(acc.balance) || 0);
   }, 0);
 });
 
-
-
-// 2. 經常收支帳戶 (根據最近交易紀錄出現頻率)
+// 4. [隊友新增] 經常收支帳戶 (邏輯：根據交易紀錄頻率)
 const frequentAccounts = computed(() => {
   if (transactions.value.length === 0) return accounts.value.slice(0, 3);
   
-  // 統計交易紀錄中每個帳戶名稱出現的次數
   const counts = {};
   transactions.value.forEach(t => {
-    // 這裡從交易紀錄的備註或相關欄位比對，若無精確對應，則依交易出現順序
-    const name = t.display_member; // 假設 member 裡存的是帳戶相關訊息，或改用其他匹配邏輯
+    const name = t.display_member; // 這裡假設用 member 或 account name 匹配
     counts[name] = (counts[name] || 0) + 1;
   });
 
@@ -120,33 +110,27 @@ const frequentAccounts = computed(() => {
     .slice(0, 3);
 });
 
-// 3. 最近編輯或新增的帳戶 (利用 accounts 本身的順序或 id)
+// 5. [隊友新增] 最近異動帳戶 (邏輯：取最新加入的)
 const recentAccounts = computed(() => {
-  // 通常 id 越大或在陣列越後面代表越新，我們直接取最後加入的前三筆
   return [...accounts.value].reverse().slice(0, 3);
 });
 
-
-
-//🌟最近交易
+// 6. 抓取交易紀錄 (含搜尋與分頁)
 const fetchTransactions = async (page = 1) => {
   isLoading.value = true
   try {
     const pageSize = 10;
     const params = { page, page_size: pageSize, search: searchQuery.value };
 
-    // 同步抓取收支與轉帳
     const [recordsRes, transfersRes] = await Promise.all([
       api.get('/records/', { params }),
       api.get('/transfers/')
     ]);
 
-    // 💡 關鍵防呆：自動偵測後端回傳格式 (處理 interceptor 的差異)
-    // 確保我們拿到的是陣列，或是包含 data 陣列的物件
     const recData = recordsRes.data?.data || recordsRes.data || recordsRes || [];
     const traData = transfersRes.data?.data || transfersRes.data || transfersRes || [];
 
-    // 💡 搜尋過濾邏輯：只有在搜尋「轉帳」相關字眼時才顯示轉帳紀錄
+    // 搜尋過濾邏輯
     const isSearchingTransfer = searchQuery.value && 
       (searchQuery.value.includes('轉') || searchQuery.value.includes('帳'));
     
@@ -155,43 +139,41 @@ const fetchTransactions = async (page = 1) => {
       filteredTransfers = [];
     }
 
-    // 1. 標準化「收支紀錄」：大標題是類別，小標題是備註
+    // 格式化一般收支
     const recordList = recData.map(item => ({
       id: `r-${item.add_id}`,
-      display_title: item.add_class,        // 🌟 類別當大標題
-      display_note: item.add_note || '',     // 🌟 備註當次標題
+      display_title: item.add_class,
+      display_note: item.add_note || '',
       display_date: item.add_date,
       display_amount: Number(item.add_amount) || 0,
       display_icon: item.add_class_icon || '📝',
       display_type: item.add_type ? 'income' : 'expense',
       display_member: item.add_member,
+      display_tag: item.add_tag, // 補上 tag
       is_transfer: false
     }));
 
-    // 2. 標準化「轉帳紀錄」
+    // 格式化轉帳紀錄
     const transferList = filteredTransfers.map(item => ({
       id: `t-${item.transaction_id}`,
-      display_title: '帳戶互轉',             // 🌟 轉帳大標題
-      display_note: `${item.from_account_name} ➔ ${item.to_account_name}`, // 🌟 流向當備註
+      display_title: '帳戶互轉',
+      display_flow: `${item.from_account_name} ➔ ${item.to_account_name}`, // [隊友修改] 流向
       display_date: item.transaction_date,
       display_amount: Number(item.amount) || 0,
       display_icon: '🔄',
       display_type: 'transfer',
-      display_member: item.transaction_note || '',
+      display_note: item.transaction_note || '',
       is_transfer: true
     }));
 
-    // 3. 合併並按日期排序
+    // 合併排序
     const combined = [...recordList, ...transferList].sort((a, b) => 
       new Date(b.display_date) - new Date(a.display_date)
     );
 
-    // 顯示前 10 筆
     transactions.value = combined.slice(0, pageSize);
 
-    // 💡 解決分頁不見的問題：
-    // 之前會不見是因為你拿「抓回來的筆數(10)」去除以 10，結果等於 1 頁就隱藏了。
-    // 我們必須從後端回傳的 pagination 裡拿「真正的總筆數」。
+    // 計算分頁
     const serverTotalRows = recordsRes.data?.pagination?.total_rows || recordsRes.pagination?.total_rows || recData.length;
     const totalCount = serverTotalRows + (searchQuery.value && !isSearchingTransfer ? 0 : traData.length);
 
@@ -201,8 +183,6 @@ const fetchTransactions = async (page = 1) => {
       total_rows: totalCount
     };
 
-    console.log("✅ 成功更新 transactions，總筆數:", totalCount);
-
   } catch (error) {
     console.error("❌ 抓取失敗:", error);
   } finally {
@@ -210,53 +190,31 @@ const fetchTransactions = async (page = 1) => {
   }
 }
 
-// 💡 監聽搜尋輸入 (延遲 500ms 觸發，避免頻繁請求)
-let searchTimer = null
+// 輔助函式
+const formatNumber = (num) => num ? num.toLocaleString() : 0;
+
+let searchTimer = null;
 const handleSearch = () => {
-  clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => {
-    fetchTransactions(1) // 搜尋時回到第一頁
-  }, 500)
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => fetchTransactions(1), 500);
 }
 
-// 💡 切換頁碼
 const goToPage = (page) => {
-  if (page >= 1 && page <= pagination.value.total_pages) {
-    fetchTransactions(page)
-  }
+  if (page >= 1 && page <= pagination.value.total_pages) fetchTransactions(page);
 }
 
-
-
-
-
-
-const budgets = ref([
-  { category: '飲食', spent: 8500, limit: 12000, color: 'color-1' },
-  { category: '交通', spent: 3200, limit: 5000, color: 'color-2' },
-  { category: '娛樂', spent: 6800, limit: 8000, color: 'color-3' }
-])
-
-
-
-// 在 onMounted 裡面同時呼叫兩個 API
 onMounted(async () => {
   fetchMonthlyStats();
-  // 1. 先等待帳戶資料載入 (為了拿到 icon 字典)
   await fetchDashboardData();
-  // 2. 接著才載入交易紀錄 (這時候就可以去對應 icon 了)
   fetchTransactions();
 })
-
 </script>
-
 
 <template>
   <Nav>
-    <div class="dashboard-page-layout" style="display: flex; min-height: 100vh;">
-
-      <div class="dashboard-container" style="flex: 1;">
-        <!-- Header -->
+    <div class="dashboard-page-layout">
+      <div class="dashboard-container">
+        
         <div class="page-header">
           <div>
             <h1 class="page-title">儀表板</h1>
@@ -264,7 +222,6 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Overview Cards -->
         <div class="overview-grid">
           <div class="stat-card income-card">
             <div class="card-header">
@@ -276,8 +233,7 @@ onMounted(async () => {
             </div>
             <div class="card-content">
               <div class="amount">NT$ {{ formatNumber(monthlyStats.income) }}</div>
-              <p class="change-text">{{ monthlyStats.incomeChange >= 0 ? '增加' : '減少' }} {{
-                Math.abs(monthlyStats.incomeChange) }}%</p>
+              <p class="change-text">{{ monthlyStats.incomeChange >= 0 ? '增加' : '減少' }} {{ Math.abs(monthlyStats.incomeChange) }}%</p>
             </div>
           </div>
 
@@ -291,8 +247,7 @@ onMounted(async () => {
             </div>
             <div class="card-content">
               <div class="amount">NT$ {{ formatNumber(monthlyStats.expense) }}</div>
-              <p class="change-text">{{ monthlyStats.expenseChange >= 0 ? '增加' : '減少' }} {{
-                Math.abs(monthlyStats.expenseChange) }}%</p>
+              <p class="change-text">{{ monthlyStats.expenseChange >= 0 ? '增加' : '減少' }} {{ Math.abs(monthlyStats.expenseChange) }}%</p>
             </div>
           </div>
 
@@ -312,9 +267,8 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Main Content Grid -->
         <div class="content-grid">
-          <!-- Accounts Overview -->
+          
           <div class="card accounts-card">
             <div class="card-inner-header">
                 <div>
@@ -322,12 +276,11 @@ onMounted(async () => {
                   <p class="card-description">常用與最近異動帳戶</p>
                 </div>
             </div>
-            <br>
-                <div class="card-inner-title">
-                  <span style="font-size: 18px; color: #8c8c8c;">總淨資產</span>
-                  <span style="font-size: 30px; font-weight: 700; color: #2c3e50;"> NT$ {{ formatNumber(totalNetWorth) }} </span>
-                </div>
-            <br>
+            
+            <div class="card-net-worth">
+                <span class="label">總淨資產</span>
+                <span class="value"> NT$ {{ formatNumber(totalNetWorth) }} </span>
+            </div>
 
             <div class="card-body">
               <div v-if="isAccountsLoading" class="loading-state">載入中...</div>
@@ -356,7 +309,7 @@ onMounted(async () => {
                   </div>
                 </div>
 
-                <div class="section-divider" style="margin: 15px 0; border-top: 1px dashed #eee;"></div>
+                <div class="section-divider"></div>
 
                 <div class="account-type-section">
                   <div class="group-header">
@@ -382,7 +335,6 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Budget Tracking -->
           <div class="card">
             <div class="card-inner-header">
               <h3 class="card-inner-title">預算追蹤</h3>
@@ -411,7 +363,6 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Recent Transactions & Notifications -->
         <div class="bottom-grid">
           <div class="card transactions-card">
             <div class="card-inner-header">
@@ -439,12 +390,16 @@ onMounted(async () => {
                       <div class="transaction-name">{{ t.display_title }}</div>
 
                       <div class="transaction-category">
-                        <span v-if="t.display_note" class="note-text">{{ t.display_note }}</span>
-                        <!-- <span class="tag">{{ t.display_category }}</span> -->
-                        <span class="member-tag" v-if="t.display_member">
-                          <i class="glyphicon glyphicon-user"></i> {{ t.display_member }}
+                        <span v-if="t.display_tag" class="tag-frame">{{ t.display_tag }}</span>
+                        <span v-if="t.display_member" class="member-label">
+                          <i class="glyphicon glyphicon-user"></i> {{ t.display_member }} 
                         </span>
-
+                        <span v-if="t.display_note" class="note-text">
+                            <span v-if="t.display_member" class="note-divider"> | </span>
+                          {{ t.display_note }}</span>
+                        <span v-if="t.is_transfer && t.display_flow" class="transfer-flow">
+                          {{ t.display_flow }}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -477,52 +432,179 @@ onMounted(async () => {
             <div class="card-body">
               <div class="notifications-list">
                 <div class="notification-item warning">
-                  <svg class="notification-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" x2="12" y1="8" y2="12"></line>
-                    <line x1="12" x2="12.01" y1="16" y2="16"></line>
-                  </svg>
-                  <div>
-                    <div class="notification-title">預算提醒</div>
-                    <p class="notification-text">娛樂預算已使用 85%，建議控制支出</p>
-                  </div>
+                  <div class="notification-title">預算提醒</div>
+                  <p class="notification-text">娛樂預算已使用 85%，建議控制支出</p>
                 </div>
-
                 <div class="notification-item success">
-                  <svg class="notification-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path
-                      d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2h0V5z">
-                    </path>
-                    <path d="M2 9v1c0 1.1.9 2 2 2h1"></path>
-                    <path d="M16 11h0"></path>
-                  </svg>
-                  <div>
-                    <div class="notification-title">儲蓄目標</div>
-                    <p class="notification-text">本月已達成儲蓄目標 76%，繼續加油！</p>
-                  </div>
-                </div>
-
-                <div class="notification-item info">
-                  <svg class="notification-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <rect width="20" height="14" x="2" y="5" rx="2"></rect>
-                    <line x1="2" x2="22" y1="10" y2="10"></line>
-                  </svg>
-                  <div>
-                    <div class="notification-title">帳單提醒</div>
-                    <p class="notification-text">信用卡帳單將於 3 天後到期</p>
-                  </div>
+                  <div class="notification-title">儲蓄目標</div>
+                  <p class="notification-text">本月已達成儲蓄目標 76%，繼續加油！</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   </Nav>
 </template>
 
-
-
 <style scoped>
+/* 引用共用儀表板樣式 */
 @import '../assets/css/dashboard.css';
+
+/* =========== 覆寫樣式 (Dark Mode 支援) ===========
+  以下針對 Dashboard.vue 內部特定的元素進行變數替換
+*/
+
+/* 1. 頁面標題與副標題 */
+.page-title {
+  color: var(--text-primary);
+}
+.page-subtitle {
+  color: var(--text-secondary);
+}
+
+/* 2. 卡片通用 */
+.card {
+  background: var(--bg-card); /* 原本 white */
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border-color); /* 增加邊框 */
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.card-inner-title {
+  color: var(--text-primary); /* 原本 #2c3e50 */
+}
+.card-description {
+  color: var(--text-secondary); /* 原本 #64748b */
+}
+
+/* 3. 淨資產顯示 */
+.card-net-worth {
+  margin: 10px 0 20px 0;
+}
+.card-net-worth .label {
+  font-size: 18px;
+  color: var(--text-secondary); /* 原本 #8c8c8c */
+  margin-right: 10px;
+}
+.card-net-worth .value {
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--text-primary); /* 原本 #2c3e50 */
+}
+
+/* 4. 統計卡片 (Stat Cards) */
+.stat-card {
+  background: var(--bg-card); /* 原本 white */
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+.stat-card .card-title {
+  color: var(--text-secondary);
+}
+.stat-card .amount {
+  color: var(--text-primary);
+}
+
+/* 5. 搜尋框 */
+.search-input {
+  background: var(--bg-input); /* 原本 white/transparent */
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+/* 6. 交易紀錄列表 */
+.transaction-item {
+  border-bottom: 1px solid var(--border-color); /* 原本 #f1f5f9 */
+}
+.transaction-name {
+  color: var(--text-primary); /* 原本 #1e293b */
+}
+.transaction-date {
+  color: var(--text-secondary);
+}
+
+/* 7. 帳戶列表 (Account Rows) */
+.account-row-item {
+  background: var(--bg-body); /* 原本 #f8fafc (改用淺灰變數) */
+  border: 1px solid var(--border-color);
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+}
+.acc-name-text {
+  color: var(--text-primary);
+}
+.acc-balance-display {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+/* 負數餘額紅色 */
+.is-negative {
+  color: var(--color-danger);
+}
+
+/* 8. 標籤與備註 (保留你原本的設定並變數化) */
+.note-text {
+  font-size: 12px;
+  color: var(--text-secondary); /* 原本 #64748b */
+  margin-right: 8px;
+}
+
+.tag-frame {
+  font-size: 11px;
+  color: #777373; /* 這個顏色可能要保留或微調 */
+  border: 1px solid var(--bg-card);
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-right: 4px;
+  background-color: #f5efbf; /* 標籤底色暫時維持 */
+}
+
+.member-label {
+  font-size: 12px;
+  color: #adb9cc; /* 原本淡藍色 */
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+.transfer-flow {
+  font-size: 12px;
+  color: var(--color-primary); /* 原本深綠改用品牌色，或維持 #0d63aa */
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.note-divider {
+  margin-right: 6px;
+  color: var(--border-color); /* 原本 #ccc */
+  user-select: none;
+}
+
+.section-divider {
+  margin: 15px 0;
+  border-top: 1px dashed var(--border-color); /* 原本 #eee */
+}
+
+/* 9. 通知 */
+.notification-title {
+  color: var(--text-primary);
+}
+.notification-text {
+  color: var(--text-secondary);
+}
+
+/* 10. 分頁按鈕 */
+.page-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+.page-btn:disabled {
+  color: var(--text-secondary);
+  background: var(--bg-body);
+}
 </style>
