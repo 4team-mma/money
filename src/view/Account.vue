@@ -393,19 +393,19 @@ onMounted(() => {
 .page-title {
     font-size: 32px;
     font-weight: 700;
-    color: #1e293b;
+    color: inherit;
     margin: 0 0 8px 0;
 }
 
 .page-subtitle {
     font-size: 14px;
-    color: #64748b;
+    color: inherit;
     margin: 0;
 }
 
 .change-text {
     font-size: 15px;
-    color: #64748b;
+    color: inherit;
     margin: 0;
 }
 
@@ -417,44 +417,52 @@ onMounted(() => {
 }
 
 .box {
-    background: white;
+    /* 修正：背景改用主題卡片色 */
+    background: var(--theme-card, rgba(255,255,255,0.8));
+    backdrop-filter: blur(10px);
     border-radius: 16px;
     padding: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    /* 修正：陰影在深色模式要調淡 */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     border-left: 4px solid;
+    color: inherit;
 }
 
 .card-title {
     font-size: 14px;
     font-weight: 500;
-    color: #64748b;
+    color: inherit;
+    opacity: 0.8;
 }
 
 .amount {
     font-size: 28px;
     font-weight: 700;
-    color: #1e293b;
+    color: inherit;
     margin-bottom: 10px;
 }
 
 .assets-card { border-left-color: #3b82f6; }
 .debt-card   { border-left-color: #ef4444; }
-.value-card  { border-left-color: #000000; }
+/* 修正：總淨值的邊框在深色模式不要用純黑 */
+.value-card  { border-left-color: var(--theme-primary, #10b981); }
 
 .icon { width: 20px; height: 20px; stroke-width: 2; }
 .assets-icon { color: #3b82f6; }
 .debt-icon   { color: #ef4444; }
-.value-icon  { color: #000000; }
+.value-icon  { color: var(--theme-primary, #10b981); }
 
 /* --- 帳戶總覽容器 --- */
 .sec_box {
     margin: auto;
     border-radius: 40px;
-    border: 1px solid #e2e8f0;
-    padding: 60px; /* 稍微縮小原有的 100px 避免過空 */
-    background-color: white;
+    /* 修正：邊框改用變數 */
+    border: 1px solid var(--theme-border, rgba(255,255,255,0.1));
+    padding: 60px;
+    background-color: var(--theme-card, white);
     max-width: 900px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    color: inherit;
 }
 
 .acc_head1 {
@@ -479,7 +487,7 @@ onMounted(() => {
 
 .category-label {
     font-weight: 600;
-    color: #475569;
+    color: inherit;
     font-size: 1.1rem;
 }
 
@@ -550,24 +558,27 @@ onMounted(() => {
     top: 100%;
     right: 0;
     z-index: 100;
-    background: #ffffff;
+    background: var(--theme-card, #ffffff);
+    color: var(--theme-text, #1e293b);
     min-width: 100px;
     padding: 8px 0;
     margin-top: 5px;
     list-style: none;
     border-radius: 8px;
     box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-    border: 1px solid #f1f5f9;
+    border: 1px solid var(--theme-border);
 }
 
 .custom-dropdown-menu li {
     padding: 8px 16px;
     font-size: 14px;
-    color: #475569;
+    color: inherit;
     cursor: pointer;
 }
 
-.custom-dropdown-menu li:hover { background: #f8fafc; }
+.custom-dropdown-menu li:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
 .custom-dropdown-menu li.delete-opt { color: #ef4444; }
 
 /* --- 彈窗 Modal --- */
@@ -584,7 +595,9 @@ onMounted(() => {
 
 .modal-card {
     width: 440px;
-    background: rgb(244, 235, 235);
+    background: var(--theme-card, #ffffff);
+    color: var(--theme-text);
+    border: 1px solid var(--theme-border);
     padding: 40px;
     border-radius: 28px;
     box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
@@ -595,6 +608,9 @@ onMounted(() => {
     max-width: 440px;
     border-radius: 20px;
     box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+    background: var(--theme-card, #ffffff);
+    border: 1px solid var(--theme-border);
+    color: var(--theme-text);
     overflow: hidden;
     padding: 35px;
     z-index: 2100;
@@ -637,13 +653,22 @@ onMounted(() => {
 
 /* 縮小版帳戶卡片 */
 .account-card.mini {
-    padding: 10px 15px;
+    padding: 12px 15px;
     display: flex;
     justify-content: space-between;
-    background: #f8fafc;
-    border: 1px solid #f1f5f9;
+    /* 修正：深色模式下的列表背景 */
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--theme-border, #f1f5f9);
+    border-radius: 12px;
     box-shadow: none;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
+    color: inherit;
+    transition: all 0.2s;
+}
+
+.account-card.mini:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
 }
 
 .emoji-small { font-size: 24px; margin-right: 10px; }
@@ -653,16 +678,16 @@ onMounted(() => {
 .account-name-small {
     font-size: 18px;
     font-weight: 600;
-    color: #334155;
+    color: inherit;
 }
 
 .balance-small {
     font-size: 18px;
     font-family: 'Roboto Mono', monospace;
-    color: #475569;
+    color: inherit;
 }
 
-.debt-text { color: #070707; }
+.debt-text { color: inherit; }
 .debt-text2 { color: #ef4444; }
 
 .empty-mini {
@@ -687,8 +712,9 @@ onMounted(() => {
 .account-card.mini.is-excluded {
     opacity: 0.80;       /* 讓透明度變低 */
     filter: grayscale(0.8); /* 讓顏色變灰，增加辨識度 */
-    background: #f1f5f9;  /* 稍微深一點的背景色 */
-    border: 1px dashed #cbd5e1; /* 邊框變成虛線 */
+    background: var(--theme-card, rgb(169, 132, 132)); 
+    border-radius: 12px;  /* 稍微深一點的背景色 */
+    border: 1px dashed var(--theme-border); /* 邊框變成虛線 */
 }
 
 /* 確保裡面的文字顏色繼承透明度 */

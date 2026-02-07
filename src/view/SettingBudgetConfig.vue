@@ -1,6 +1,25 @@
 <script setup>
 import { ref } from 'vue'
 
+// 1. 直接在組件內定義主題資料
+const themes = {
+    mma_light: { name: 'MMA 經典', primary: '#3b82f6', bgGradient: 'linear-gradient(135deg, #EBF4FF 0%, #F0F9FF 100%)', cardBg: 'rgba(255, 255, 255, 0.85)', sidebarBg: 'rgba(255, 255, 255, 0.7)', text: '#1e293b', border: 'rgba(255, 255, 255, 0.5)' },
+    dark: { name: '極客深邃', primary: '#60a5fa', bgGradient: 'linear-gradient(135deg, #0f172a 0%, #111827 100%)', cardBg: 'rgba(31, 41, 55, 0.9)', sidebarBg: 'rgba(17, 24, 39, 0.95)', text: '#FFFFFF', border: 'rgba(255, 255, 255, 0.15)' },
+    forest: { name: '森林晨曦', primary: '#10b981', bgGradient: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)', cardBg: 'rgba(255, 255, 255, 0.8)', sidebarBg: 'rgba(255, 255, 255, 0.6)', text: '#064e3b', border: 'rgba(16, 185, 129, 0.2)' },
+    sunset: { name: '微醺夕陽', primary: '#f59e0b', bgGradient: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)', cardBg: 'rgba(255, 255, 255, 0.8)', sidebarBg: 'rgba(255, 255, 255, 0.6)', text: '#78350f', border: 'rgba(245, 158, 11, 0.2)' }
+}
+
+const currentTheme = ref(localStorage.getItem('adminTheme') || 'mma_light')
+
+// 2. 切換主題函式
+const changeTheme = (id) => {
+    currentTheme.value = id
+    localStorage.setItem('adminTheme', id)
+    
+    // 核心：發送一個全域事件，讓父層或其他組件知道主題變了
+    window.dispatchEvent(new Event('theme-changed'))
+}
+
 
 // 標籤頁
 const activeTab = ref('profile')
@@ -53,11 +72,16 @@ const savePreferences = () => {
                             <h3>主題</h3>
                             <p>選擇介面主題</p>
                         </div>
-                        <select v-model="preferences.theme" class="select-input">
-                            <option value="light">淺色</option>
-                            <option value="dark">深色</option>
-                            <option value="auto">跟隨系統</option>
-                        </select>
+                        <div class="theme-picker">
+                            <div v-for="(style, id) in themes" :key="id" class="theme-item"
+                                :class="{ 'is-selected': currentTheme === id }" @click="changeTheme(id)">
+                                <div class="theme-preview" :style="{ background: style.bgGradient }">
+                                    <div class="preview-sidebar" :style="{ background: style.sidebarBg }"></div>
+                                        <div class="preview-accent" :style="{ background: style.primary }"></div>
+                                </div>
+                                <span>{{ style.name }}</span>
+                            </div>
+                    </div>
                     </div>
                 </div>
 
@@ -113,4 +137,5 @@ const savePreferences = () => {
 
 <style scoped>
 @import '../assets/css/setting.css';
+@import "../assets/css/admin.css";
 </style>

@@ -1,9 +1,23 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { ref, onMounted, computed } from 'vue'
+import { onUnmounted } from 'vue'
 
 const sidebarOpen = ref(false)
 const router = useRouter()
+
+/* ========================
+    Theme System [cite: 6-9]
+   ======================== */
+const themes = {
+    mma_light: { name: 'MMA 經典', primary: '#3b82f6', bgGradient: 'linear-gradient(135deg, #EBF4FF 0%, #F0F9FF 100%)', cardBg: 'rgba(255, 255, 255, 0.85)', sidebarBg: 'rgba(255, 255, 255, 0.7)', text: '#1e293b', border: 'rgba(255, 255, 255, 0.5)' },
+    dark: { name: '極客深邃', primary: '#60a5fa', bgGradient: 'linear-gradient(135deg, #0f172a 0%, #111827 100%)', cardBg: 'rgba(31, 41, 55, 0.9)', sidebarBg: 'rgba(17, 24, 39, 0.95)', text: '#FFFFFF', border: 'rgba(255, 255, 255, 0.15)' },
+    forest: { name: '森林晨曦', primary: '#10b981', bgGradient: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)', cardBg: 'rgba(255, 255, 255, 0.8)', sidebarBg: 'rgba(255, 255, 255, 0.6)', text: '#064e3b', border: 'rgba(16, 185, 129, 0.2)' },
+    sunset: { name: '微醺夕陽', primary: '#f59e0b', bgGradient: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)', cardBg: 'rgba(255, 255, 255, 0.8)', sidebarBg: 'rgba(255, 255, 255, 0.6)', text: '#78350f', border: 'rgba(245, 158, 11, 0.2)' }
+}
+const currentTheme = ref(localStorage.getItem('adminTheme') || 'mma_light')
+const currentStyle = computed(() => themes[currentTheme.value] || themes.mma_light)
+
 
 // === 1. 使用者資訊狀態 ===
 const userData = ref({
@@ -71,24 +85,51 @@ const logout = () => {
 }
 
 // 確保組件掛載後執行
+// 在 Nav 檔的 onMounted 中加入監聽
 onMounted(() => {
   loadUserData()
+
+  // 監聽來自 Setting 檔的主題變更事件
+  window.addEventListener('theme-changed', () => {
+    const newThemeId = localStorage.getItem('adminTheme')
+    if (newThemeId && themes[newThemeId]) {
+      currentTheme.value = newThemeId
+    }
+  })
+})
+
+// 建議：為了效能，組件銷毀時移除監聽
+onUnmounted(() => {
+  window.removeEventListener('theme-changed', () => {})
 })
 </script>
-<template>
-  <div class="dashboard-layout">
-    <div v-if="sidebarOpen" class="sidebar-backdrop" @click="sidebarOpen = false" />
 
-    <aside :class="['sidebar', { 'sidebar-open': sidebarOpen }]">
+
+<template>
+  <!-- 在Nav主題樣式綁定處，加入 CSS 變數的定義，讓當用於實現動態主題（Dynamic Theming）或一鍵換膚的功能 -->
+  <!-- 這樣做的好處： 你可以在 CSS 檔案中透過 var(--theme-text) 來引用這些值。 -->
+<div class="dashboard-layout" 
+    :style="{ 
+      '--theme-text': currentStyle.text, 
+      '--theme-card': currentStyle.cardBg,
+      '--theme-border': currentStyle.border,
+    background: currentStyle.bgGradient, 
+    color: currentStyle.text 
+}">    
+      <div v-if="sidebarOpen" class="sidebar-backdrop" @click="sidebarOpen = false" />
+      <div class="background-effects"><div v-for="n in 8" :key="n" class="effect-circle"></div></div>
+
+    <aside 
+      :class="['sidebar', { 'sidebar-open': sidebarOpen }]" 
+      :style="{ background: currentStyle.sidebarBg, borderColor: currentStyle.border }"
+    >
       <div class="sidebar-content">
-        <div class="sidebar-header">
+        <div class="sidebar-header" :style="{ borderColor: currentStyle.border }">
           <RouterLink to="/dashboard" class="logo">
-            <div class="logo-icon">
-              <img src="../assets/logo.svg" alt="logo" width="72" height="72">
-            </div>
-            <span class="logo-text">Money MMA</span>
+            <div class="logo-icon"><img src="../assets/logo.svg" alt="logo" width="72" height="72"></div>
+            <span class="logo-text" :style="{ color: currentStyle.text }">Money MMA</span>
           </RouterLink>
-          <button class="close-button" @click="sidebarOpen = false">✕</button>
+          <button class="close-button" @click="sidebarOpen = false" :style="{ color: currentStyle.text }">✕</button>
         </div>
 
         <nav class="sidebar-nav">
@@ -307,19 +348,20 @@ onMounted(() => {
 .user-name {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #1e293b;
+  color: inherit;
 }
 
 .user-email {
   font-size: 0.75rem;
-  color: #64748b;
+  color: inherit;
 }
 
 .logout-button {
   width: 100%;
   padding: 0.6rem;
-  background: transparent;
-  border: 1px solid #e2e8f0;
+  color: inherit;
+  background: var(--theme-card, rgba(255,255,255,0.8));
+  border: 1px var(--theme-border, rgba(255,255,255,0.1));
   border-radius: 8px;
   font-size: 0.875rem;
   cursor: pointer;
@@ -454,4 +496,33 @@ onMounted(() => {
     font-size: 0.7rem;
   }
 }
-</style>
+
+/* 佈局基礎 */
+
+.dashboard-layout { min-height: 100vh; transition: all 0.5s ease; color: inherit; }
+.sidebar { border-right: 1px solid; transition: transform 0.3s, background 0.5s; backdrop-filter: blur(15px); }
+
+/* 修正重點：移除所有原本寫死的顏色數值 */
+.logo-text { font-size: 1.25rem; font-weight: 700; /* color: #1e293b; <-- 刪除這行 */ }
+
+.nav-item { 
+  display: flex; align-items: center; gap: 12px; padding: 0.75rem 1rem; border-radius: 10px;
+  text-decoration: none; font-size: 0.95rem; font-weight: 500; color: inherit;
+  /* color: #64748b; <-- 刪除這行，改由 template 的 inherit 控制 */
+}
+
+.nav-item:hover { background: rgba(255, 255, 255, 0.15); }
+
+/* 只有 Active 狀態維持白色 */
+.nav-item-active { background: linear-gradient(135deg, #3b82f6, #2563eb) !important; color: #ffffff !important; }
+
+.top-bar { backdrop-filter: blur(10px); border-bottom: 1px solid; }
+
+/* 跑馬燈容器背景設為半透明，確保白字在深色背景下有足夠對比度 */
+.news-ticker-container { border-radius: 50px; height: 38px; flex: 1; margin: 0 1rem; border: 1px solid; display: flex; align-items: center; }
+
+.user-name { font-weight: 600; /* color: #1e293b; <-- 刪除這行 */ }
+.user-email { font-size: 0.75rem; /* color: #64748b; <-- 刪除這行 */ }
+
+@keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+.ticker-content { display: inline-block; white-space: nowrap; animation: marquee 30s linear infinite; }</style>

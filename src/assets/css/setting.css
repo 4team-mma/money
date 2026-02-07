@@ -4,19 +4,19 @@
     margin: 0 auto;
 }
 
-.settings-header {
-    margin-bottom: 32px;
-}
-
 .settings-header h1 {
     font-size: 28px;
     font-weight: 700;
-    color: #1e293b;
+    /* 修正：不再寫死黑色，改用變數或繼承 */
+    color: var(--theme-text, #1e293b); 
     margin: 0 0 8px 0;
 }
 
+
 .settings-header p {
-    color: #64748b;
+    /* 修正：副標題使用主題色並加點透明度 */
+    color: var(--theme-text);
+    opacity: 0.7;
     margin: 0;
 }
 
@@ -86,24 +86,27 @@
 }
 
 .settings-section {
-    background: white;
+    /* 修正：卡片背景跟隨主題 */
+    background: var(--theme-card, white); 
     border-radius: 12px;
     padding: 24px;
     margin-bottom: 24px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    /* 修正：確保內容文字也是主題色 */
+    color: var(--theme-text);
 }
 
 .settings-section h2 {
     font-size: 18px;
     font-weight: 600;
-    color: #1e293b;
     margin: 0 0 24px 0;
+    color: var(--theme-text, #1e293b);
 }
 
 .settings-section h3 {
     font-size: 15px;
     font-weight: 600;
-    color: #1e293b;
+    color: var(--theme-text, #1e293b);
     margin: 0;
 }
 
@@ -159,19 +162,20 @@
 }
 
 .form-group label {
-    font-size: 14px;
-    font-weight: 500;
-    color: #475569;
+    color: var(--theme-text);
+    opacity: 0.8;
 }
 
 .form-group input,
 .form-group textarea,
 .select-input {
     padding: 10px 14px;
-    border: 1px solid #e2e8f0;
+    /* 修正：邊框與背景適應深色模式 */
+    border: 1px solid var(--theme-border, #e2e8f0);
+    background: rgba(255, 255, 255, 0.05); 
     border-radius: 8px;
     font-size: 14px;
-    color: #1e293b;
+    color: var(--theme-text);
     transition: border-color 0.2s;
 }
 
@@ -295,7 +299,8 @@
     align-items: center;
     gap: 16px;
     padding: 16px;
-    background: #f8fafc;
+    /* 修正：背景不要寫死淡灰色 */
+    background: rgba(0, 0, 0, 0.05); 
     border-radius: 8px;
 }
 
