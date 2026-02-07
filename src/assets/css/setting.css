@@ -1,33 +1,37 @@
+/* src/assets/css/setting.css */
+
 .settings-container {
     padding: 24px;
     max-width: 1000px;
     margin: 0 auto;
+    /* 確保背景色跟隨全站設定 */
+    background: var(--bg-body); 
+    min-height: 100vh;
+}
+
+/* --- 頁面標題 --- */
+.settings-header {
+    margin-bottom: 32px;
 }
 
 .settings-header h1 {
     font-size: 28px;
     font-weight: 700;
-    /* 修正：不再寫死黑色，改用變數或繼承 */
-    color: var(--theme-text, #1e293b); 
+    color: var(--text-primary); /* 原本 #1e293b */
     margin: 0 0 8px 0;
 }
 
-
 .settings-header p {
-    /* 修正：副標題使用主題色並加點透明度 */
-    color: var(--theme-text);
-    opacity: 0.7;
+    color: var(--text-secondary); /* 原本 #64748b */
     margin: 0;
 }
 
-/* 標籤頁 */
+/* --- 標籤頁 (Tabs) --- */
 .tabs {
     display: flex;
     gap: 8px;
     margin-bottom: 32px;
-    border-bottom: 2px solid #e2e8f0;
-    
-    /* 加入下面這一行就能置中了 */
+    border-bottom: 2px solid var(--border-color); /* 原本 #e2e8f0 */
     justify-content: center; 
 }
 
@@ -35,7 +39,7 @@
     padding: 12px 24px;
     background: transparent;
     border: none;
-    color: #64748b;
+    color: var(--text-secondary); /* 原本 #64748b */
     font-size: 15px;
     font-weight: 500;
     cursor: pointer;
@@ -51,11 +55,11 @@
 }
 
 .tab-button:hover {
-    color: #3b82f6;
+    color: var(--color-primary); /* 原本 #3b82f6 */
 }
 
 .tab-button.active {
-    color: #3b82f6;
+    color: var(--color-primary); /* 原本 #3b82f6 */
 }
 
 .tab-button.active::after {
@@ -65,64 +69,57 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: #3b82f6;
+    background: var(--color-primary); /* 原本 #3b82f6 */
 }
 
-/* 標籤內容 */
+/* 標籤內容動畫 */
 .tab-content {
     animation: fadeIn 0.3s;
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
+/* --- 設定區塊卡片 --- */
 .settings-section {
-    /* 修正：卡片背景跟隨主題 */
-    background: var(--theme-card, white); 
+    background: var(--bg-card); /* 原本 white */
     border-radius: 12px;
     padding: 24px;
     margin-bottom: 24px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    /* 修正：確保內容文字也是主題色 */
-    color: var(--theme-text);
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--border-color); /* 增加邊框 */
 }
 
 .settings-section h2 {
     font-size: 18px;
     font-weight: 600;
+    color: var(--text-primary); /* 原本 #1e293b */
     margin: 0 0 24px 0;
-    color: var(--theme-text, #1e293b);
 }
 
 .settings-section h3 {
     font-size: 15px;
     font-weight: 600;
-    color: var(--theme-text, #1e293b);
+    color: var(--text-primary); /* 原本 #1e293b */
     margin: 0;
 }
 
-/* 頭像 */
+/* --- 頭像區塊 --- */
 .avatar-section {
     display: flex;
     align-items: center;
     gap: 20px;
     margin-bottom: 32px;
     padding-bottom: 32px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--border-color); /* 原本 #e2e8f0 */
 }
 
 .avatar {
     width: 100px;
     height: 100px;
+    /* 頭像漸層保持原樣，因為是品牌色 */
     background: linear-gradient(135deg, #3b82f6, #2563eb);
     border-radius: 50%;
     display: flex;
@@ -134,7 +131,7 @@
 .avatar-text {
     font-size: 36px;
     font-weight: 700;
-    color: white;
+    color: white; /* 這裡固定白色，因為背景是深藍漸層 */
 }
 
 .avatar-actions {
@@ -143,7 +140,7 @@
     gap: 8px;
 }
 
-/* 表單 */
+/* --- 表單 --- */
 .form-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -162,20 +159,21 @@
 }
 
 .form-group label {
-    color: var(--theme-text);
-    opacity: 0.8;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary); /* 原本 #475569 */
 }
 
+/* 🌟 整合隊友修改：統一輸入框樣式 */
 .form-group input,
 .form-group textarea,
 .select-input {
     padding: 10px 14px;
-    /* 修正：邊框與背景適應深色模式 */
-    border: 1px solid var(--theme-border, #e2e8f0);
-    background: rgba(255, 255, 255, 0.05); 
+    border: 1px solid var(--border-color); /* 原本 #e2e8f0 */
     border-radius: 8px;
     font-size: 14px;
-    color: var(--theme-text);
+    color: var(--text-primary); /* 原本 #1e293b */
+    background: var(--bg-input); /* 關鍵：深色模式背景 */
     transition: border-color 0.2s;
 }
 
@@ -183,7 +181,7 @@
 .form-group textarea:focus,
 .select-input:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: var(--color-primary); /* 原本 #3b82f6 */
 }
 
 .form-group textarea {
@@ -191,13 +189,13 @@
     font-family: inherit;
 }
 
-/* 偏好設定項目 */
+/* --- 偏好設定列表 --- */
 .preference-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 20px 0;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--border-color); /* 原本 #f1f5f9 */
 }
 
 .preference-item:last-child {
@@ -210,11 +208,11 @@
 
 .preference-info p {
     font-size: 13px;
-    color: #64748b;
+    color: var(--text-secondary); /* 原本 #64748b */
     margin: 0;
 }
 
-/* 安全性切換 */
+/* --- 安全性切換 --- */
 .security-toggle {
     display: flex;
     justify-content: space-between;
@@ -228,10 +226,11 @@
 
 .security-info p {
     font-size: 13px;
-    color: #64748b;
+    color: var(--text-secondary); /* 原本 #64748b */
     margin: 0;
 }
 
+/* Toggle Switch (開關) */
 .toggle-switch {
     position: relative;
     width: 52px;
@@ -249,9 +248,14 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: #cbd5e1;
+    background: #cbd5e1; /* 關閉時的灰色，深色模式可能需要調深一點 */
     border-radius: 14px;
     transition: background 0.3s;
+}
+
+/* 深色模式下的 Toggle 關閉底色 */
+[data-theme="dark"] .toggle-switch .slider {
+    background: #475569;
 }
 
 .toggle-switch .slider::before {
@@ -267,7 +271,7 @@
 }
 
 .toggle-switch input:checked+.slider {
-    background: #3b82f6;
+    background: var(--color-primary); /* 原本 #3b82f6 */
 }
 
 .toggle-switch input:checked+.slider::before {
@@ -277,17 +281,19 @@
 .security-details {
     margin-top: 16px;
     padding: 16px;
-    background: #f0fdf4;
+    /* 使用 color-mix 製作半透明綠色背景 */
+    background: color-mix(in srgb, var(--color-success), transparent 90%);
     border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--color-success), transparent 70%);
 }
 
 .security-details p {
     margin: 0 0 12px 0;
-    color: #166534;
+    color: var(--color-success); /* 原本 #166534 */
     font-size: 14px;
 }
 
-/* 登入記錄 */
+/* --- 登入記錄 --- */
 .login-history {
     display: flex;
     flex-direction: column;
@@ -299,15 +305,16 @@
     align-items: center;
     gap: 16px;
     padding: 16px;
-    /* 修正：背景不要寫死淡灰色 */
-    background: rgba(0, 0, 0, 0.05); 
+    background: var(--bg-hover); /* 原本 #f8fafc */
     border-radius: 8px;
+    border: 1px solid var(--border-color);
 }
 
 .login-icon {
     width: 40px;
     height: 40px;
-    background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+    /* 淺藍色背景 */
+    background: color-mix(in srgb, var(--color-primary), transparent 85%); 
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -318,7 +325,7 @@
 .login-icon svg {
     width: 20px;
     height: 20px;
-    color: #3b82f6;
+    color: var(--color-primary); /* 原本 #3b82f6 */
 }
 
 .login-info {
@@ -328,13 +335,13 @@
 .login-info h4 {
     font-size: 14px;
     font-weight: 600;
-    color: #1e293b;
+    color: var(--text-primary); /* 原本 #1e293b */
     margin: 0 0 4px 0;
 }
 
 .login-info p {
     font-size: 13px;
-    color: #64748b;
+    color: var(--text-secondary); /* 原本 #64748b */
     margin: 0;
 }
 
@@ -346,19 +353,20 @@
 }
 
 .login-status.current {
-    background: #dcfce7;
-    color: #166534;
+    background: color-mix(in srgb, var(--color-success), transparent 85%);
+    color: var(--color-success);
 }
 
 .login-status.success {
-    background: #dbeafe;
-    color: #1e40af;
+    background: color-mix(in srgb, var(--color-primary), transparent 85%);
+    color: var(--color-primary);
 }
 
-/* 危險區域 */
+/* --- 危險區域 (Danger Zone) --- */
 .danger-zone {
-    border: 2px solid #fecaca;
-    background: #fef2f2;
+    border: 1px solid var(--color-danger);
+    /* 背景使用 5% 透明度的紅色 */
+    background: color-mix(in srgb, var(--color-danger), transparent 95%); 
 }
 
 .danger-item {
@@ -366,7 +374,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 20px 0;
-    border-bottom: 1px solid #fecaca;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-danger), transparent 80%);
 }
 
 .danger-item:last-child {
@@ -376,18 +384,19 @@
 
 .danger-info h3 {
     margin-bottom: 4px;
+    color: var(--text-primary);
 }
 
 .danger-info p {
     font-size: 13px;
-    color: #991b1b;
+    color: var(--color-danger); /* 原本 #991b1b */
     margin: 0;
 }
 
-/* 通知項目 */
+/* --- 通知項目 --- */
 .notification-item {
     padding: 16px 0;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--border-color); /* 原本 #f1f5f9 */
 }
 
 .notification-item:last-child {
@@ -405,7 +414,7 @@
     width: 20px;
     height: 20px;
     cursor: pointer;
-    accent-color: #3b82f6;
+    accent-color: var(--color-primary); /* 原本 #3b82f6 */
 }
 
 .notification-info h3 {
@@ -414,7 +423,7 @@
 
 .notification-info p {
     font-size: 13px;
-    color: #64748b;
+    color: var(--text-secondary); /* 原本 #64748b */
     margin: 0;
 }
 
@@ -423,11 +432,11 @@
     margin-top: 12px;
 }
 
-/* 按鈕 */
+/* --- 按鈕 --- */
 .btn-primary {
     padding: 10px 24px;
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    color: white;
+    background: var(--color-primary); /* 原本 #3b82f6 */
+    color: var(--text-inverse); /* 原本 white */
     border: none;
     border-radius: 8px;
     font-size: 14px;
@@ -443,9 +452,9 @@
 
 .btn-secondary {
     padding: 10px 24px;
-    background: white;
-    color: #475569;
-    border: 1px solid #e2e8f0;
+    background: var(--bg-card); /* 原本 white */
+    color: var(--text-secondary); /* 原本 #475569 */
+    border: 1px solid var(--border-color); /* 原本 #e2e8f0 */
     border-radius: 8px;
     font-size: 14px;
     font-weight: 500;
@@ -454,13 +463,14 @@
 }
 
 .btn-secondary:hover {
-    background: #f8fafc;
+    background: var(--bg-hover); /* 原本 #f8fafc */
+    color: var(--text-primary);
 }
 
 .btn-text {
     padding: 10px 24px;
     background: transparent;
-    color: #64748b;
+    color: var(--text-secondary); /* 原本 #64748b */
     border: none;
     font-size: 14px;
     font-weight: 500;
@@ -469,13 +479,13 @@
 }
 
 .btn-text:hover {
-    color: #3b82f6;
+    color: var(--color-primary); /* 原本 #3b82f6 */
 }
 
 .btn-danger {
     padding: 10px 24px;
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: white;
+    background: var(--color-danger); /* 原本 #ef4444 */
+    color: var(--text-inverse); /* 原本 white */
     border: none;
     border-radius: 8px;
     font-size: 14px;
@@ -491,9 +501,9 @@
 
 .btn-danger-outline {
     padding: 10px 24px;
-    background: white;
-    color: #ef4444;
-    border: 1px solid #ef4444;
+    background: transparent;
+    color: var(--color-danger); /* 原本 #ef4444 */
+    border: 1px solid var(--color-danger);
     border-radius: 8px;
     font-size: 14px;
     font-weight: 500;
@@ -502,8 +512,8 @@
 }
 
 .btn-danger-outline:hover {
-    background: #ef4444;
-    color: white;
+    background: var(--color-danger);
+    color: var(--text-inverse);
 }
 
 .form-actions {
