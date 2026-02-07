@@ -1,117 +1,117 @@
+/* src/assets/css/main.css */
 
 /* =========================================
-  1. 定義變數 (Variables)
-  這些變數在專案的任何角落(包含 scoped style, 外部 css)都能讀取到
+   1. 定義預設變數 (Light Mode - MMA 經典)
    ========================================= */
 :root {
-    /* 背景類:頁面大背景 */
-    --bg-body: #f8f9fa;
-
-    /* 卡片背景:卡片、側邊欄、頂部導覽列 (白) */
-    --bg-card: #ffffff;
-    /* 側邊欄背景 */
-    --bg-sidebar: #ffffff;
-    
+    /* --- 背景類 --- */
+    --bg-body: #f8f9fa;       /* 頁面大背景 (淺灰) */
+    --bg-card: #ffffff;       /* 卡片、側邊欄背景 (白) */
+    --bg-sidebar: #ffffff;    /* 側邊欄背景 */
     --bg-hover: rgba(0,0,0,0.05); /* 滑鼠移過去的底色 */
-    --bg-input: #ffffff;      /* 輸入框背景 (通常跟卡片一樣，但在深色模式可能不同) */
+    --bg-input: #ffffff;      /* 輸入框背景 */
 
-    /* 文字色 */
-    --text-primary: #2c3e50;   /* 主要標題:標題、重點文字 */
-    --text-secondary: #6c757d; /* 次要說明文 : 籤、說明文字 (灰)*/
-    --text-inverse: #ffffff;  /* 反白文字 (例如藍色按鈕上的字) */
+    /* --- 文字色 --- */
+    --text-primary: #1e293b;  /* 主要深色文字 */
+    --text-secondary: #64748b;/* 次要灰色文字 */
+    --text-inverse: #ffffff;  /* 反白文字 */
 
-    /* 品牌色 (你的主色調) */
-    --color-primary: #3b82f6;
-    --color-danger: #ef4444;
+    /* --- 品牌與功能色 --- */
+    --color-primary: #3b82f6; /* 品牌藍 */
+    --color-success: #10b981; /* 成功綠 */
+    --color-danger: #ef4444;  /* 危險紅 */
 
-    /* 邊框 */
-    --border-color: #e9ecef;
-    --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* 卡片陰影 */
-    /* 裝飾色 */
-    --color-primary: #3b82f6;  /* 品牌主色 */
-    --color-danger: #ef4444;   /* 警告/刪除 */
-    --border-color: #e9ecef;   /* 邊框線條 */
-
+    /* --- 邊框與陰影 --- */
+    --border-color: #e2e8f0;
+    --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-/* 深色主題 (Dark Mode) */
-/* 當 標籤上 data-theme="dark" 時，覆蓋上面的變數 */
+/* =========================================
+   2. 深色主題 (Dark Mode - 極客深邃)
+   ========================================= */
 [data-theme="dark"] {
-    /* 背景變深 */
     --bg-body: #0f172a;       /* 極深藍/黑 */
-    --bg-card: #1e293b;       /* 深灰藍 (卡片亮一點) */
-    --bg-sidebar: #242424;
-    --bg-input: #334155;      /* 輸入框要比卡片再明顯一點 */
-
-    /* 文字變淺 */
-    --text-primary: #e0e0e0;
-    --text-secondary: #a0a0a0;
-    --text-inverse: #ffffff;  /* 保持白色 */
+    --bg-card: #1e293b;       /* 深灰藍 */
+    --bg-sidebar: #1e293b;
     --bg-hover: rgba(255,255,255,0.1);
+    --bg-input: #334155;
 
-    /* --- C. 顏色微調 (讓刺眼的顏色柔和一點) --- */
+    --text-primary: #f1f5f9;  /* 亮白 */
+    --text-secondary: #94a3b8;/* 淺灰 */
+    --text-inverse: #ffffff;
+
     --color-primary: #60a5fa; /* 淺藍 */
     --color-success: #34d399; /* 淺綠 */
     --color-danger: #f87171;  /* 淺紅 */
 
-    /* --- D. 深色模式通常不需要陰影，或是改用發光效果 --- */
-    /* 邊框變深 */
     --border-color: #334155;
-    --shadow-card: none;      /* 深色模式建議拿掉陰影，看起來比較乾淨 */
+    --shadow-card: none;
 }
 
-/* 3. 定義其他主題 (例如 Forest) */
+/* =========================================
+   3. 森林主題 (Forest - 森林晨曦) [整合隊友]
+   ========================================= */
 [data-theme="forest"] {
-    --bg-body: #f0fdf4;
-    --color-primary: #16a34a;
-    /* ...其他顏色 */
+    --bg-body: #f0fdf4;       /* 極淺綠背景 */
+    --bg-card: #ffffff;
+    --bg-sidebar: #ffffff;
+    --bg-hover: #dcfce7;      /* 淺綠 Hover */
+    --bg-input: #ffffff;
+
+    --text-primary: #064e3b;  /* 深綠文字 */
+    --text-secondary: #047857;/* 次要綠文字 */
+    --text-inverse: #ffffff;
+
+    --color-primary: #10b981; /* 品牌綠 */
+    --color-success: #059669; 
+    --color-danger: #ef4444;
+
+    --border-color: #d1fae5;  /* 淺綠邊框 */
+    --shadow-card: 0 4px 6px -1px rgba(16, 185, 129, 0.1);
 }
 
-  body {
-  /* background-color: #f8f8e1; */
+/* =========================================
+   4. 夕陽主題 (Sunset - 微醺夕陽) [整合隊友]
+   ========================================= */
+[data-theme="sunset"] {
+    --bg-body: #fffbeb;       /* 淺黃背景 */
+    --bg-card: #ffffff;
+    --bg-sidebar: #ffffff;
+    --bg-hover: #fef3c7;      /* 淺橘 Hover */
+    --bg-input: #ffffff;
 
-  /* ✅ 改用變數 (這樣切換 dark mode 時背景才會變黑) */
+    --text-primary: #78350f;  /* 深褐文字 */
+    --text-secondary: #92400e;/* 次要褐文字 */
+    --text-inverse: #ffffff;
+
+    --color-primary: #f59e0b; /* 品牌橘 */
+    --color-success: #10b981;
+    --color-danger: #ef4444;
+
+    --border-color: #fde68a;  /* 淺黃邊框 */
+    --shadow-card: 0 4px 6px -1px rgba(245, 158, 11, 0.1);
+}
+
+/* =========================================
+   5. 通用基礎樣式
+   ========================================= */
+body {
     background-color: var(--bg-body);
-    color: var(--text-primary); /* 讓文字顏色也跟著變 */
-
-    /* 用來確保在 Mac/Windows 上字體看起來一致的設定 */
+    color: var(--text-primary);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     margin: 0; 
     padding: 0;
-
-
-    /* padding-left: 2rem;
-    padding-right: 2rem; */
+    transition: background-color 0.3s ease, color 0.3s ease; /* 讓主題切換更滑順 */
 }
 
-.nav {
-  display: flex;
-  justify-content: center;
-  gap: 60px; /* 自動產生間距 */
-  padding: 20px 0;
-  font-size: 18px;
-}
-.nav-link,
-.nav-link:visited,
-.nav-link:active {
-  color: #333;
-  text-decoration: none;
-  font-weight: 500;
-}
-
-/* hover 效果 */
-.nav-link:hover {
-  color: #409eff;
-}
-
-h1 {
-  text-align: center;
-}
-
-/* 確保所有連結預設沒有底線 */
 a {
     text-decoration: none;
     color: inherit;
+}
+
+/* 確保所有標題置中 (您原本的設定) */
+h1 {
+    text-align: center;
 }

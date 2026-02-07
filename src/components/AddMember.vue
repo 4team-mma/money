@@ -117,13 +117,12 @@ const removeItem = (id) => {
                         <div v-for="item in categoryItems" :key="item.id" class="tag-pill"
                             @click="selectCategory(item)">
                             {{ item.itemName }}
-                            <span style="margin-left:8px; font-size:10px; color:#94a3b8"
-                                @click.stop="removeItem(item.id)">✕</span>
+                            <span class="remove-x" @click.stop="removeItem(item.id)">✕</span>
                         </div>
                     </div>
 
                     <div class="add-section">
-                        <div class="add-form" style="margin-top:0">
+                        <div class="add-form compact-form">
                             <input v-model="newAdd" 
                             placeholder="輸入新成員名稱" 
                             @keyup.enter="addNewItem"
@@ -140,4 +139,31 @@ const removeItem = (id) => {
 
 <style scoped>
 @import '../assets/css/add.css';
+
+/* 針對移除按鈕的樣式 */
+.remove-x {
+    margin-left: 8px;
+    font-size: 10px;
+    color: var(--text-secondary); /* 原本是 #94a3b8 */
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.remove-x:hover {
+    color: var(--color-danger); /* hover 時變紅色 */
+}
+
+/* 針對表單的微調 */
+.compact-form {
+    margin-top: 0;
+}
+
+/* 確保輸入框在深色模式下正確顯示 */
+/* 因為 add.css 已經定義了 .add-form input 的通用樣式，這裡通常不需要額外寫 */
+/* 但為了保險起見，再次確認 */
+.add-form input {
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
 </style>
