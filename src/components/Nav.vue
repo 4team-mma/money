@@ -1,524 +1,459 @@
-/* src/assets/css/setting.css */
+<script setup>
+import { useRouter } from 'vue-router'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 
-.settings-container {
-    padding: 24px;
-    max-width: 1000px;
-    margin: 0 auto;
-    /* 確保背景色跟隨全站設定 */
-    background: var(--bg-body); 
+const sidebarOpen = ref(false)
+const router = useRouter()
+
+// === 1. 使用者資訊 ===
+const userData = ref({
+  name: '用戶',
+  email: '',
+  avatar: 'U',
+  role: 'user'
+})
+
+// === 2. 跑馬燈通知 ===
+const notifications = ref([
+  '📢 系統提醒：本月預算已達 76%，請注意支出控管，避免超支。',
+  '💡 理財小撇步：採用 50/30/20 法則分配薪資，能讓您的儲蓄目標更早達成。',
+  '🎯 目標進度：您的「日本旅遊基金」達成率已過半，繼續加油！',
+  '🚀 Money MMA 提示：點擊「記一筆」快速紀錄今日開銷，養成好習慣。'
+]);
+
+const marqueeText = computed(() => notifications.value.join('　　 | 　　'));
+
+// === 3. 選單配置 ===
+const navigation = [
+  { name: '行事曆', to: '/Book', icon: '🗓' },
+  { name: '儀表板', to: '/dashboard', icon: '📊' },
+  { name: '帳戶管理', to: '/Account', icon: '⛺' },
+  { name: '理財規劃', to: '/BudgetManager', icon: '🐱' },
+  { name: '記一筆', to: '/Add', icon: '➕' },
+  { name: '圖表分析', to: '/Chart', icon: '📈' },
+  { name: '消費趨勢', to: '/ConsumerAnalysis', icon: '⛽' },
+  { name: '薪資趨勢', to: '/SalaryAnalysis', icon: '💵' },
+  { name: '成就系統', to: '/Achievements', icon: '🏆' },
+  { name: '成就測試', to: '/Achievements_new', icon: '🏆' },
+  { name: '問題回饋', to: '/Feedback', icon: '❓' },
+  { name: '設定', to: '/Settings', icon: '⚙️' }
+]
+
+// === 4. 功能函式 ===
+const loadUserData = () => {
+  try {
+    const userJson = localStorage.getItem('currentUser')
+    if (userJson) {
+      const user = JSON.parse(userJson)
+      userData.value = {
+        name: user.name || '用戶',
+        email: user.email || '',
+        role: user.role || 'user',
+        avatar: (user.name || user.email || 'U').substring(0, 2).toUpperCase()
+      }
+    } else {
+      router.push('/')
+    }
+  } catch (e) {
+    console.error('解析使用者資料失敗', e)
+    router.push('/')
+  }
+}
+
+const logout = () => {
+  if (confirm('確定要登出系統嗎？')) {
+    localStorage.removeItem('currentUser')
+    localStorage.removeItem('user_token')
+    router.push('/')
+  }
+}
+
+// === 5. 主題初始化與監聽 ===
+const initTheme = () => {
+  // 從 localStorage 讀取主題 (預設 light)
+  const savedTheme = localStorage.getItem('appTheme') || 'light';
+  // 設定到 html 標籤上，觸發 main.css 的變數切換
+  document.documentElement.setAttribute('data-theme', savedTheme);
+}
+
+onMounted(() => {
+  loadUserData()
+  initTheme()
+
+  // 監聽來自 Settings 頁面的切換事件 (如果有的話)
+  window.addEventListener('theme-changed', (e) => {
+    const newTheme = e.detail || localStorage.getItem('appTheme');
+    document.documentElement.setAttribute('data-theme', newTheme);
+  })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('theme-changed', () => {})
+})
+</script>
+
+<template>
+  <div class="dashboard-layout">
+    <div v-if="sidebarOpen" class="sidebar-backdrop" @click="sidebarOpen = false" />
+
+    <aside :class="['sidebar', { 'sidebar-open': sidebarOpen }]">
+      <div class="sidebar-content">
+        <div class="sidebar-header">
+          <RouterLink to="/dashboard" class="logo">
+            <div class="logo-icon">
+              <img src="../assets/logo.svg" alt="logo" width="72" height="72">
+            </div>
+            <span class="logo-text">Money MMA</span>
+          </RouterLink>
+          <button class="close-button" @click="sidebarOpen = false">✕</button>
+        </div>
+
+        <nav class="sidebar-nav">
+          <div class="nav-section">
+            <RouterLink v-for="item in navigation" :key="item.to" :to="item.to" class="nav-item"
+              active-class="nav-item-active" exact-active-class="nav-item-active" @click="sidebarOpen = false">
+              <span class="nav-icon">{{ item.icon }}</span>
+              <span class="nav-text">{{ item.name }}</span>
+              <span class="nav-indicator">›</span>
+            </RouterLink>
+          </div>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="user-info">
+            <div class="user-avatar">{{ userData.avatar }}</div>
+            <div class="user-details">
+              <div class="user-name">{{ userData.name }}</div>
+              <div class="user-email">{{ userData.email }}</div>
+            </div>
+          </div>
+          <button class="logout-button" @click="logout">
+            ⏏️ 登出系統
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="main-content">
+      <header class="top-bar">
+        <button class="menu-button" @click="sidebarOpen = true">☰</button>
+
+        <div class="news-ticker-container">
+          <div class="ticker-label">重要通知</div>
+          <div class="ticker-wrapper">
+            <div class="ticker-content">
+              {{ marqueeText }} 　　 | 　　 {{ marqueeText }}
+            </div>
+          </div>
+        </div>
+
+      </header>
+
+      <main class="page-content">
+        <slot />
+      </main>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+/* 引用共用變數後，這裡的 CSS 變得非常乾淨 */
+
+/* 基本佈局 */
+.dashboard-layout {
     min-height: 100vh;
+    background: var(--bg-body); /* 自動切換背景 */
+    transition: background 0.3s ease;
 }
 
-/* --- 頁面標題 --- */
-.settings-header {
-    margin-bottom: 32px;
+.sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
 }
 
-.settings-header h1 {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--text-primary); /* 原本 #1e293b */
-    margin: 0 0 8px 0;
+@media (min-width: 1024px) {
+    .sidebar-backdrop { display: none; }
 }
 
-.settings-header p {
-    color: var(--text-secondary); /* 原本 #64748b */
-    margin: 0;
-}
-
-/* --- 標籤頁 (Tabs) --- */
-.tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 32px;
-    border-bottom: 2px solid var(--border-color); /* 原本 #e2e8f0 */
-    justify-content: center; 
-}
-
-.tab-button {
-    padding: 12px 24px;
-    background: transparent;
-    border: none;
-    color: var(--text-secondary); /* 原本 #64748b */
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
-    position: relative;
-    transition: color 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.tab-icon {
-    font-size: 18px;
-}
-
-.tab-button:hover {
-    color: var(--color-primary); /* 原本 #3b82f6 */
-}
-
-.tab-button.active {
-    color: var(--color-primary); /* 原本 #3b82f6 */
-}
-
-.tab-button.active::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
+/* 側邊欄樣式 */
+.sidebar {
+    position: fixed;
+    inset-y: 0;
     left: 0;
-    right: 0;
-    height: 2px;
-    background: var(--color-primary); /* 原本 #3b82f6 */
+    z-index: 50;
+    width: 288px;
+    background: var(--bg-sidebar); /* 自動切換 */
+    border-right: 1px solid var(--border-color); /* 自動切換 */
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    height: 100vh;
+    overflow: hidden;
 }
 
-/* 標籤內容動畫 */
-.tab-content {
-    animation: fadeIn 0.3s;
+.sidebar-open { transform: translateX(0); }
+
+@media (min-width: 1024px) {
+    .sidebar { transform: translateX(0); }
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+.sidebar-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
-/* --- 設定區塊卡片 --- */
-.settings-section {
-    background: var(--bg-card); /* 原本 white */
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 24px;
-    box-shadow: var(--shadow-card);
-    border: 1px solid var(--border-color); /* 增加邊框 */
-}
-
-.settings-section h2 {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text-primary); /* 原本 #1e293b */
-    margin: 0 0 24px 0;
-}
-
-.settings-section h3 {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text-primary); /* 原本 #1e293b */
-    margin: 0;
-}
-
-/* --- 頭像區塊 --- */
-.avatar-section {
+.sidebar-header {
     display: flex;
     align-items: center;
-    gap: 20px;
-    margin-bottom: 32px;
-    padding-bottom: 32px;
-    border-bottom: 1px solid var(--border-color); /* 原本 #e2e8f0 */
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
 }
 
-.avatar {
-    width: 100px;
-    height: 100px;
-    /* 頭像漸層保持原樣，因為是品牌色 */
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+}
+
+.logo-icon {
+    background: var(--bg-card);
+    padding: 0.5rem;
+    border-radius: 8px;
+}
+
+.logo-text {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+@media (min-width: 1024px) {
+    .close-button { display: none; }
+}
+
+/* 導覽選單 */
+.sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+.nav-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+/* Hover 效果：只有沒被選中的才會變色 */
+.nav-item:not(.nav-item-active):hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+/* Active 效果：使用品牌主色，文字反白 */
+.nav-item-active {
+    background: var(--color-primary); /* 自動切換品牌色 (藍/綠/橘) */
+    color: var(--text-inverse);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.nav-indicator {
+    opacity: 0;
+    margin-left: auto;
+}
+
+.nav-item-active .nav-indicator {
+    opacity: 1;
+}
+
+/* 側邊欄底部 */
+.sidebar-footer {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1rem;
+}
+
+.user-avatar {
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
+    /* 頭像維持漸層，使用品牌色 */
+    background: linear-gradient(135deg, var(--color-primary), #10b981);
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
 }
 
-.avatar-text {
-    font-size: 36px;
-    font-weight: 700;
-    color: white; /* 這裡固定白色，因為背景是深藍漸層 */
+.user-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
-.avatar-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+.user-email {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
 }
 
-/* --- 表單 --- */
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
-    margin-bottom: 20px;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.form-group.full-width {
-    grid-column: 1 / -1;
-}
-
-.form-group label {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-secondary); /* 原本 #475569 */
-}
-
-/* 🌟 整合隊友修改：統一輸入框樣式 */
-.form-group input,
-.form-group textarea,
-.select-input {
-    padding: 10px 14px;
-    border: 1px solid var(--border-color); /* 原本 #e2e8f0 */
+.logout-button {
+    width: 100%;
+    padding: 0.6rem;
+    background: transparent;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
-    font-size: 14px;
-    color: var(--text-primary); /* 原本 #1e293b */
-    background: var(--bg-input); /* 關鍵：深色模式背景 */
-    transition: border-color 0.2s;
-}
-
-.form-group input:focus,
-.form-group textarea:focus,
-.select-input:focus {
-    outline: none;
-    border-color: var(--color-primary); /* 原本 #3b82f6 */
-}
-
-.form-group textarea {
-    resize: vertical;
-    font-family: inherit;
-}
-
-/* --- 偏好設定列表 --- */
-.preference-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 0;
-    border-bottom: 1px solid var(--border-color); /* 原本 #f1f5f9 */
-}
-
-.preference-item:last-child {
-    border-bottom: none;
-}
-
-.preference-info h3 {
-    margin-bottom: 4px;
-}
-
-.preference-info p {
-    font-size: 13px;
-    color: var(--text-secondary); /* 原本 #64748b */
-    margin: 0;
-}
-
-/* --- 安全性切換 --- */
-.security-toggle {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 0;
-}
-
-.security-info h3 {
-    margin-bottom: 4px;
-}
-
-.security-info p {
-    font-size: 13px;
-    color: var(--text-secondary); /* 原本 #64748b */
-    margin: 0;
-}
-
-/* Toggle Switch (開關) */
-.toggle-switch {
-    position: relative;
-    width: 52px;
-    height: 28px;
+    font-size: 0.875rem;
     cursor: pointer;
+    transition: 0.2s;
+    color: var(--text-primary);
 }
 
-.toggle-switch input {
-    display: none;
+.logout-button:hover {
+    background: var(--bg-hover);
+    border-color: var(--color-danger);
+    color: var(--color-danger);
 }
 
-.toggle-switch .slider {
-    position: absolute;
+/* 主內容與頂部橫條 */
+.main-content {
+    margin-left: 0;
+    transition: margin-left 0.3s;
+}
+
+@media (min-width: 1024px) {
+    .main-content { margin-left: 288px; }
+}
+
+.top-bar {
+    position: sticky;
     top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: #cbd5e1; /* 關閉時的灰色，深色模式可能需要調深一點 */
-    border-radius: 14px;
-    transition: background 0.3s;
-}
-
-/* 深色模式下的 Toggle 關閉底色 */
-[data-theme="dark"] .toggle-switch .slider {
-    background: #475569;
-}
-
-.toggle-switch .slider::before {
-    content: '';
-    position: absolute;
-    width: 24px;
-    height: 24px;
-    background: white;
-    border-radius: 50%;
-    top: 2px;
-    left: 2px;
-    transition: transform 0.3s;
-}
-
-.toggle-switch input:checked+.slider {
-    background: var(--color-primary); /* 原本 #3b82f6 */
-}
-
-.toggle-switch input:checked+.slider::before {
-    transform: translateX(24px);
-}
-
-.security-details {
-    margin-top: 16px;
-    padding: 16px;
-    /* 使用 color-mix 製作半透明綠色背景 */
-    background: color-mix(in srgb, var(--color-success), transparent 90%);
-    border-radius: 8px;
-    border: 1px solid color-mix(in srgb, var(--color-success), transparent 70%);
-}
-
-.security-details p {
-    margin: 0 0 12px 0;
-    color: var(--color-success); /* 原本 #166534 */
-    font-size: 14px;
-}
-
-/* --- 登入記錄 --- */
-.login-history {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.login-item {
+    z-index: 30;
+    height: 64px;
+    background: var(--bg-card); /* 自動切換 */
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 16px;
-    background: var(--bg-hover); /* 原本 #f8fafc */
-    border-radius: 8px;
+    padding: 0 1.5rem;
+    opacity: 0.98;
+}
+
+.menu-button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-primary);
+}
+
+@media (min-width: 1024px) {
+    .menu-button { display: none; }
+}
+
+.page-content {
+    padding: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .page-content { padding: 2rem; }
+}
+
+/* --- 跑馬燈 --- */
+.news-ticker-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    background: var(--bg-body);
+    border-radius: 50px;
+    height: 38px;
+    margin: 0 1.5rem;
+    padding: 0 4px;
+    overflow: hidden;
     border: 1px solid var(--border-color);
 }
 
-.login-icon {
-    width: 40px;
-    height: 40px;
-    /* 淺藍色背景 */
-    background: color-mix(in srgb, var(--color-primary), transparent 85%); 
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.login-icon svg {
-    width: 20px;
-    height: 20px;
-    color: var(--color-primary); /* 原本 #3b82f6 */
-}
-
-.login-info {
-    flex: 1;
-}
-
-.login-info h4 {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-primary); /* 原本 #1e293b */
-    margin: 0 0 4px 0;
-}
-
-.login-info p {
-    font-size: 13px;
-    color: var(--text-secondary); /* 原本 #64748b */
-    margin: 0;
-}
-
-.login-status {
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 500;
-}
-
-.login-status.current {
-    background: color-mix(in srgb, var(--color-success), transparent 85%);
-    color: var(--color-success);
-}
-
-.login-status.success {
-    background: color-mix(in srgb, var(--color-primary), transparent 85%);
-    color: var(--color-primary);
-}
-
-/* --- 危險區域 (Danger Zone) --- */
-.danger-zone {
-    border: 1px solid var(--color-danger);
-    /* 背景使用 5% 透明度的紅色 */
-    background: color-mix(in srgb, var(--color-danger), transparent 95%); 
-}
-
-.danger-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 0;
-    border-bottom: 1px solid color-mix(in srgb, var(--color-danger), transparent 80%);
-}
-
-.danger-item:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
-.danger-info h3 {
-    margin-bottom: 4px;
-    color: var(--text-primary);
-}
-
-.danger-info p {
-    font-size: 13px;
-    color: var(--color-danger); /* 原本 #991b1b */
-    margin: 0;
-}
-
-/* --- 通知項目 --- */
-.notification-item {
-    padding: 16px 0;
-    border-bottom: 1px solid var(--border-color); /* 原本 #f1f5f9 */
-}
-
-.notification-item:last-child {
-    border-bottom: none;
-}
-
-.notification-label {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    cursor: pointer;
-}
-
-.notification-label input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-    accent-color: var(--color-primary); /* 原本 #3b82f6 */
-}
-
-.notification-info h3 {
-    margin-bottom: 4px;
-}
-
-.notification-info p {
-    font-size: 13px;
-    color: var(--text-secondary); /* 原本 #64748b */
-    margin: 0;
-}
-
-.notification-subitems {
-    margin-left: 36px;
-    margin-top: 12px;
-}
-
-/* --- 按鈕 --- */
-.btn-primary {
-    padding: 10px 24px;
-    background: var(--color-primary); /* 原本 #3b82f6 */
-    color: var(--text-inverse); /* 原本 white */
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.btn-secondary {
-    padding: 10px 24px;
-    background: var(--bg-card); /* 原本 white */
-    color: var(--text-secondary); /* 原本 #475569 */
-    border: 1px solid var(--border-color); /* 原本 #e2e8f0 */
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-secondary:hover {
-    background: var(--bg-hover); /* 原本 #f8fafc */
-    color: var(--text-primary);
-}
-
-.btn-text {
-    padding: 10px 24px;
-    background: transparent;
-    color: var(--text-secondary); /* 原本 #64748b */
-    border: none;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: color 0.2s;
-}
-
-.btn-text:hover {
-    color: var(--color-primary); /* 原本 #3b82f6 */
-}
-
-.btn-danger {
-    padding: 10px 24px;
-    background: var(--color-danger); /* 原本 #ef4444 */
-    color: var(--text-inverse); /* 原本 white */
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-danger:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-}
-
-.btn-danger-outline {
-    padding: 10px 24px;
-    background: transparent;
-    color: var(--color-danger); /* 原本 #ef4444 */
-    border: 1px solid var(--color-danger);
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-danger-outline:hover {
-    background: var(--color-danger);
+.ticker-label {
+    background: var(--color-primary); /* 自動切換 */
     color: var(--text-inverse);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+    z-index: 2;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.form-actions {
+.ticker-wrapper {
+    flex: 1;
+    overflow: hidden;
     display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    margin-top: 24px;
+    align-items: center;
 }
+
+.ticker-content {
+    display: inline-block;
+    white-space: nowrap;
+    padding-left: 20px;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    animation: marquee 40s linear infinite;
+}
+
+.ticker-content:hover {
+    animation-play-state: paused;
+    cursor: pointer;
+}
+
+@keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+
+@media (max-width: 768px) {
+    .news-ticker-container {
+        margin: 0 0.5rem;
+        height: 32px;
+    }
+    .ticker-label {
+        padding: 2px 10px;
+        font-size: 0.7rem;
+    }
+}
+</style>
