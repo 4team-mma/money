@@ -1,42 +1,89 @@
-/* @import './base.css';
 
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-weight: normal;
+/* =========================================
+  1. 定義變數 (Variables)
+  這些變數在專案的任何角落(包含 scoped style, 外部 css)都能讀取到
+   ========================================= */
+:root {
+    /* 背景類:頁面大背景 */
+    --bg-body: #f8f9fa;
+
+    /* 卡片背景:卡片、側邊欄、頂部導覽列 (白) */
+    --bg-card: #ffffff;
+    /* 側邊欄背景 */
+    --bg-sidebar: #ffffff;
+    
+    --bg-hover: rgba(0,0,0,0.05); /* 滑鼠移過去的底色 */
+    --bg-input: #ffffff;      /* 輸入框背景 (通常跟卡片一樣，但在深色模式可能不同) */
+
+    /* 文字色 */
+    --text-primary: #2c3e50;   /* 主要標題:標題、重點文字 */
+    --text-secondary: #6c757d; /* 次要說明文 : 籤、說明文字 (灰)*/
+    --text-inverse: #ffffff;  /* 反白文字 (例如藍色按鈕上的字) */
+
+    /* 品牌色 (你的主色調) */
+    --color-primary: #3b82f6;
+    --color-danger: #ef4444;
+
+    /* 邊框 */
+    --border-color: #e9ecef;
+    --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* 卡片陰影 */
+    /* 裝飾色 */
+    --color-primary: #3b82f6;  /* 品牌主色 */
+    --color-danger: #ef4444;   /* 警告/刪除 */
+    --border-color: #e9ecef;   /* 邊框線條 */
+
 }
 
-a,
-.green {
-  text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
+/* 深色主題 (Dark Mode) */
+/* 當 標籤上 data-theme="dark" 時，覆蓋上面的變數 */
+[data-theme="dark"] {
+    /* 背景變深 */
+    --bg-body: #0f172a;       /* 極深藍/黑 */
+    --bg-card: #1e293b;       /* 深灰藍 (卡片亮一點) */
+    --bg-sidebar: #242424;
+    --bg-input: #334155;      /* 輸入框要比卡片再明顯一點 */
+
+    /* 文字變淺 */
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    --text-inverse: #ffffff;  /* 保持白色 */
+    --bg-hover: rgba(255,255,255,0.1);
+
+    /* --- C. 顏色微調 (讓刺眼的顏色柔和一點) --- */
+    --color-primary: #60a5fa; /* 淺藍 */
+    --color-success: #34d399; /* 淺綠 */
+    --color-danger: #f87171;  /* 淺紅 */
+
+    /* --- D. 深色模式通常不需要陰影，或是改用發光效果 --- */
+    /* 邊框變深 */
+    --border-color: #334155;
+    --shadow-card: none;      /* 深色模式建議拿掉陰影，看起來比較乾淨 */
 }
 
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
+/* 3. 定義其他主題 (例如 Forest) */
+[data-theme="forest"] {
+    --bg-body: #f0fdf4;
+    --color-primary: #16a34a;
+    /* ...其他顏色 */
 }
 
-@media (min-width: 1024px) {
   body {
-    display: flex;
-    place-items: center;
-  }
+  /* background-color: #f8f8e1; */
 
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
-  } */
+  /* ✅ 改用變數 (這樣切換 dark mode 時背景才會變黑) */
+    background-color: var(--bg-body);
+    color: var(--text-primary); /* 讓文字顏色也跟著變 */
 
-  body {
-  background-color: #f8f8e1;
-    padding-left: 2rem;
-    padding-right: 2rem;
+    /* 用來確保在 Mac/Windows 上字體看起來一致的設定 */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    margin: 0; 
+    padding: 0;
+
+
+    /* padding-left: 2rem;
+    padding-right: 2rem; */
 }
 
 .nav {
@@ -62,4 +109,9 @@ a,
 h1 {
   text-align: center;
 }
-/* } */
+
+/* 確保所有連結預設沒有底線 */
+a {
+    text-decoration: none;
+    color: inherit;
+}
