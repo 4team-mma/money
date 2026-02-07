@@ -141,17 +141,21 @@ onMounted(async () => {
     </Nav>
 </template>
 
-
 <style scoped>
+/* 引用共用 CSS */
 @import '../assets/css/add.css';
 
+/* 1. 卡片樣式 */
 .card {
-    background: #ffffff;
+    background: var(--bg-card); /* 原本 #ffffff */
     border-radius: 16px;
     padding: 24px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-card); /* 原本 0 10px 25px... */
+    /* 建議加上邊框，讓深色模式下的卡片邊緣更清晰 */
+    border: 1px solid var(--border-color);
 }
 
+/* 2. 標題與日期 */
 .header {
     margin-bottom: 24px;
 }
@@ -159,40 +163,60 @@ onMounted(async () => {
 .header h2 {
     margin: 0;
     font-size: 1.5rem;
+    color: var(--text-primary); /* 補上標題顏色 */
 }
 
-.date {
-    font-size: 0.9rem;
-    color: #64748b;
+/* 日期選擇器相關 (雖然在 template 裡有寫 style="border:0"，但這裡可以補強) */
+.date-input-container button {
+    background: none;
+    font-size: 1.2rem;
+}
+.date-display-input {
+    background: transparent;
+    border: none;
+    font-size: 1rem;
+    color: var(--text-secondary);
+    width: 120px;
+    cursor: pointer;
 }
 
-
-
+/* 3. 標籤 */
 label {
     font-size: 0.85rem;
-    color: #475569;
+    color: var(--text-secondary); /* 原本 #475569 */
+    margin-bottom: 8px; /* 增加一點間距比較好看 */
+    display: block;
 }
 
-/* 金額 */
+/* 4. 金額輸入框 */
 .amount-input {
     height: 52px;
     font-size: 1.4rem;
     font-weight: 600;
     padding: 0 16px;
     border-radius: 12px;
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--border-color); /* 原本 #e2e8f0 */
+    background: var(--bg-input); /* 補上背景 */
+    color: var(--text-primary);  /* 補上文字 */
+    width: 100%; /* 確保寬度正確 */
+    box-sizing: border-box;
 }
 
-/* textarea */
+/* 5. 備註輸入框 (Textarea) */
 textarea {
     min-height: 120px;
     padding: 12px;
     border-radius: 12px;
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--border-color); /* 原本 #e2e8f0 */
+    background: var(--bg-input); /* 補上背景 */
+    color: var(--text-primary);  /* 補上文字 */
     resize: vertical;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: inherit; /* 確保字體一致 */
 }
 
-/* Actions */
+/* 6. 按鈕區 */
 .actions {
     display: flex;
     justify-content: flex-end;
@@ -201,20 +225,26 @@ textarea {
 }
 
 .btn-primary {
-    background: #2563eb;
-    color: white;
+    background: var(--color-primary); /* 原本 #2563eb */
+    color: var(--text-inverse); /* 原本 white */
     padding: 10px 20px;
     border: 0px;
     border-radius: 10px;
     font-weight: 600;
-
+    cursor: pointer;
 }
 
 .btn-secondary {
-    background: #e7eef5;
-    color: #334155;
+    background: var(--bg-hover); /* 原本 #e7eef5 (淺灰) */
+    color: var(--text-secondary); /* 原本 #334155 (深灰) */
     padding: 10px 20px;
     border-radius: 10px;
-    border: 0px;
+    border: 1px solid var(--border-color); /* 補個邊框讓它在深色模式更清楚 */
+    cursor: pointer;
+    font-weight: 600;
+}
+.btn-secondary:hover {
+    background: var(--border-color); /* hover 時稍微深一點 */
+    color: var(--text-primary);
 }
 </style>
