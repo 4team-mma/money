@@ -142,7 +142,9 @@ onMounted(() => {
 /* 基本佈局 */
 .dashboard-layout {
   min-height: 100vh;
-  background: #f8fafc;
+  /* background: #f8fafc; */
+  /* 讓底色能隨主題變色 */
+  background: var(--bg-body);
 }
 
 .sidebar-backdrop {
@@ -166,7 +168,11 @@ onMounted(() => {
   left: 0;
   z-index: 50;
   width: 288px;
-  background: white;
+
+  /* background: white; */
+  /* 側邊欄背景 */
+  background: var(--bg-sidebar);
+
   border-right: 2px solid #e2e8f0;
   transform: translateX(-100%);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -389,13 +395,14 @@ onMounted(() => {
   flex: 1;
   display: flex;
   align-items: center;
-  background: #f1f5f9;
+  background: var(--bg-body);
   border-radius: 50px;
   height: 38px;
   margin: 0 1.5rem;
   padding: 0 4px;
   overflow: hidden;
-  border: 1px solid #e2e8f0;
+  /* border: 1px solid #e2e8f0; */
+  border: 1px solid var(--border-color);
 }
 
 .ticker-label {
