@@ -1,21 +1,45 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue' 
+import { ElMessage } from 'element-plus'
 
 /* ========================
-   Theme System (與 main.css 對應)
+    Theme System (與 main.css 對應)
    ======================== */
-const themes = {
+
+const themeUnlocks = {
+    light: 1,      
+    nordic: 1,
+    sunset: 1,
+    forest: 1,
+    lavender: 1,
+    dark: 1,
+    oasis: 5,   // Lv 5解鎖
+    cyber: 10    // Lv 10解鎖
+};
+
+// 假設你從 API 或成就系統獲取的當前等級
+const userLevel = ref(3);
+
+const themes = computed(() => {
+    const baseThemes = {
     light: { 
         name: 'MMA 經典', 
         bgGradient: '#f8fafc', 
         sidebarBg: '#ffffff', 
         primary: '#3b82f6' 
     },
-    dark: { 
-        name: '極客深邃', 
-        bgGradient: '#0f172a', 
-        sidebarBg: '#1e293b', 
-        primary: '#60a5fa' 
+    nordic: { 
+        name: '北歐極簡', 
+        bgGradient: '#eceff4', 
+        sidebarBg: '#d8dee9', 
+        primary: '#5e81ac',
+        text: '#2e3440'
+    },
+        sunset: { 
+        name: '微醺夕陽', 
+        bgGradient: '#fffbeb', 
+        sidebarBg: '#ffffff', 
+        primary: '#f59e0b' 
     },
     forest: { 
         name: '森林晨曦', 
@@ -23,19 +47,59 @@ const themes = {
         sidebarBg: '#ffffff', 
         primary: '#10b981' 
     },
-    sunset: { 
-        name: '微醺夕陽', 
-        bgGradient: '#fffbeb', 
+    lavender: { 
+        name: '薰衣草園', 
+        bgGradient: '#f3f0ff', 
         sidebarBg: '#ffffff', 
-        primary: '#f59e0b' 
+        primary: '#b39cd0',
+        text: '#4b4453'
+    },
+    dark: { 
+        name: '極客深邃', 
+        bgGradient: '#0f172a', 
+        sidebarBg: '#1e293b', 
+        primary: '#60a5fa' 
+    },
+    oasis: { 
+        name: '沙漠綠洲', 
+        bgGradient: '#f7f3f0', 
+        sidebarBg: '#caebdf', 
+        primary: '#c2a383',
+        text: '#4a3f35'
+    },
+        cyber: { 
+        name: '午夜霓虹',
+        bgGradient: '#0a0a12', 
+        sidebarBg: '#161625', 
+        primary: '#ff00ff',
+        text: '#e0e0ff'
     }
-}
+    };
+
+    Object.keys(baseThemes).forEach(id => {
+    const requiredLevel = themeUnlocks[id] || 1;
+    baseThemes[id].locked = userLevel.value < requiredLevel;
+    baseThemes[id].requiredLevel = requiredLevel; // 順便存起來，顯示在介面上
+    });
+
+    return baseThemes;
+    });
 
 // 讀取當前前台主題 (注意：key 是 appTheme)
 const currentTheme = ref(localStorage.getItem('appTheme') || 'light')
 
 // 2. 切換主題函式
 const changeTheme = (id) => {
+    if (themes.value[id].locked) {
+        // 如果你有引入 ElMessage
+        if (typeof ElMessage !== 'undefined') {
+            ElMessage.warning(`尚未解鎖！需要 Lv.${themes.value[id].requiredLevel}`);
+        } else {
+            alert(`尚未解鎖！需要 Lv.${themes.value[id].requiredLevel}`);
+        }
+        return;
+    }
+
     currentTheme.value = id
     localStorage.setItem('appTheme', id)
     
@@ -100,8 +164,12 @@ onMounted(() => {
                         <div class="theme-preview" :style="{ background: style.bgGradient }">
                             <div class="preview-sidebar" :style="{ background: style.sidebarBg }"></div>
                             <div class="preview-accent" :style="{ background: style.primary }"></div>
+                            <div v-if="style.locked" class="lock-overlay">
+                                <span class="lock-icon">🔒</span>
+                                <span class="lock-text">Lv.{{ style.requiredLevel }} 解鎖</span>
+                            </div>
                         </div>
-                        <span>{{ style.name }}</span>
+                        <span class="theme_name_color" >{{ style.name }}</span>
                     </div>
                 </div>
             </div>
@@ -160,17 +228,20 @@ onMounted(() => {
 
 /* 主題選擇器樣式 (補在這裡確保不依賴 admin.css) */
 .theme-picker {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    margin-top: 10px;
+    display: grid;
+    /* 核心設定：分成 6 等份，每份 1fr */
+    grid-template-columns: repeat(6, 1fr); 
+    gap: 10px; /* 項目之間的間距 */
+    width: 70%;
 }
 
 .theme-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
     cursor: pointer;
-    text-align: center;
-    transition: 0.3s;
-    opacity: 0.7;
+    transition: transform 0.2s;
 }
 
 .theme-item:hover, .theme-item.is-selected {
@@ -184,19 +255,19 @@ onMounted(() => {
 }
 
 .theme-preview {
-    width: 100px;
-    height: 60px;
+    width: 100%;
+    aspect-ratio: 16 / 10; /* 保持固定寬高比 */
     border-radius: 12px;
     position: relative;
     overflow: hidden;
-    border: 2px solid var(--border-color);
-    margin-bottom: 8px;
-    transition: 0.3s;
+    border: 2px solid transparent;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: all 0.3s;
 }
 
 .theme-item.is-selected .theme-preview {
-    border-color: var(--color-primary);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: var(--theme-primary, #3b82f6);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
 }
 
 .preview-sidebar {
@@ -214,5 +285,72 @@ onMounted(() => {
     position: absolute;
     bottom: 8px;
     right: 8px;
+}
+
+.theme_name_color {
+    color: var(--text-primary);
+}
+
+/* 鎖定狀態的容器 */
+.theme-item.is-locked {
+    cursor: not-allowed; /* 顯示禁止點擊的手勢 */
+    opacity: 0.8;
+}
+
+/* 鎖定時的預覽圖模糊效果 */
+.theme-item.is-locked .theme-preview {
+    filter: grayscale(0.8) blur(2px); /* 變灰且模糊 */
+    border: 1px dashed rgba(0,0,0,0.1);
+}
+
+/* 鎖定遮罩層 */
+.lock-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4); /* 半透明黑底 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    backdrop-filter: blur(4px); /* 加強模糊感 */
+    transition: background 0.3s;
+}
+
+/* 鎖定圖示與文字 */
+.lock-icon {
+    font-size: 24px;
+    margin-bottom: 4px;
+    filter: none; /* 圖示本身不要模糊 */
+}
+
+.lock-text {
+    font-size: 12px;
+    color: #ffd700; /* 使用金色文字，對應成就獎勵的感覺 */
+    font-weight: 800;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* 移除鎖定項目的懸浮位移效果 */
+.theme-item.is-locked:hover {
+    transform: none;
+}
+
+/* 滑鼠懸停在鎖定項目時，遮罩變深一點點提示不可用 */
+.theme-item.is-locked:hover .lock-overlay {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+/* 響應式：如果螢幕太小，自動變更為每排 3 個或 2 個 */
+@media (max-width: 1024px) {
+    .theme-picker {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .theme-picker {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 </style>
