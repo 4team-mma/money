@@ -1,9 +1,25 @@
 <script setup>
-import { useRouter } from 'vue-router'
+import { useRouter,useRoute } from 'vue-router'
 import { ref, onMounted, computed, onUnmounted } from 'vue'
-
+import MoneyAIBot from '../components/MoneyAIBot.vue'
 const sidebarOpen = ref(false)
-const router = useRouter()
+
+
+
+const router = useRouter() //執行動作。用來指令電腦「去哪裡」。
+const route = useRoute() // 讀取狀態。用來查看「目前在哪」
+// 判斷是否要顯示機器人 (例如：不希望在登入頁 Login.vue 看到它)
+
+const showBot = computed(() => {
+  const hiddenRoutes = ['Home'] // 這些頁面不顯示
+  return !route.name || !hiddenRoutes.includes(route.name)
+})
+// === 補上主題樣式 (避免機器人讀不到顏色報錯) ===
+const currentStyle = computed(() => {
+  // 這裡建議從你的主題邏輯中抓取顏色，或者先給一個預設值
+  return { primary: 'var(--color-primary)' } 
+})
+
 
 // === 1. 使用者資訊 ===
 const userData = ref({
@@ -33,8 +49,8 @@ const navigation = [
   { name: '圖表分析', to: '/Chart', icon: '📈' },
   { name: '消費趨勢', to: '/ConsumerAnalysis', icon: '⛽' },
   { name: '薪資趨勢', to: '/SalaryAnalysis', icon: '💵' },
-  { name: '成就系統', to: '/Achievements', icon: '🏆' },
-  { name: '成就測試', to: '/Achievements_new', icon: '🏆' },
+  { name: '舊款成就', to: '/Achievements', icon: '🏆' },
+  { name: '成就系統', to: '/Achievements_new', icon: '🏆' },
   { name: '問題回饋', to: '/Feedback', icon: '❓' },
   { name: '設定', to: '/Settings', icon: '⚙️' }
 ]
@@ -93,6 +109,7 @@ onUnmounted(() => {
 </script>
 
 <template>
+  
   <div class="dashboard-layout">
     <div v-if="sidebarOpen" class="sidebar-backdrop" @click="sidebarOpen = false" />
 
@@ -146,14 +163,18 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-
+      
       </header>
 
       <main class="page-content">
         <slot />
       </main>
+    
     </div>
   </div>
+  <footer>
+    <MoneyAIBot v-if="showBot" :currentStyle="currentStyle" />
+  </footer>
 </template>
 
 <style scoped>
