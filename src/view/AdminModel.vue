@@ -94,9 +94,9 @@ const saveConfig = () => {
                 </div>
 
                 <div class="config-actions">
-                    <button class="btn-mma-secondary" @click="testConnection">⚡ 測試連線</button>
-                    <button class="btn-mma-primary" 
-                            :style="{ background: currentStyle?.primary || '#3b82f6' }"
+                    <button class="btn-mma-action" @click="testConnection">⚡ 測試連線</button>
+                    <button class="btn-mma-action" 
+                            
                             @click="saveConfig">
                         💾 儲存並套用
                     </button>
@@ -107,7 +107,7 @@ const saveConfig = () => {
 </template>
 
 <style scoped>
-/* 確保樣式有正確套用，這部分是美化間距的關鍵 */
+
 .model-config-grid {
     display: grid;
     grid-template-columns: 280px 1fr;
@@ -158,4 +158,26 @@ const saveConfig = () => {
     gap: 12px;
     margin-top: 30px;
 }
+.btn-mma-action {
+    background: white;
+    border: 1.5px solid #3b82f6;
+    color: #3b82f6;
+    padding: 10px 25px;      
+    border-radius: 12px;   
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;      
+    transition: 0.2s;
+    white-space: nowrap;
+    margin-left: 50%;
+}
+
+
+.btn-mma-action:hover:not(.is-disabled) {
+    background: #3b82f6;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);
+}
+
 </style>

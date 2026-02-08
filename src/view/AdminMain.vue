@@ -343,7 +343,9 @@ const normalUsersFiltered = computed(() => {
                                         <td>{{ u.name }}</td>
                                         <td>{{ u.email }}</td>
                                         <td class="action-btns">
-                                            <button class="btn-mma-action" :style="{ borderColor: currentStyle.primary, color: currentStyle.primary }">詳情</button>
+                                            <button class="btn-mma-action" 
+                                            
+                                            >詳情</button>
                                             <button class="btn-mma-action delete" @click="userStore.deleteUser(u.uid)">註銷</button>
                                         </td>
                                     </tr>
