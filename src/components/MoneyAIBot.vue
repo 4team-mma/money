@@ -1,6 +1,7 @@
 <script setup>
 import { ref, nextTick, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { robotApi } from '../api/robot';
 
 const route = useRoute()
 const messagesContainer = ref(null)
@@ -9,13 +10,14 @@ const messagesContainer = ref(null)
 const isOpen = ref(localStorage.getItem('isMeowChatOpen') === 'true')
 
 const input = ref('')
+const isTyping = ref(false) // 確保變數定義在頂部
 const catImg = new URL('@/assets/AI_cat.png', import.meta.url).href
 
 /* ========================
-  路徑問候語地圖
+   路徑問候語地圖
    ======================== */
 const greetingsMap = {
-'/Book': '喵～今天有什麼開支要紀錄嗎？點擊日期可以看詳細紀錄喔！🗓️',
+  '/Book': '喵～今天有什麼開支要紀錄嗎？點擊日期可以看詳細紀錄喔！🗓️',
   '/dashboard': '喵～這是你的財務總覽，看看最近的收支平衡了嗎？📊',
   '/Account': '喵～這裡可以管理你的金庫，要新增銀行帳號或錢包嗎？⛺',
   '/BudgetManager': '喵～預算控管是修仙的第一步！我們來規劃這月的開銷吧。🐱',
@@ -88,17 +90,51 @@ const scrollToBottom = () => {
   })
 }
 
-const handleSend = () => {
-  if (!input.value.trim()) return
-  messages.value.push({ id: Date.now(), text: input.value, sender: 'user', timestamp: new Date() })
+const handleSend = async () => {
+  // 檢查輸入是否為空或正在思考中
+  if (!input.value.trim() || isTyping.value) return
+
   const query = input.value
+  
+  // 1. 使用者訊息加入列表
+  messages.value.push({ 
+    id: Date.now(), 
+    text: query, 
+    sender: 'user', 
+    timestamp: new Date() 
+  })
+  
   input.value = ''
+  isTyping.value = true // 開始思考
   scrollToBottom()
 
-  setTimeout(() => {
-    messages.value.push({ id: Date.now() + 1, text: '收到！這部分喵喵正在幫你計算中...✨', sender: 'bot', timestamp: new Date() })
+  try {
+    // 2. 呼叫後端 API (robotApi)
+    const response = await robotApi.postAiRobotChat({ message: query });
+
+    // 3. 取得回覆內容 (相容不同的 axios 返回結構)
+    const replyText = response.data?.reply || response.reply;
+
+    messages.value.push({
+      id: Date.now() + 1,
+      text: replyText,
+      sender: 'bot',
+      timestamp: new Date()
+    })
+  } catch (error) {
+    console.error("AI 請求失敗:", error);
+    // 顯示錯誤具體細節，方便偵測 401 或 400
+    const errorMsg = error.response?.data?.detail || "喵... 我好像斷線了，請檢查後端伺服器喵！";
+    messages.value.push({
+      id: Date.now() + 1,
+      text: errorMsg,
+      sender: 'bot',
+      timestamp: new Date()
+    })
+  } finally {
+    isTyping.value = false // 結束思考
     scrollToBottom()
-  }, 800)
+  }
 }
 </script>
 
@@ -118,7 +154,7 @@ const handleSend = () => {
           <img :src="catImg" class="header-icon" />
           <div class="bot-status">
             <span class="name">Money 喵喵小助手</span>
-            <span class="status">隨時為您服務</span>
+            <span class="status">{{ isTyping ? '喵喵正在思考中...' : '隨時為您服務' }}</span>
           </div>
         </div>
         <button class="close-x" @click="isOpen = false">✕</button>
@@ -132,11 +168,20 @@ const handleSend = () => {
             <span class="time">{{ formatTime(message.timestamp) }}</span>
           </div>
         </div>
+        <div v-if="isTyping" class="msg-row bot">
+           <img :src="catImg" class="msg-avatar" />
+           <div class="bubble typing">...正在思考中喵...</div>
+        </div>
       </div>
 
       <div class="input-area">
-        <input v-model="input" placeholder="輸入訊息..." @keydown.enter="handleSend" />
-        <button class="send-btn" @click="handleSend">🐾</button>
+        <input 
+          v-model="input" 
+          placeholder="輸入訊息..." 
+          @keydown.enter="handleSend" 
+          :disabled="isTyping"
+        />
+        <button class="send-btn" @click="handleSend" :disabled="isTyping">🐾</button>
       </div>
       <p class="bottom-hint">喵～問問我「預算」、「帳戶」或「分析」！</p>
     </div>
@@ -175,7 +220,6 @@ const handleSend = () => {
   transform: scale(1.1) translateY(-5px);
 }
 
-/* 閃爍星星動畫修正 */
 .stars-container {
   position: absolute;
   top: 0;
@@ -192,16 +236,14 @@ const handleSend = () => {
   animation: blink 1.5s infinite alternate;
 }
 
-/* 星星調整位置，避開耳朵 */
-.s1 { top: 20%; right: 5%; font-size: 0.9rem; animation-delay: 0s; }/* 數字越大越下面 */
-.s3 { top: 35%; right: 18%; font-size: 0.7rem; animation-delay: 0.8s; }/* 數字越大越下面 */
+.s1 { top: 20%; right: 5%; font-size: 0.9rem; animation-delay: 0s; }
+.s3 { top: 35%; right: 18%; font-size: 0.7rem; animation-delay: 0.8s; }
 
 @keyframes blink {
   0% { opacity: 0.4; transform: scale(0.9); }
   100% { opacity: 1; transform: scale(1.2); }
 }
 
-/* 對話視窗 */
 .chat-window-custom {
   width: 360px;
   height: 520px;
@@ -214,7 +256,6 @@ const handleSend = () => {
   border: 1px solid #f0f0f0;
 }
 
-/* ...其餘 CSS 保持不變... */
 .chat-header-custom { padding: 16px; background: #f8faff; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; }
 .header-left { display: flex; align-items: center; gap: 10px; }
 .header-icon { width: 32px; height: 32px; object-fit: contain; }
@@ -222,14 +263,26 @@ const handleSend = () => {
 .bot-status .status { font-size: 0.75rem; color: #888; }
 .close-x { background: #eee; border: none; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; }
 .messages-container { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: #fff; }
+
 .msg-row { display: flex; gap: 10px; max-width: 85%; }
 .msg-row.user { align-self: flex-end; flex-direction: row-reverse; }
+
 .msg-avatar { width: 28px; height: 28px; object-fit: contain; }
-.bubble { padding: 10px 14px; border-radius: 14px; font-size: 0.9rem; line-height: 1.4; }
-.bot .bubble { background: #f0f2f5; border-top-left-radius: 2px; }
+.bubble { padding: 10px 14px; border-radius: 14px; font-size: 0.9rem; line-height: 1.4; position: relative; }
+
+.bot .bubble { background: #f0f2f5; color: #333; border-top-left-radius: 2px; }
 .user .bubble { background: #3b82f6; color: white; border-top-right-radius: 2px; }
+
+.bubble.typing { color: #888; font-style: italic; }
+
+.time { font-size: 0.7rem; opacity: 0.5; margin-top: 4px; display: block; text-align: right; }
+
 .input-area { padding: 12px; display: flex; gap: 8px; border-top: 1px solid #f0f0f0; }
 .input-area input { flex: 1; border: 1px solid #ddd; padding: 8px 12px; border-radius: 10px; outline: none; }
+.input-area input:disabled { background: #f9f9f9; }
+
 .send-btn { background: #3b82f6; border: none; border-radius: 8px; width: 40px; color: white; cursor: pointer; }
+.send-btn:disabled { background: #ccc; cursor: not-allowed; }
+
 .bottom-hint { font-size: 0.7rem; color: #aaa; text-align: center; margin-bottom: 10px; }
 </style>
