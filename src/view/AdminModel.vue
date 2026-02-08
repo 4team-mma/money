@@ -1,30 +1,55 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { robotApi } from '../api/robot';
 
-// 接收父組件傳過來的樣式
-const props = defineProps({
-    currentStyle: Object
-})
+const props = defineProps({ currentStyle: Object })
 
-/* ========================
-   模型控制中心邏輯
-   ======================== */
-const selectedAiModel = ref('gemini') 
+const selectedAiModel = ref('ollama') 
 const aiSettings = ref({
+    // 以下必須對應你 Template 裡的 v-model
     geminiKey: '',
     geminiVersion: 'gemini-1.5-pro',
     ollamaHost: 'http://localhost:11434',
-    ollamaModel: 'llama3'
+    ollamaModel: 'gemma3:1b', // 修改為你現在正使用的模型
+    system_prompt: '你是一個親切的理財助手喵喵，說話結尾要帶喵~'
 })
 
-const testConnection = () => {
-    alert(`正在測試 ${selectedAiModel.value} 連線...`)
-}
+onMounted(async () => {
+    try {
+        const res = await robotApi.getAiRobotConfig();
+        // 如果後端有資料，將資料庫欄位對應回你的 UI 變數
+        if (res.data) {
+            const d = res.data;
+            selectedAiModel.value = d.provider;
+            if (d.provider === 'gemini') {
+                aiSettings.value.geminiKey = ''; // API Key 為了安全不回傳
+                aiSettings.value.geminiVersion = d.model_version;
+            } else {
+                aiSettings.value.ollamaHost = d.base_url;
+                aiSettings.value.ollamaModel = d.model_version;
+            }
+            aiSettings.value.system_prompt = d.system_prompt || aiSettings.value.system_prompt;
+        }
+    } catch (err) { console.error("載入設定失敗"); }
+})
 
-// 儲存邏輯 (之後對接 FastAPI)
-const saveConfig = () => {
-    console.log("準備儲存至 MySQL:", aiSettings.value)
-    alert("設定已傳送至後端加密儲存！")
+const saveConfig = async () => {
+    try {
+        // 核心修正：將前端不同模型的欄位，轉換成後端統一的 Schema
+        const payload = {
+            provider: selectedAiModel.value,
+            api_key: selectedAiModel.value === 'gemini' ? aiSettings.value.geminiKey : 'ollama_no_key',
+            base_url: selectedAiModel.value === 'ollama' ? aiSettings.value.ollamaHost : '',
+            model_version: selectedAiModel.value === 'gemini' ? aiSettings.value.geminiVersion : aiSettings.value.ollamaModel,
+            system_prompt: aiSettings.value.system_prompt
+        };
+
+        await robotApi.saveAiRobotConfig(payload);
+        alert("✅ 設定已成功加密儲存！");
+    } catch (error) {
+        console.error(error);
+        alert("❌ 儲存失敗，請檢查欄位是否填寫完整");
+    }
 }
 </script>
 
@@ -169,7 +194,7 @@ const saveConfig = () => {
     font-size: 14px;      
     transition: 0.2s;
     white-space: nowrap;
-    margin-left: 50%;
+    margin-left: 0%;
 }
 
 
