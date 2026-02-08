@@ -2,207 +2,161 @@
 import { ref, onMounted } from 'vue'
 import { robotApi } from '../api/robot';
 
-const props = defineProps({ currentStyle: Object })
+const selectedAiModel = ref('ollama')
+const currentActiveModel = ref('載入中...')
 
-const selectedAiModel = ref('ollama') 
 const aiSettings = ref({
-    // 以下必須對應你 Template 裡的 v-model
     geminiKey: '',
     geminiVersion: 'gemini-1.5-pro',
     ollamaHost: 'http://localhost:11434',
-    ollamaModel: 'gemma3:1b', // 修改為你現在正使用的模型
+    ollamaModel: 'gemma3:1b',
+    anythingHost: 'http://localhost:3001',
+    anythingModel: 'gemma3:1b',
+    anythingKey: '',
     system_prompt: '你是一個親切的理財助手喵喵，說話結尾要帶喵~'
 })
 
 onMounted(async () => {
     try {
         const res = await robotApi.getAiRobotConfig();
-        // 如果後端有資料，將資料庫欄位對應回你的 UI 變數
-        if (res.data) {
-            const d = res.data;
+        const d = res.data || res;
+        if (d && d.provider) {
             selectedAiModel.value = d.provider;
-            if (d.provider === 'gemini') {
-                aiSettings.value.geminiKey = ''; // API Key 為了安全不回傳
-                aiSettings.value.geminiVersion = d.model_version;
-            } else {
+            currentActiveModel.value = d.provider.toUpperCase();
+            // 同步讀取的設定到輸入框
+            if (d.provider === 'anythingllm') {
+                aiSettings.value.anythingHost = d.base_url;
+                aiSettings.value.anythingModel = d.model_version;
+            } else if (d.provider === 'ollama') {
                 aiSettings.value.ollamaHost = d.base_url;
                 aiSettings.value.ollamaModel = d.model_version;
             }
             aiSettings.value.system_prompt = d.system_prompt || aiSettings.value.system_prompt;
         }
-    } catch (err) { console.error("載入設定失敗"); }
+    } catch (err) { currentActiveModel.value = '預設 Ollama'; }
 })
 
 const saveConfig = async () => {
     try {
-        // 核心修正：將前端不同模型的欄位，轉換成後端統一的 Schema
+        let activeKey = '';
+        if (selectedAiModel.value === 'anythingllm') activeKey = aiSettings.value.anythingKey;
+        else if (selectedAiModel.value === 'gemini') activeKey = aiSettings.value.geminiKey;
+
+        let host = selectedAiModel.value === 'ollama' ? aiSettings.value.ollamaHost : aiSettings.value.anythingHost;
+        let model = selectedAiModel.value === 'ollama' ? aiSettings.value.ollamaModel : 
+                    selectedAiModel.value === 'anythingllm' ? aiSettings.value.anythingModel : aiSettings.value.geminiVersion;
+
         const payload = {
             provider: selectedAiModel.value,
-            api_key: selectedAiModel.value === 'gemini' ? aiSettings.value.geminiKey : 'ollama_no_key',
-            base_url: selectedAiModel.value === 'ollama' ? aiSettings.value.ollamaHost : '',
-            model_version: selectedAiModel.value === 'gemini' ? aiSettings.value.geminiVersion : aiSettings.value.ollamaModel,
-            system_prompt: aiSettings.value.system_prompt
+            system_prompt: aiSettings.value.system_prompt,
+            base_url: host,
+            model_version: model,
+            api_key: activeKey // 若為空，後端會自動找舊的
         };
 
         await robotApi.saveAiRobotConfig(payload);
-        alert("✅ 設定已成功加密儲存！");
-    } catch (error) {
-        console.error(error);
-        alert("❌ 儲存失敗，請檢查欄位是否填寫完整");
-    }
+        currentActiveModel.value = selectedAiModel.value.toUpperCase();
+        alert("✅ 設定儲存並套用成功！");
+    } catch (error) { alert("❌ 儲存失敗，請檢查 API 路徑是否為 /save"); }
 }
 </script>
 
 <template>
     <div class="model-management-container">
         <div class="section-header">
-            <h3>🤖 AI 模型控制中心</h3>
-            <p class="opacity-60">配置用於自動化記帳分類與財務健康分析的 AI 大腦</p>
+            <div class="header-main">
+                <h3>🤖 AI 模型控制中心</h3>
+                <div class="status-badge" :class="selectedAiModel">
+                    ● 目前生效：<strong>{{ currentActiveModel }}</strong>
+                </div>
+            </div>
         </div>
 
         <div class="model-config-grid">
             <div class="config-sidebar">
-                <div class="model-card" 
-                     :class="{ active: selectedAiModel === 'gemini' }"
-                     @click="selectedAiModel = 'gemini'">
-                    <div class="model-icon">✨</div>
-                    <div class="model-info">
-                        <span class="model-name">Google Gemini</span>
-                        <span class="model-desc">雲端高性能 LLM</span>
-                    </div>
-                </div>
-
-                <div class="model-card" 
-                     :class="{ active: selectedAiModel === 'ollama' }"
-                     @click="selectedAiModel = 'ollama'">
-                    <div class="model-icon">🦙</div>
-                    <div class="model-info">
-                        <span class="model-name">Ollama (Local)</span>
-                        <span class="model-desc">本地私有化部署</span>
-                    </div>
-                </div>
+                <div class="model-card" :class="{ active: selectedAiModel === 'ollama' }" @click="selectedAiModel = 'ollama'">🦙 Ollama</div>
+                <div class="model-card" :class="{ active: selectedAiModel === 'anythingllm' }" @click="selectedAiModel = 'anythingllm'">🦾 AnythingLLM</div>
+                <div class="model-card" :class="{ active: selectedAiModel === 'gemini' }" @click="selectedAiModel = 'gemini'">✨ Gemini</div>
             </div>
 
             <div class="config-detail-card">
-                <div v-if="selectedAiModel === 'gemini'" class="animate-fade-in">
-                    <div class="card-title-row">
-                        <h4>Gemini Cloud 設定</h4>
-                        <span class="badge-online">已啟用 Google API</span>
-                    </div>
-                    <div class="input-group">
-                        <label>Gemini API Key</label>
-                        <input type="password" v-model="aiSettings.geminiKey" 
-                               placeholder="API Key 會安全地儲存在後端資料庫" class="mma-input" />
-                    </div>
-                    <div class="input-group">
-                        <label>模型版本</label>
-                        <select v-model="aiSettings.geminiVersion" class="mma-input">
-                            <option value="gemini-1.5-pro">Gemini 1.5 Pro (推薦)</option>
-                            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                        </select>
-                    </div>
+                <div class="editing-title">正在配置：{{ selectedAiModel.toUpperCase() }}</div>
+
+                <div v-if="selectedAiModel === 'anythingllm'">
+                    <div class="input-group"><label>API 端點</label><input v-model="aiSettings.anythingHost" class="mma-input" /></div>
+                    <div class="input-group"><label>API Key (留空保持原設定)</label><input type="password" v-model="aiSettings.anythingKey" class="mma-input" /></div>
                 </div>
 
-                <div v-if="selectedAiModel === 'ollama'" class="animate-fade-in">
-                    <div class="card-title-row">
-                        <h4>Ollama 本地設定</h4>
-                        <span class="badge-offline">本地內網通訊</span>
-                    </div>
-                    <div class="input-group">
-                        <label>伺服器端點 (Host)</label>
-                        <input type="text" v-model="aiSettings.ollamaHost" class="mma-input" />
-                    </div>
-                    <div class="input-group">
-                        <label>指定模型名稱 (Model)</label>
-                        <input type="text" v-model="aiSettings.ollamaModel" class="mma-input" />
-                    </div>
+                <div v-if="selectedAiModel === 'ollama'">
+                    <div class="input-group"><label>Host</label><input v-model="aiSettings.ollamaHost" class="mma-input" /></div>
                 </div>
 
-                <div class="config-actions">
-                    <button class="btn-mma-action" @click="testConnection">⚡ 測試連線</button>
-                    <button class="btn-mma-action" 
-                            
-                            @click="saveConfig">
-                        💾 儲存並套用
-                    </button>
+                <div v-if="selectedAiModel === 'gemini'">
+                    <div class="input-group"><label>Gemini Key (留空保持原設定)</label><input type="password" v-model="aiSettings.geminiKey" class="mma-input" /></div>
                 </div>
+
+                <div class="config-actions"><button class="btn-mma-action" @click="saveConfig">💾 儲存並套用</button></div>
             </div>
         </div>
     </div>
 </template>
 
 <style scoped>
-
-.model-config-grid {
-    display: grid;
-    grid-template-columns: 280px 1fr;
-    gap: 25px;
-    margin-top: 20px;
-}
-
-.config-sidebar {
+/* 保持你原本的樣式，並新增以下狀態標籤樣式 */
+.header-main {
     display: flex;
-    flex-direction: column;
-    gap: 15px;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.model-card {
-    background: white;
-    padding: 16px;
-    border-radius: 12px;
-    border: 2px solid transparent;
-    cursor: pointer;
+.status-badge {
+    background: #f3f4f6;
+    padding: 6px 16px;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    color: #4b5563;
     display: flex;
     align-items: center;
-    gap: 12px;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    gap: 8px;
+    border: 1px solid #e5e7eb;
 }
 
-.model-card.active {
-    border-color: #3b82f6; /* 這是你喜歡的藍色框 */
-    background: #f0f7ff;
+.status-badge.ollama { border-color: #93c5fd; color: #1e40af; }
+.status-badge.anythingllm { border-color: #c084fc; color: #581c87; }
+.status-badge.gemini { border-color: #6ee7b7; color: #064e3b; }
+
+.pulse-icon {
+    color: #10b981;
+    animation: pulse 2s infinite;
 }
 
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
+}
+
+.editing-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #3b82f6;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+/* 原始樣式... */
+.model-config-grid { display: grid; grid-template-columns: 280px 1fr; gap: 25px; margin-top: 20px; }
+.config-sidebar { display: flex; flex-direction: column; gap: 15px; }
+.model-card { background: white; padding: 16px; border-radius: 12px; border: 2px solid transparent; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+.model-card.active { border-color: #3b82f6; background: #f0f7ff; }
 .model-name { display: block; font-weight: bold; }
 .model-desc { font-size: 0.8rem; color: #666; }
-
-.config-detail-card {
-    background: white;
-    padding: 24px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-}
-
+.config-detail-card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); }
 .input-group { margin-bottom: 20px; }
 .input-group label { display: block; margin-bottom: 8px; font-weight: 500; }
 .mma-input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; }
-
-.config-actions {
-    display: flex;
-    gap: 12px;
-    margin-top: 30px;
-}
-.btn-mma-action {
-    background: white;
-    border: 1.5px solid #3b82f6;
-    color: #3b82f6;
-    padding: 10px 25px;      
-    border-radius: 12px;   
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 14px;      
-    transition: 0.2s;
-    white-space: nowrap;
-    margin-left: 0%;
-}
-
-
-.btn-mma-action:hover:not(.is-disabled) {
-    background: #3b82f6;
-    color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);
-}
-
+.config-actions { display: flex; gap: 12px; margin-top: 30px; }
+.btn-mma-action { background: white; border: 1.5px solid #3b82f6; color: #3b82f6; padding: 10px 25px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 14px; transition: 0.2s; white-space: nowrap; }
+.btn-mma-action:hover { background: #3b82f6; color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2); }
 </style>
