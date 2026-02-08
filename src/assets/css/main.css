@@ -1,7 +1,7 @@
 /* src/assets/css/main.css */
 
 /* =========================================
-   1. 定義預設變數 (Light Mode - MMA 經典)
+    1. 定義預設變數 (Light Mode - MMA 經典)
    ========================================= */
 :root {
     /* --- 背景類 --- */
@@ -27,7 +27,7 @@
 }
 
 /* =========================================
-   2. 深色主題 (Dark Mode - 極客深邃)
+    2. 深色主題 (Dark Mode - 極客深邃)
    ========================================= */
 [data-theme="dark"] {
     --bg-body: #0f172a;       /* 極深藍/黑 */
@@ -49,7 +49,7 @@
 }
 
 /* =========================================
-   3. 森林主題 (Forest - 森林晨曦) [整合隊友]
+    3. 森林主題 (Forest - 森林晨曦) [整合隊友]
    ========================================= */
 [data-theme="forest"] {
     --bg-body: #f0fdf4;       /* 極淺綠背景 */
@@ -71,7 +71,7 @@
 }
 
 /* =========================================
-   4. 夕陽主題 (Sunset - 微醺夕陽) [整合隊友]
+    4. 夕陽主題 (Sunset - 微醺夕陽) [整合隊友]
    ========================================= */
 [data-theme="sunset"] {
     --bg-body: #fffbeb;       /* 淺黃背景 */
@@ -93,7 +93,7 @@
 }
 
 /* =========================================
-   5. 通用基礎樣式
+    5. 通用基礎樣式
    ========================================= */
 body {
     background-color: var(--bg-body);
@@ -114,4 +114,84 @@ a {
 /* 確保所有標題置中 (您原本的設定) */
 h1 {
     text-align: center;
+}
+
+/* 6. 午夜霓虹 (Cyberpunk) - 強烈對比、科技感 */
+[data-theme="cyber"] {
+    --bg-body: #0a0a12;       /* 極深紫黑 */
+    --bg-card: #161625;       /* 深紫色 */
+    --bg-sidebar: #161625;
+    --bg-hover: rgba(255, 0, 255, 0.1);
+    --bg-input: #1f1f35;
+
+    --text-primary: #e0e0ff;  /* 亮藍白 */
+    --text-secondary: #9d9dbf;
+    --text-inverse: #ffffff;
+
+    --color-primary: #ff00ff; /* 霓虹粉 */
+    --color-success: #00ffcc; /* 電子青 */
+    --color-danger: #ff3e3e;
+
+    --border-color: #2d2d4a;
+    --shadow-card: 0 0 15px rgba(255, 0, 255, 0.1);
+}
+
+/* 7.北歐極簡 (Nordic) - 涼爽、安靜、高端 */
+[data-theme="nordic"] {
+    --bg-body: #eceff4;       /* 冷灰白 */
+    --bg-card: #ffffff;
+    --bg-sidebar: #d8dee9;    /* 淺藍灰側邊欄 */
+    --bg-hover: #e5e9f0;
+    --bg-input: #ffffff;
+
+    --text-primary: #2e3440;  /* 深炭灰 */
+    --text-secondary: #4c566a;
+    --text-inverse: #ffffff;
+
+    --color-primary: #5e81ac; /* 北歐藍 */
+    --color-success: #a3be8c; /* 莫蘭迪綠 */
+    --color-danger: #bf616a;
+
+    --border-color: #d8dee9;
+    --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+/* 8.薰衣草莊園 (Lavender) - 溫柔、優雅、女性化 */
+[data-theme="lavender"] {
+    --bg-body: #f3f0ff;       /* 極淺紫 */
+    --bg-card: #ffffff;
+    --bg-sidebar: #ffffff;
+    --bg-hover: #f8f7ff;
+    --bg-input: #ffffff;
+
+    --text-primary: #4b4453;  /* 深紫灰 */
+    --text-secondary: #845ec2;/* 薰衣草紫 */
+    --text-inverse: #ffffff;
+
+    --color-primary: #b39cd0; /* 柔和紫 */
+    --color-success: #00c9a7;
+    --color-danger: #ff8066;
+
+    --border-color: #e0d4f7;
+    --shadow-card: 0 8px 20px rgba(179, 156, 208, 0.15);
+}
+
+/* 9.沙漠綠洲 (Oasis) - 大地色系、高級、溫暖 */
+[data-theme="oasis"] {
+    --bg-body: #f7f3f0;       /* 奶油沙色 */
+    --bg-card: #ffffff;
+    --bg-sidebar: #caebdf;    /* 深色側邊欄形成對比 */
+    --bg-hover: #fdfaf8;
+    --bg-input: #ffffff;
+
+    --text-primary: #4a3f35;  /* 深咖啡色 */
+    --text-secondary: #7c6b58;/* 拿鐵色 */
+    --text-inverse: #ffffff;
+
+    --color-primary: #c2a383; /* 金色沙丘 */
+    --color-success: #889e81; /* 鼠尾草綠 */
+    --color-danger: #bc6c25;
+
+    --border-color: #e9e0d6;
+    --shadow-card: 0 4px 12px rgba(74, 63, 53, 0.08);
 }
