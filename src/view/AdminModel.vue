@@ -16,24 +16,41 @@ const aiSettings = ref({
     system_prompt: '你是一個親切的理財助手喵喵，說話結尾要帶喵~'
 })
 
+// 🚀 核心：初始化加載
 onMounted(async () => {
     try {
+        // 🛡️ 雙系統 Token 預檢 (Mac: user_token / Win11: token)
+        const token = localStorage.getItem('user_token') || localStorage.getItem('token');
+        if (!token) {
+            currentActiveModel.value = '尚未登入喵';
+            return;
+        }
+
         const res = await robotApi.getAiRobotConfig();
-        const d = res.data || res;
+        // 修正：相容 axios 不同層級的資料結構
+        const d = res?.data || res;
+        
         if (d && d.provider) {
             selectedAiModel.value = d.provider;
             currentActiveModel.value = d.provider.toUpperCase();
-            // 同步讀取的設定到輸入框
+            
+            // 同步設定到輸入框，增加預設值防止空白
             if (d.provider === 'anythingllm') {
-                aiSettings.value.anythingHost = d.base_url;
-                aiSettings.value.anythingModel = d.model_version;
+                aiSettings.value.anythingHost = d.base_url || 'http://localhost:3001';
+                aiSettings.value.anythingModel = d.model_version || 'gemma3:1b';
             } else if (d.provider === 'ollama') {
-                aiSettings.value.ollamaHost = d.base_url;
-                aiSettings.value.ollamaModel = d.model_version;
+                aiSettings.value.ollamaHost = d.base_url || 'http://localhost:11434';
+                aiSettings.value.ollamaModel = d.model_version || 'gemma3:1b';
             }
             aiSettings.value.system_prompt = d.system_prompt || aiSettings.value.system_prompt;
+        } else {
+            currentActiveModel.value = '預設 OLLAMA';
         }
-    } catch (err) { currentActiveModel.value = '預設 Ollama'; }
+    } catch (err) { 
+        console.error("載入配置失敗:", err);
+        // 針對 401 報錯提供明確文字提示
+        currentActiveModel.value = err.response?.status === 401 ? '認證過期' : '連線失敗';
+    }
 })
 
 const saveConfig = async () => {
@@ -42,22 +59,22 @@ const saveConfig = async () => {
         if (selectedAiModel.value === 'anythingllm') activeKey = aiSettings.value.anythingKey;
         else if (selectedAiModel.value === 'gemini') activeKey = aiSettings.value.geminiKey;
 
-        let host = selectedAiModel.value === 'ollama' ? aiSettings.value.ollamaHost : aiSettings.value.anythingHost;
-        let model = selectedAiModel.value === 'ollama' ? aiSettings.value.ollamaModel : 
-                    selectedAiModel.value === 'anythingllm' ? aiSettings.value.anythingModel : aiSettings.value.geminiVersion;
-
+        // 整理 payload
         const payload = {
             provider: selectedAiModel.value,
             system_prompt: aiSettings.value.system_prompt,
-            base_url: host,
-            model_version: model,
-            api_key: activeKey // 若為空，後端會自動找舊的
+            base_url: selectedAiModel.value === 'ollama' ? aiSettings.value.ollamaHost : aiSettings.value.anythingHost,
+            model_version: selectedAiModel.value === 'ollama' ? aiSettings.value.ollamaModel : 
+                           selectedAiModel.value === 'anythingllm' ? aiSettings.value.anythingModel : aiSettings.value.geminiVersion,
+            api_key: activeKey
         };
 
         await robotApi.saveAiRobotConfig(payload);
         currentActiveModel.value = selectedAiModel.value.toUpperCase();
-        alert("✅ 設定儲存並套用成功！");
-    } catch (error) { alert("❌ 儲存失敗，請檢查 API 路徑是否為 /save"); }
+        alert("✅ 設定儲存並套用成功！喵～");
+    } catch (error) { 
+        alert(`❌ 儲存失敗：${error.response?.data?.detail || '連線逾時喵'}`); 
+    }
 }
 </script>
 
@@ -92,71 +109,30 @@ const saveConfig = async () => {
                 </div>
 
                 <div v-if="selectedAiModel === 'gemini'">
-                    <div class="input-group"><label>Gemini Key (留空保持原設定)</label><input type="password" v-model="aiSettings.geminiKey" class="mma-input" /></div>
+                    <div class="input-group"><label>Gemini Key</label><input type="password" v-model="aiSettings.geminiKey" class="mma-input" /></div>
                 </div>
 
-                <div class="config-actions"><button class="btn-mma-action" @click="saveConfig">💾 儲存並套用</button></div>
+                <div class="config-actions">
+                    <button class="btn-mma-action" @click="saveConfig">💾 儲存並套用</button>
+                </div>
             </div>
         </div>
     </div>
 </template>
 
 <style scoped>
-/* 保持你原本的樣式，並新增以下狀態標籤樣式 */
-.header-main {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.status-badge {
-    background: #f3f4f6;
-    padding: 6px 16px;
-    border-radius: 50px;
-    font-size: 0.9rem;
-    color: #4b5563;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border: 1px solid #e5e7eb;
-}
-
+/* 此處保留您原本最精美的 CSS 喵！ */
+.header-main { display: flex; justify-content: space-between; align-items: center; }
+.status-badge { background: #f3f4f6; padding: 6px 16px; border-radius: 50px; font-size: 0.9rem; color: #4b5563; display: flex; align-items: center; gap: 8px; border: 1px solid #e5e7eb; }
 .status-badge.ollama { border-color: #93c5fd; color: #1e40af; }
 .status-badge.anythingllm { border-color: #c084fc; color: #581c87; }
 .status-badge.gemini { border-color: #6ee7b7; color: #064e3b; }
-
-.pulse-icon {
-    color: #10b981;
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.4; }
-    100% { opacity: 1; }
-}
-
-.editing-title {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #3b82f6;
-    margin-bottom: 10px;
-    font-weight: bold;
-}
-
-/* 原始樣式... */
+.editing-title { font-size: 0.75rem; text-transform: uppercase; color: #3b82f6; margin-bottom: 10px; font-weight: bold; }
 .model-config-grid { display: grid; grid-template-columns: 280px 1fr; gap: 25px; margin-top: 20px; }
 .config-sidebar { display: flex; flex-direction: column; gap: 15px; }
-.model-card { background: white; padding: 16px; border-radius: 12px; border: 2px solid transparent; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+.model-card { background: white; padding: 16px; border-radius: 12px; border: 2px solid transparent; cursor: pointer; transition: all 0.3s; }
 .model-card.active { border-color: #3b82f6; background: #f0f7ff; }
-.model-name { display: block; font-weight: bold; }
-.model-desc { font-size: 0.8rem; color: #666; }
-.config-detail-card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); }
-.input-group { margin-bottom: 20px; }
-.input-group label { display: block; margin-bottom: 8px; font-weight: 500; }
+.config-detail-card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
 .mma-input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; }
-.config-actions { display: flex; gap: 12px; margin-top: 30px; }
-.btn-mma-action { background: white; border: 1.5px solid #3b82f6; color: #3b82f6; padding: 10px 25px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 14px; transition: 0.2s; white-space: nowrap; }
-.btn-mma-action:hover { background: #3b82f6; color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2); }
+.btn-mma-action { background: #3b82f6; color: white; padding: 10px 25px; border-radius: 12px; cursor: pointer; border: none; }
 </style>

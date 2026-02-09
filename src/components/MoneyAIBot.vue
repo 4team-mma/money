@@ -1,20 +1,19 @@
 <script setup>
 import { ref, nextTick, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { robotApi } from '../api/robot';
+import { robotApi } from '../api/robot'; 
 
 const route = useRoute()
 const messagesContainer = ref(null)
 
-// 修正：從 localStorage 讀取狀態，確保換頁不縮起來
+// 讀取開啟狀態：從 localStorage 讀取，確保換頁不縮起來
 const isOpen = ref(localStorage.getItem('isMeowChatOpen') === 'true')
-
 const input = ref('')
-const isTyping = ref(false) // 確保變數定義在頂部
+const isTyping = ref(false)
 const catImg = new URL('@/assets/AI_cat.png', import.meta.url).href
 
 /* ========================
-   路徑問候語地圖
+   路徑問候語地圖 (全功能修仙版)
    ======================== */
 const greetingsMap = {
   '/Book': '喵～今天有什麼開支要紀錄嗎？點擊日期可以看詳細紀錄喔！🗓️',
@@ -30,25 +29,30 @@ const greetingsMap = {
   '/Settings': '喵～這裡可以調整我的樣式和系統設定，選個你喜歡的主題吧。⚙️'
 }
 
-const messages = ref([
-  {
-    id: 1,
-    text: '嗨！我是 喵喵小助手 💰 有什麼財務問題我可以幫你嗎？',
-    sender: 'bot',
-    timestamp: new Date()
-  }
-])
+const messages = ref([{
+  id: 1,
+  text: '嗨！我是 喵喵小助手 💰 有什麼財務問題我可以幫你嗎？',
+  sender: 'bot',
+  timestamp: new Date()
+}])
 
-// 監聽 isOpen 狀態並存入 localStorage
+// 監聽貓咪開啟狀態
 watch(isOpen, (newVal) => {
   localStorage.setItem('isMeowChatOpen', newVal)
-  if (newVal) {
-    checkAndGreet()
-  }
+  if (newVal) checkAndGreet()
 })
 
-// 自動問候邏輯
+// 監聽路徑：換頁時如果貓咪是開著的，就檢查問候語
+watch(() => route.path, () => {
+  if (isOpen.value) checkAndGreet()
+})
+
+// 自動問候邏輯 (整合 Token 檢查)
 const checkAndGreet = () => {
+  // 🚀 雙系統相容：同時檢查兩種 Token 命名
+  const token = localStorage.getItem('user_token') || localStorage.getItem('token');
+  if (!token) return;
+
   const customText = greetingsMap[route.path]
   if (customText) {
     setTimeout(() => {
@@ -67,52 +71,46 @@ const checkAndGreet = () => {
   }
 }
 
-// 監聽路徑：換頁時如果貓咪是開著的，就檢查問候語
-watch(() => route.path, () => {
-  if (isOpen.value) {
-    checkAndGreet()
-  }
-})
-
-onMounted(() => {
-  if (isOpen.value) {
-    checkAndGreet()
-  }
+onMounted(() => { 
+  const token = localStorage.getItem('user_token') || localStorage.getItem('token');
+  if (token && isOpen.value) checkAndGreet() 
 })
 
 const formatTime = (date) => date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
 
 const scrollToBottom = () => {
-  nextTick(() => {
+  nextTick(() => { 
     if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight 
     }
   })
 }
 
+// 🚀 核心發送邏輯：整合雙系統 Token 與逾時顯示
 const handleSend = async () => {
-  // 檢查輸入是否為空或正在思考中
   if (!input.value.trim() || isTyping.value) return
+  
+  // 🛡️ 雙系統守衛：檢查 user_token 或 token
+  const token = localStorage.getItem('user_token') || localStorage.getItem('token');
+  if (!token) {
+    messages.value.push({ 
+      id: Date.now(), 
+      text: "喵... 系統抓不到您的登入資訊，請重新登入喵！🐾", 
+      sender: 'bot', 
+      timestamp: new Date() 
+    });
+    return;
+  }
 
   const query = input.value
-  
-  // 1. 使用者訊息加入列表
-  messages.value.push({ 
-    id: Date.now(), 
-    text: query, 
-    sender: 'user', 
-    timestamp: new Date() 
-  })
-  
+  messages.value.push({ id: Date.now(), text: query, sender: 'user', timestamp: new Date() })
   input.value = ''
-  isTyping.value = true // 開始思考
+  isTyping.value = true
   scrollToBottom()
 
   try {
-    // 2. 呼叫後端 API (robotApi)
+    // 執行 robot.js 中設定的 120 秒超時邏輯
     const response = await robotApi.postAiRobotChat({ message: query });
-
-    // 3. 取得回覆內容 (相容不同的 axios 返回結構)
     const replyText = response.data?.reply || response.reply;
 
     messages.value.push({
@@ -123,16 +121,20 @@ const handleSend = async () => {
     })
   } catch (error) {
     console.error("AI 請求失敗:", error);
-    // 顯示錯誤具體細節，方便偵測 401 或 400
-    const errorMsg = error.response?.data?.detail || "喵... 我好像斷線了，請檢查後端伺服器喵！";
-    messages.value.push({
-      id: Date.now() + 1,
-      text: errorMsg,
-      sender: 'bot',
-      timestamp: new Date()
-    })
+    if (error.code === "ECONNABORTED") {
+      messages.value.push({ 
+        id: Date.now() + 1, 
+        text: "喵... AI 思考太久逾時了，請確認 AI 大腦是否卡住喵！", 
+        sender: 'bot', 
+        timestamp: new Date() 
+      });
+    } else {
+      // 顯示後端噴出的具體錯誤細節
+      const errorMsg = error.response?.data?.detail || "喵... 我好像斷線了喵！";
+      messages.value.push({ id: Date.now() + 1, text: errorMsg, sender: 'bot', timestamp: new Date() });
+    }
   } finally {
-    isTyping.value = false // 結束思考
+    isTyping.value = false
     scrollToBottom()
   }
 }
@@ -189,6 +191,7 @@ const handleSend = async () => {
 </template>
 
 <style scoped>
+/* 使用 Win11 最完整的樣式 */
 .money-ai-bot {
   position: fixed;
   bottom: 30px;
@@ -256,7 +259,14 @@ const handleSend = async () => {
   border: 1px solid #f0f0f0;
 }
 
-.chat-header-custom { padding: 16px; background: #f8faff; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; }
+.chat-header-custom { 
+  padding: 16px; 
+  background: #f8faff; 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  border-bottom: 1px solid #eee; 
+}
 .header-left { display: flex; align-items: center; gap: 10px; }
 .header-icon { width: 32px; height: 32px; object-fit: contain; }
 .bot-status .name { display: block; font-weight: 700; color: #333; font-size: 0.95rem; }
@@ -281,7 +291,7 @@ const handleSend = async () => {
 .input-area input { flex: 1; border: 1px solid #ddd; padding: 8px 12px; border-radius: 10px; outline: none; }
 .input-area input:disabled { background: #f9f9f9; }
 
-.send-btn { background: #3b82f6; border: none; border-radius: 8px; width: 40px; color: white; cursor: pointer; }
+.send-btn { background: #3b82f6; border: none; border-radius: 8px; padding: 0 12px; color: white; cursor: pointer; }
 .send-btn:disabled { background: #ccc; cursor: not-allowed; }
 
 .bottom-hint { font-size: 0.7rem; color: #aaa; text-align: center; margin-bottom: 10px; }
