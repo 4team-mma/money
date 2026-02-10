@@ -1,138 +1,170 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { robotApi } from '../api/robot';
+import { useAiAdminStore } from '../stores/useAiAdminStore';
 
+const aiStore = useAiAdminStore();
 const selectedAiModel = ref('ollama')
-const currentActiveModel = ref('載入中...')
+const isEditMode = ref(false)
+const isSaving = ref(false)
 
-const aiSettings = ref({
+// 🎯 找回原本的 3 個模型
+const geminiModels = [
+    { label: 'Gemini 2.0 Flash (目前最穩)', value: 'gemini-2.0-flash' },
+    { label: 'Gemini Flash Latest (最新 Flash)', value: 'gemini-flash-latest' },
+    { label: 'Gemini Pro Latest (最新 Pro)', value: 'gemini-pro-latest' }
+]
+
+const ollamaModels = [
+    { label: 'Gemma 3 1B IT (Mac 舊款首選)', value: 'gemma-3-1b-it', locked: false },
+    { label: 'Llama 3.2 3B (Win11 推薦)', value: 'llama3.2', locked: true },
+    { label: 'DeepSeek R1 (Win10 推薦)', value: 'deepseek-r1:7b', locked: true }
+]
+
+const DEFAULT_PROMPT = '你是理財助手喵喵。嚴禁廢話、公式與表格，回答限制在 30 字內，直接回答金額重點，結尾帶喵。';
+
+const localSettings = ref({
     geminiKey: '',
-    geminiVersion: 'gemini-1.5-pro',
-    ollamaHost: 'http://localhost:11434',
-    ollamaModel: 'gemma3:1b',
-    anythingHost: 'http://localhost:3001',
-    anythingModel: 'gemma3:1b',
     anythingKey: '',
-    system_prompt: '你是一個親切的理財助手喵喵，說話結尾要帶喵~'
+    geminiVersion: 'gemini-2.0-flash',
+    ollamaModel: 'gemma-3-1b-it',
+    system_prompt: DEFAULT_PROMPT
 })
 
-// 🚀 核心：初始化加載
+// 🚀 強制同步函數：確保 hasKey 狀態被更新
+const switchAndSync = async (provider) => {
+    selectedAiModel.value = provider;
+    isEditMode.value = false;
+    await aiStore.fetchConfig(provider); // 這裡會更新 aiStore.configs[provider].hasKey
+    
+    const cached = aiStore.configs[provider];
+    localSettings.value.system_prompt = cached.prompt || DEFAULT_PROMPT;
+    if (provider === 'gemini') localSettings.value.geminiVersion = cached.version || 'gemini-2.0-flash';
+    if (provider === 'ollama') localSettings.value.ollamaModel = cached.version || 'gemma-3-1b-it';
+}
+
 onMounted(async () => {
-    try {
-        // 🛡️ 雙系統 Token 預檢 (Mac: user_token / Win11: token)
-        const token = localStorage.getItem('user_token') || localStorage.getItem('token');
-        if (!token) {
-            currentActiveModel.value = '尚未登入喵';
-            return;
-        }
-
-        const res = await robotApi.getAiRobotConfig();
-        // 修正：相容 axios 不同層級的資料結構
-        const d = res?.data || res;
-        
-        if (d && d.provider) {
-            selectedAiModel.value = d.provider;
-            currentActiveModel.value = d.provider.toUpperCase();
-            
-            // 同步設定到輸入框，增加預設值防止空白
-            if (d.provider === 'anythingllm') {
-                aiSettings.value.anythingHost = d.base_url || 'http://localhost:3001';
-                aiSettings.value.anythingModel = d.model_version || 'gemma3:1b';
-            } else if (d.provider === 'ollama') {
-                aiSettings.value.ollamaHost = d.base_url || 'http://localhost:11434';
-                aiSettings.value.ollamaModel = d.model_version || 'gemma3:1b';
-            }
-            aiSettings.value.system_prompt = d.system_prompt || aiSettings.value.system_prompt;
-        } else {
-            currentActiveModel.value = '預設 OLLAMA';
-        }
-    } catch (err) { 
-        console.error("載入配置失敗:", err);
-        // 針對 401 報錯提供明確文字提示
-        currentActiveModel.value = err.response?.status === 401 ? '認證過期' : '連線失敗';
-    }
+    const res = await robotApi.getAiRobotConfig();
+    const d = res?.data || res;
+    await switchAndSync(d?.provider || 'ollama');
 })
 
-const saveConfig = async () => {
+const handleSave = async () => {
+    isSaving.value = true;
     try {
-        let activeKey = '';
-        if (selectedAiModel.value === 'anythingllm') activeKey = aiSettings.value.anythingKey;
-        else if (selectedAiModel.value === 'gemini') activeKey = aiSettings.value.geminiKey;
+        const provider = selectedAiModel.value;
+        let activeKey = 'none';
 
-        // 整理 payload
+        // 修改模式開啟且有填寫才傳送 Key
+        if (isEditMode.value) {
+            if (provider === 'gemini' && localSettings.value.geminiKey.trim()) activeKey = localSettings.value.geminiKey.trim();
+            if (provider === 'anythingllm' && localSettings.value.anythingKey.trim()) activeKey = localSettings.value.anythingKey.trim();
+        }
+
         const payload = {
-            provider: selectedAiModel.value,
-            system_prompt: aiSettings.value.system_prompt,
-            base_url: selectedAiModel.value === 'ollama' ? aiSettings.value.ollamaHost : aiSettings.value.anythingHost,
-            model_version: selectedAiModel.value === 'ollama' ? aiSettings.value.ollamaModel : 
-                           selectedAiModel.value === 'anythingllm' ? aiSettings.value.anythingModel : aiSettings.value.geminiVersion,
+            provider: provider,
+            system_prompt: localSettings.value.system_prompt,
+            base_url: provider === 'ollama' ? 'http://localhost:11434' : 'http://localhost:3001',
+            model_version: provider === 'ollama' ? localSettings.value.ollamaModel : 
+                           provider === 'anythingllm' ? 'gemma3:1b' : localSettings.value.geminiVersion,
             api_key: activeKey
         };
 
         await robotApi.saveAiRobotConfig(payload);
-        currentActiveModel.value = selectedAiModel.value.toUpperCase();
-        alert("✅ 設定儲存並套用成功！喵～");
-    } catch (error) { 
-        alert(`❌ 儲存失敗：${error.response?.data?.detail || '連線逾時喵'}`); 
-    }
+        await aiStore.fetchConfig(provider); // 🚀 儲存完立刻抓回最新 hasKey 狀態
+        
+        localSettings.value.geminiKey = '';
+        localSettings.value.anythingKey = '';
+        isEditMode.value = false; // 🚀 儲存完自動關閉修改模式，觸發鎖定
+        alert("💾 所有變更已成功儲存喵！");
+    } catch (error) { alert("❌ 儲存失敗！"); }
+    finally { isSaving.value = false; }
 }
 </script>
 
 <template>
     <div class="model-management-container">
-        <div class="section-header">
-            <div class="header-main">
+        <div class="glass-header">
+            <div class="title-group">
                 <h3>🤖 AI 模型控制中心</h3>
-                <div class="status-badge" :class="selectedAiModel">
-                    ● 目前生效：<strong>{{ currentActiveModel }}</strong>
-                </div>
+                <span class="sub-title">配置喵喵的回話風格與串接金鑰</span>
+            </div>
+            <div class="active-status" :class="aiStore.currentActiveProvider">
+                ● 目前生效：<strong>{{ aiStore.currentActiveProvider.toUpperCase() || '載入中' }}</strong>
             </div>
         </div>
 
-        <div class="model-config-grid">
-            <div class="config-sidebar">
-                <div class="model-card" :class="{ active: selectedAiModel === 'ollama' }" @click="selectedAiModel = 'ollama'">🦙 Ollama</div>
-                <div class="model-card" :class="{ active: selectedAiModel === 'anythingllm' }" @click="selectedAiModel = 'anythingllm'">🦾 AnythingLLM</div>
-                <div class="model-card" :class="{ active: selectedAiModel === 'gemini' }" @click="selectedAiModel = 'gemini'">✨ Gemini</div>
+        <div class="layout-body">
+            <div class="nav-sidebar">
+                <div class="nav-item" :class="{ active: selectedAiModel === 'gemini' }" @click="switchAndSync('gemini')">✨ Gemini</div>
+                <div class="nav-item" :class="{ active: selectedAiModel === 'ollama' }" @click="switchAndSync('ollama')">🦙 Ollama</div>
+                <div class="nav-item" :class="{ active: selectedAiModel === 'anythingllm' }" @click="switchAndSync('anythingllm')">🦾 AnythingLLM</div>
             </div>
 
-            <div class="config-detail-card">
-                <div class="editing-title">正在配置：{{ selectedAiModel.toUpperCase() }}</div>
-
-                <div v-if="selectedAiModel === 'anythingllm'">
-                    <div class="input-group"><label>API 端點</label><input v-model="aiSettings.anythingHost" class="mma-input" /></div>
-                    <div class="input-group"><label>API Key (留空保持原設定)</label><input type="password" v-model="aiSettings.anythingKey" class="mma-input" /></div>
+            <div class="config-pane">
+                <div class="card personality">
+                    <div class="card-title">🧠 喵喵性格指令 (System Prompt)</div>
+                    <textarea v-model="localSettings.system_prompt" class="prompt-area" rows="4"></textarea>
                 </div>
 
-                <div v-if="selectedAiModel === 'ollama'">
-                    <div class="input-group"><label>Host</label><input v-model="aiSettings.ollamaHost" class="mma-input" /></div>
+                <div class="card connection">
+                    <div class="card-title">⚙️ {{ selectedAiModel.toUpperCase() }} 連線配置</div>
+                    
+                    <div v-if="selectedAiModel === 'gemini'" class="form-group">
+                        <label>GEMINI API KEY</label>
+                        <div class="key-control">
+                            <input v-if="!aiStore.configs.gemini.hasKey || isEditMode" type="password" v-model="localSettings.geminiKey" class="form-input" placeholder="請貼上 API Key" />
+                            <div v-else class="key-locked-display">🔒 系統已安全載入並加密儲存金鑰</div>
+                            <button @click="isEditMode = !isEditMode" class="btn-edit">{{ isEditMode ? '取消' : '修改' }}</button>
+                        </div>
+                    </div>
+
+                    <div v-if="selectedAiModel === 'anythingllm'" class="form-group">
+                        <label>ANYTHINGLLM KEY</label>
+                        <div class="key-control">
+                            <input v-if="!aiStore.configs.anythingllm.hasKey || isEditMode" type="password" v-model="localSettings.anythingKey" class="form-input" placeholder="請貼上 Key" />
+                            <div v-else class="key-locked-display">🔒 系統已安全載入並加密儲存金鑰</div>
+                            <button @click="isEditMode = !isEditMode" class="btn-edit">{{ isEditMode ? '取消' : '修改' }}</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>運作模型版本</label>
+                        <select v-if="selectedAiModel === 'gemini'" v-model="localSettings.geminiVersion" class="form-select">
+                            <option v-for="m in geminiModels" :key="m.value" :value="m.value">{{ m.label }}</option>
+                        </select>
+                        <select v-if="selectedAiModel === 'ollama'" v-model="localSettings.ollamaModel" class="form-select">
+                            <option v-for="m in ollamaModels" :key="m.value" :value="m.value" :disabled="m.locked">{{ m.label }}</option>
+                        </select>
+                        <div v-if="selectedAiModel === 'anythingllm'" class="form-input readonly">預設使用 gemma3:1b</div>
+                    </div>
                 </div>
 
-                <div v-if="selectedAiModel === 'gemini'">
-                    <div class="input-group"><label>Gemini Key</label><input type="password" v-model="aiSettings.geminiKey" class="mma-input" /></div>
-                </div>
-
-                <div class="config-actions">
-                    <button class="btn-mma-action" @click="saveConfig">💾 儲存並套用</button>
-                </div>
+                <button @click="handleSave" class="btn-save-master" :disabled="isSaving">
+                    💾 儲存變更
+                </button>
             </div>
         </div>
     </div>
 </template>
 
 <style scoped>
-/* 此處保留您原本最精美的 CSS 喵！ */
-.header-main { display: flex; justify-content: space-between; align-items: center; }
-.status-badge { background: #f3f4f6; padding: 6px 16px; border-radius: 50px; font-size: 0.9rem; color: #4b5563; display: flex; align-items: center; gap: 8px; border: 1px solid #e5e7eb; }
-.status-badge.ollama { border-color: #93c5fd; color: #1e40af; }
-.status-badge.anythingllm { border-color: #c084fc; color: #581c87; }
-.status-badge.gemini { border-color: #6ee7b7; color: #064e3b; }
-.editing-title { font-size: 0.75rem; text-transform: uppercase; color: #3b82f6; margin-bottom: 10px; font-weight: bold; }
-.model-config-grid { display: grid; grid-template-columns: 280px 1fr; gap: 25px; margin-top: 20px; }
-.config-sidebar { display: flex; flex-direction: column; gap: 15px; }
-.model-card { background: white; padding: 16px; border-radius: 12px; border: 2px solid transparent; cursor: pointer; transition: all 0.3s; }
-.model-card.active { border-color: #3b82f6; background: #f0f7ff; }
-.config-detail-card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-.mma-input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; }
-.btn-mma-action { background: #3b82f6; color: white; padding: 10px 25px; border-radius: 12px; cursor: pointer; border: none; }
+/* 🎯 樣式完整恢復您最愛的版本 */
+.model-management-container { max-width: 900px; margin: 0 auto; color: #1e293b; }
+.glass-header { display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); padding: 25px; border-radius: 20px; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(0,0,0,0.05); margin-bottom: 30px; }
+.active-status { padding: 8px 18px; border-radius: 50px; font-size: 0.85rem; font-weight: bold; background: white; border: 1px solid #e2e8f0; }
+.layout-body { display: grid; grid-template-columns: 200px 1fr; gap: 30px; }
+.nav-sidebar { display: flex; flex-direction: column; gap: 12px; }
+.nav-item { padding: 15px; background: white; border-radius: 15px; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.3s; font-weight: 600; text-align: center; }
+.nav-item.active { background: #3b82f6; color: white; border-color: #2563eb; box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3); }
+.config-pane { display: flex; flex-direction: column; gap: 20px; }
+.card { background: white; border-radius: 20px; padding: 25px; border: 1px solid #f1f5f9; }
+.personality-card { border-top: 6px solid #3b82f6; }
+.card-title { font-size: 1rem; font-weight: 800; margin-bottom: 20px; color: #334155; }
+.prompt-area { width: 100%; border-radius: 12px; border: 1px solid #cbd5e1; padding: 15px; font-size: 0.95rem; line-height: 1.6; background: #f8fafc; outline: none; }
+.key-locked-display { flex: 1; padding: 12px; background: #f1f5f9; border-radius: 10px; color: #94a3b8; font-size: 0.85rem; border: 1px dashed #cbd5e1; display: flex; align-items: center; }
+.btn-edit { padding: 0 20px; background: white; border: 1px solid #cbd5e1; border-radius: 10px; cursor: pointer; font-weight: 600; }
+.btn-save-master { width: 100%; padding: 18px; background: #3b82f6; color: white; border: none; border-radius: 15px; font-weight: 800; font-size: 1rem; cursor: pointer; box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3); }
+.form-input, .form-select { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e1; font-size: 0.9rem; }
+.readonly { background: #f8fafc; border-style: dashed; color: #94a3b8; }
 </style>

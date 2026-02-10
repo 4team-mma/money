@@ -33,12 +33,11 @@ api.interceptors.request.use(
 
 // 3. 匯出通用 API 介面
 export const robotApi = {
-  // 取得 AI 配置
-  getAiRobotConfig: () => api.get("/ai_models/config"),
-
-  // 儲存 AI 配置
+  // 🚀 修正：支援傳入 provider 參數 (例如 ?provider=gemini)
+  getAiRobotConfig: (provider = null) => {
+    const url = provider ? `/ai_models/config?provider=${provider}` : "/ai_models/config";
+    return api.get(url);
+  },
   saveAiRobotConfig: (data) => api.post("/ai_models/save", data),
-
-  // AI 對話測試
   postAiRobotChat: (data) => api.post("/ai_models/chat", data),
 };
