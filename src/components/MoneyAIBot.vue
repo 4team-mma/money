@@ -18,6 +18,10 @@ const messages = ref(JSON.parse(localStorage.getItem('meowChatHistory')) || [{
 
 const input = ref('')
 const isTyping = ref(false)
+// 新增：隨機等待語錄變數
+const loadingText = ref('思考中喵...');
+let loadingInterval = null;
+
 const catImg = new URL('@/assets/AI_cat.png', import.meta.url).href
 
 // 換頁自動問候語地圖
@@ -34,6 +38,18 @@ const greetingsMap = {
   '/Feedback': '喵～有什麼不滿意的地方嗎？告訴喵喵，我會努力改進的！❓',
   '/Settings': '喵～這裡可以調整樣式和系統設定，選個你喜歡的主題吧。⚙️'
 }
+
+// 🐱 喵喵的隨機等待語錄
+const waitingJokes = [
+  "喵喵正在翻閱帳本... 📖",
+  "正在計算罐罐的匯率... 🐟",
+  "數據量有點大，喵喵努力消化中... 🐾",
+  "連線到大腦中，請稍候喵... ⚡",
+  "喵？這筆帳好像有點複雜... 🤔",
+  "正在幫你省錢，別急別急... 💰",
+  "喵喵正在跟財神爺連線... ☎️",
+  "正在偷看你的錢包... 啊不是，是幫你分析... 🫣"
+];
 
 // 監聽狀態變化並儲存
 watch(isOpen, (newVal) => localStorage.setItem('isMeowChatOpen', newVal))
@@ -92,15 +108,25 @@ const scrollToBottom = () => {
   })
 }
 
-// 🚀 核心發送邏輯
+// 🚀 核心發送邏輯 (已修復：自動清空、隨機語錄、Console Log)
 const handleSend = async () => {
   if (!input.value.trim() || isTyping.value) return
   
   const query = input.value
   messages.value.push({ id: Date.now(), text: query, sender: 'user', timestamp: new Date().toISOString() })
+  
+  // ✅ 1. 馬上清空輸入框
   input.value = ''
+  
   isTyping.value = true
+  loadingText.value = "思考中喵..."
   scrollToBottom()
+
+  // ✅ 2. 啟動隨機語錄 (每 1.5 秒換一句)
+  loadingInterval = setInterval(() => {
+    const randomIdx = Math.floor(Math.random() * waitingJokes.length);
+    loadingText.value = waitingJokes[randomIdx];
+  }, 1500);
 
   try {
     let smartInstruction = "";
@@ -110,6 +136,9 @@ const handleSend = async () => {
       smartInstruction = "嚴禁廢話與表格，限制在 2-20 中文字內。若問吃什麼，請優先從飲食類別的 add_note 找具體食物(如：包子、拉麵)，直接回答如：小主人，你吃了包子喵！";
     }
 
+    // ✅ 3. Console Log 回歸
+    console.log(`🚀 [Chat] 發送請求: "${query}"`);
+
     const response = await robotApi.postAiRobotChat({ 
       message: query,
       instruction_override: smartInstruction 
@@ -117,6 +146,10 @@ const handleSend = async () => {
 
     const replyText = response.data?.reply || response.reply;
     const duration = response.data?.duration || 0;
+    const provider = response.data?.provider || 'unknown';
+
+    // ✅ 4. 顯示回應來源模型
+    console.log(`✨ [Chat] 收到回應 (${provider}):`, replyText);
 
     messages.value.push({
       id: Date.now() + 1,
@@ -126,9 +159,13 @@ const handleSend = async () => {
       duration: duration
     })
   } catch (error) {
-    messages.value.push({ id: Date.now() + 1, text: "喵... 我斷線了喵！", sender: 'bot', timestamp: new Date().toISOString() });
+    console.error("❌ [Chat] 錯誤:", error);
+    messages.value.push({ id: Date.now() + 1, text: "喵... 我斷線了喵！請檢查網路連線。", sender: 'bot', timestamp: new Date().toISOString() });
   } finally {
     isTyping.value = false
+    // 清除隨機語錄計時器
+    if (loadingInterval) clearInterval(loadingInterval);
+    loadingInterval = null;
     scrollToBottom()
   }
 }
@@ -154,7 +191,7 @@ onMounted(() => { if (isOpen.value) checkAndGreet() })
           </div>
           <div class="bot-status">
             <span class="name">Money 喵喵小助手</span>
-            <span class="status">{{ isTyping ? '正在思考中...' : '隨時為您服務' }}</span>
+            <span class="status">{{ isTyping ? '正在動腦...' : '隨時為您服務' }}</span>
           </div>
         </div>
         <div class="header-actions">
@@ -180,7 +217,7 @@ onMounted(() => { if (isOpen.value) checkAndGreet() })
           <div class="avatar-container-msg">
             <img :src="catImg" class="msg-avatar" />
           </div>
-          <div class="bubble typing">...思考中喵...</div>
+          <div class="bubble typing">{{ loadingText }}</div>
         </div>
       </div>
 
@@ -211,6 +248,11 @@ onMounted(() => { if (isOpen.value) checkAndGreet() })
 .header-icon { width: 100%; height: 100%; object-fit: contain; }
 .avatar-container-msg { width: 30px; height: 30px; flex-shrink: 0; margin-top: 5px; }
 .msg-avatar { width: 100%; height: 100%; object-fit: contain; }
+.bot-status { display: flex; flex-direction: column; justify-content: center; margin-left: 8px; } /* 新增 */
+.name { font-weight: bold; font-size: 0.95rem; color: #333; } /* 新增 */
+.status { font-size: 0.75rem; color: #888; } /* 新增 */
+
+.header-left { display: flex; align-items: center; } /* 新增 */
 
 .header-actions { display: flex; gap: 8px; align-items: center; }
 .clear-btn { background: none; border: none; cursor: pointer; font-size: 1.1rem; opacity: 0.5; transition: opacity 0.2s; }
@@ -225,6 +267,7 @@ onMounted(() => { if (isOpen.value) checkAndGreet() })
 .user .bubble { background: #3b82f6; color: white; border-top-right-radius: 2px; }
 .time { font-size: 0.7rem; opacity: 0.5; margin-top: 4px; display: block; text-align: right; }
 .duration { font-size: 9px; color: #9ca3af; margin-left: 4px; }
+.typing { color: #888; font-style: italic; font-size: 0.85rem; } /* 新增 */
 
 .input-area { padding: 12px; display: flex; gap: 8px; border-top: 1px solid #f0f0f0; }
 .input-area input { flex: 1; border: 1px solid #ddd; padding: 8px 12px; border-radius: 10px; outline: none; }
