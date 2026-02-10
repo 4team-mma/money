@@ -22,11 +22,17 @@ const catImg = new URL('@/assets/AI_cat.png', import.meta.url).href
 
 // 換頁自動問候語地圖
 const greetingsMap = {
-  '/Book': '喵～今天有什麼開支要紀錄嗎？',
-  '/dashboard': '喵～看看最近的收支平衡了嗎？',
-  '/Account': '喵～要管理你的金庫嗎？⛺',
-  '/BudgetManager': '喵～預算控管是修仙的第一步！',
-  '/Settings': '喵～來調整設定吧。⚙️'
+  '/Book': '喵～今天有什麼開支要紀錄嗎？點擊日期可以看詳細紀錄喔！🗓️',
+  '/dashboard': '喵～這是你的財務總覽，看看最近的收支平衡了嗎？📊',
+  '/Account': '喵～這裡可以管理你的金庫，要新增銀行帳號或錢包嗎？⛺',
+  '/BudgetManager': '喵～預算控管是修仙的第一步！我們來規劃這月的開銷吧。🐱',
+  '/Add': '喵～記下一筆支出，用戶等級就會提升喔！快輸入金額吧。➕',
+  '/Chart': '喵～想看哪段時間的支出分佈？我可以幫你解讀這些圖表喔。📈',
+  '/ConsumerAnalysis': '喵～最近的 CPI 物價趨勢有影響到你的錢包嗎？來看看分析。⛽',
+  '/SalaryAnalysis': '喵～想知道你的薪資在行業中位置？來看看增長率吧！💵',
+  '/Achievements_new': '喵～好多成就等著你收集！離理財大師又近一步了。🏆',
+  '/Feedback': '喵～有什麼不滿意的地方嗎？告訴喵喵，我會努力改進的！❓',
+  '/Settings': '喵～這裡可以調整樣式和系統設定，選個你喜歡的主題吧。⚙️'
 }
 
 // 監聽狀態變化並儲存
@@ -51,16 +57,30 @@ const checkAndGreet = () => {
   }
 }
 
-// 🧹 清空紀錄按鈕
+// 🧹 清空紀錄按鈕 (優化版：6秒自動刪除提示訊息)
 const clearChat = () => {
   if (confirm('喵？確定要清空所有對話紀錄嗎？')) {
+    const clearMsgId = Date.now();
+    
+    // 1. 清空紀錄並放入「暫時性」的清空提示
     messages.value = [{
-      id: Date.now(),
+      id: clearMsgId,
       text: '紀錄已清空喵！有什麼新問題嗎？',
       sender: 'bot',
       timestamp: new Date().toISOString(),
       duration: null
     }]
+
+    // 2. 🚀 6 秒後自動刪除該提示訊息
+    setTimeout(() => {
+      // 只有在該訊息還在 messages 陣列中時才刪除 (避免使用者已經開始新對話)
+      const index = messages.value.findIndex(m => m.id === clearMsgId);
+      if (index !== -1) {
+        messages.value.splice(index, 1);
+        // 刪除提示後，補上當前頁面的正常問候語
+        checkAndGreet();
+      }
+    }, 5000);
   }
 }
 
@@ -72,7 +92,7 @@ const scrollToBottom = () => {
   })
 }
 
-// 🚀 核心發送邏輯：注入字數封印指令
+// 🚀 核心發送邏輯
 const handleSend = async () => {
   if (!input.value.trim() || isTyping.value) return
   
@@ -83,12 +103,11 @@ const handleSend = async () => {
   scrollToBottom()
 
   try {
-    // 🧠 智慧指令：除非有「分析」，否則嚴格限制 20 字以內，並抓取 add_note 食物品名
     let smartInstruction = "";
     if (query.includes("分析")) {
       smartInstruction = "請進行詳細財務分析，可使用數據說明。";
     } else {
-      smartInstruction = "嚴禁廢話、表格與公式。字數嚴格限制在 2-20 中文字內。若問吃什麼，請優先從飲食類別的 add_note 找具體食物(如：包子、拉麵)，直接回答：小主人，你吃了XX喵！";
+      smartInstruction = "嚴禁廢話與表格，限制在 2-20 中文字內。若問吃什麼，請優先從飲食類別的 add_note 找具體食物(如：包子、拉麵)，直接回答如：小主人，你吃了包子喵！";
     }
 
     const response = await robotApi.postAiRobotChat({ 
