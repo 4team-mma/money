@@ -6,6 +6,47 @@ import axios from 'axios';
 const activeTab = ref('profile')
 const fileInput = ref(null); // 對應 HTML 的 ref="fileInput"
 
+// =========================
+// 文字欄位設定
+// =========================
+
+onMounted(async () => {
+    // 確保有 username 才能抓資料
+    if (username.value) {
+        try {
+            const response = await axios.get(
+                `http://localhost:8000/api/setting/setting_profile/get-profile/${username.value}`
+            );
+            // 在 onMounted 的 response.data.success 裡面修改如下：
+            if (response.data.success) {
+                const d = response.data.data;
+
+                // 整理一份乾淨的資料物件
+                const fetchedData = {
+                    name: d.name || '',
+                    email: d.email || '',
+                    birthday: d.birthday || '',
+                    about: d.about || ''
+                };
+
+                // 同步給「編輯組」與「對照組」
+                profile.value = { ...fetchedData };
+                originalProfile.value = { ...fetchedData };
+
+                // 頭像路徑獨立處理
+                avatarUrl.value = d.avatar_url || null;
+            }
+
+        } catch (error) {
+            console.error("初始化載入失敗:", error);
+        }
+    }
+});
+
+// =========================
+// 🗑️ 頭像相關設定
+// =========================
+
 // --- 1. 變數宣告區 (只寫一次) ---
 const userStore = useUserStore();
 
@@ -14,7 +55,14 @@ const profile = ref({
     name: '',
     email: '',
     birthday: '',
-    bio: ''
+    about: ''
+});
+const originalProfile = ref({ name: '', email: '', birthday: '', about: '' });// 用來存「沒改過」的版本
+
+// 計算資料是否動過
+const isDirty = computed(() => {
+    // 將兩個物件轉為 JSON 字串進行快速比對
+    return JSON.stringify(profile.value) !== JSON.stringify(originalProfile.value);
 });
 
 // 💡 補上 avatarUrl，用來存放後端回傳的路徑
@@ -88,6 +136,57 @@ const removePhoto = async () => {
     }
 };
 
+// =========================
+// 按鈕設定
+// =========================
+
+// 取消按鈕邏輯：將資料還原回上一次儲存的狀態
+const resetForm = () => {
+    if (confirm("確定要捨棄目前的修改嗎？")) {
+        // 使用展開運算子複製資料，確保響應式物件被正確更新
+        profile.value = { ...originalProfile.value };
+    }
+};
+
+// 儲存變更按鈕
+const saveProfile = async () => {
+    // 檢查是否有登入帳號
+    if (!username.value) {
+        alert("請先登入帳號");
+        return;
+    }
+
+    // 準備要送給後端的 JSON 資料
+    const updateData = {
+        name: profile.value.name,
+        email: profile.value.email,
+        birthday: profile.value.birthday,
+        about: profile.value.about
+    };
+
+    try {
+        console.log("正在送出更新請求...", updateData);
+
+        const response = await axios.put(
+            `http://localhost:8000/api/setting/setting_profile/update-profile/${username.value}`,
+            updateData
+        );
+
+        if (response.data.success) {
+            alert("✨ 個人資料更新成功！");
+            // ✅ 關鍵改動：儲存成功後，將當前資料備份回 originalProfile
+            // 這樣 isDirty 會重新計算為 false，按鈕會自動變回禁用狀態
+            originalProfile.value = { ...profile.value };
+        } else {
+            alert("❌ 更新失敗：" + response.data.message);
+        }
+    } catch (error) {
+        console.error("儲存失敗：", error);
+        alert("連線伺服器時發生錯誤，請稍後再試");
+    }
+};
+
+
 
 </script>
 
@@ -137,11 +236,11 @@ const removePhoto = async () => {
 
             <div class="form-group full-width">
                 <label>關於我</label>
-                <textarea v-model="profile.bio" placeholder="介紹一下自己..." rows="4"></textarea>
+                <textarea v-model="profile.about" placeholder="介紹一下自己..." rows="4"></textarea>
             </div>
 
             <div class="form-actions">
-                <button class="btn-secondary">取消</button>
+                <button type="button" class="btn-secondary" :disabled="!isDirty" @click="resetForm">取消</button>
                 <button class="btn-primary" @click="saveProfile">儲存變更</button>
             </div>
         </div>
@@ -152,4 +251,29 @@ const removePhoto = async () => {
 
 <style scoped>
 @import '../assets/css/setting.css';
+
+/* 1. 當按鈕處於 disabled 狀態時的基礎樣式 */
+button:disabled {
+    background-color: #ccc !important;
+    /* 灰掉的顏色 */
+    color: #666 !important;
+    /* 文字顏色 */
+    cursor: not-allowed !important;
+    /* 顯示禁用圖示 */
+    opacity: 0.6 !important;
+    /* 半透明感 */
+    border: none !important;
+
+    /* 核心：讓滑鼠事件失效，這樣滑過去就不會觸發 hover 變色 */
+    pointer-events: none !important;
+}
+
+/* 2. 為了保險起見，明確定義禁用時的 hover 狀態與原樣相同 */
+button:disabled:hover {
+    background-color: #ccc !important;
+    opacity: 0.6 !important;
+    box-shadow: none !important;
+    transform: none !important;
+    /* 如果你有寫縮放效果也要移除 */
+}
 </style>
