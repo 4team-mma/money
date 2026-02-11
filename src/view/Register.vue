@@ -121,15 +121,15 @@ const goToLogin = () => router.push('/')
 
                     <form @submit.prevent="handleRegister" class="register-form">
                         <div class="form-group">
-                            <label>登入帳號 (Username)</label>
+                            <label>帳號</label>
                             <input v-model="formData.username" type="text" placeholder="設定登入帳號" required />
                         </div>
                         <div class="form-group">
-                            <label>使用者名稱 (暱稱)</label>
+                            <label>暱稱</label>
                             <input v-model="formData.name" type="text" placeholder="您的稱呼" required />
                         </div>
                         <div class="form-group">
-                            <label>電子郵件 (Email)</label>
+                            <label>電子郵件</label>
                             <input v-model="formData.email" type="email" placeholder="your@email.com" required />
                         </div>
                         <div class="password-row">
