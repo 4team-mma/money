@@ -94,33 +94,54 @@ const handleSave = async () => {
     isSaving.value = true;
     try {
         const provider = selectedAiModel.value;
-        let activeKey = 'none';
-
-        if (isEditMode.value) {
-            if (provider === 'gemini' && localSettings.value.geminiKey.trim()) activeKey = localSettings.value.geminiKey.trim();
-            if (provider === 'anythingllm' && localSettings.value.anythingKey.trim()) activeKey = localSettings.value.anythingKey.trim();
-        }
-
+        
+        // 1. 建立基礎資料
         const payload = {
             provider: provider,
             system_prompt: localSettings.value.system_prompt,
             base_url: provider === 'ollama' ? 'http://localhost:11434' : 'http://localhost:3001',
-            // 儲存時將選單的值送回後端
             model_version: provider === 'ollama' ? localSettings.value.ollamaModel : 
                            provider === 'anythingllm' ? 'gemma3:1b' : localSettings.value.geminiVersion,
-            api_key: activeKey
         };
 
-        await robotApi.saveAiRobotConfig(payload);
-        await aiStore.fetchConfig(provider); // 儲存後重新抓取確認
+        // 2. 🚀 強制抓取 Key (不依賴 isEditMode)
+        // 直接從 localSettings 抓取對應的值
+        const inputKey = provider === 'gemini' ? localSettings.value.geminiKey : 
+                         provider === 'anythingllm' ? localSettings.value.anythingKey : null;
+
+        // 只要 inputKey 有內容（去除空白後不為空），就加入 payload
+        if (inputKey && inputKey.trim() !== '') {
+            payload.api_key = inputKey.trim();
+            console.log(`[Admin] 偵測到新金鑰，準備寫入 ${provider} 喵~`);
+        } else if (isEditMode.value) {
+            // 如果開了編輯模式卻什麼都沒填，提醒使用者
+            alert("請輸入有效的 Key 喵！");
+            isSaving.value = false;
+            return;
+        }
+
+        // 3. 實際發送請求
+        const response = await robotApi.saveAiRobotConfig(payload);
+        console.log("🚀 API 回傳結果:", response.data || response);
+
+        // 4. 成功後的後續處理
+        // 這裡要先 fetch 最新狀態，才能讓 Pinia Store 裡的 hasKey 變 true
+        await aiStore.fetchConfig(provider); 
         
+        // 清空輸入框與重置模式
         localSettings.value.geminiKey = '';
         localSettings.value.anythingKey = '';
-        isEditMode.value = false;
-        alert("💾 設定已更新！準備上線~喵~");
-    } catch (error) { alert("❌ 儲存失敗！"); }
-    finally { isSaving.value = false; }
+        isEditMode.value = false; 
+        
+        alert("💾 設定已更新！金鑰已安全存入喵~");
+    } catch (error) { 
+        console.error("❌ 儲存錯誤:", error);
+        alert("❌ 儲存失敗！請檢查網路或後端記錄。"); 
+    } finally { 
+        isSaving.value = false; 
+    }
 }
+
 </script>
 
 <template>
