@@ -1,88 +1,92 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/stores/user'
 import axios from 'axios';
 
-
-
-// 標籤頁
 const activeTab = ref('profile')
-const tabs = [
-    { id: 'profile', label: '個人資料', icon: '👤' },
-    { id: 'preferences', label: '偏好設定', icon: '⚙️' },
-    { id: 'security', label: '帳號設置', icon: '🔒' },
-    { id: 'notifications', label: '通知', icon: '🔔' },
-    { id: 'output', label: '輸出', icon: '📂' },
-]
+const fileInput = ref(null); // 對應 HTML 的 ref="fileInput"
 
-// 個人資料
+// --- 1. 變數宣告區 (只寫一次) ---
+const userStore = useUserStore();
+
+// 💡 補上 profile 變數，否則 v-model 會報錯
 const profile = ref({
-    name: '王小明',
-    email: 'wang@example.com',
-    phone: '0912-345-678',
-    birthday: '1990-01-15',
-    bio: '熱愛理財，追求財務自由的上班族'
-})
+    name: '',
+    email: '',
+    birthday: '',
+    bio: ''
+});
 
-
-
-
-// 取得姓名縮寫
-const getInitials = (name) => {
-    return name
-        .split(' ')
-        .map(word => word[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
-}
-
-// 儲存個人資料
-const saveProfile = () => {
-    alert('個人資料已儲存！')
-}
-
-// 照片上傳與移除設定
-// 1. 定義變數
-const fileInput = ref(null);
-// 記得確保後端有這張預設圖，或者先清空
+// 💡 補上 avatarUrl，用來存放後端回傳的路徑
 const avatarUrl = ref(null);
-const userId = 1;
 
-// 2. 上傳處理
+// 使用 computed 確保它是動態的
+const username = computed(() => {
+    return userStore.currentUser?.username ||
+        JSON.parse(localStorage.getItem('currentUser') || '{}').username ||
+        "";
+});
+
+// --- 2. 函式定義區 ---
+
+// 取得名字首字母 (預防頭像沒顯示時的備案)
+const getInitials = (name) => {
+    return name ? name.charAt(0).toUpperCase() : '?';
+};
+
+// 📤 上傳頭像
 const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
+
+    // 檢查是否有 username
+    if (!username.value) {
+        alert("請先登入再上傳照片");
+        return;
+    }
 
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-        // 發送上傳請求
         const response = await axios.post(
-            `http://localhost:8000/api/setting/setting_profile/upload-avatar/${userId}`,
+            `http://localhost:8000/api/setting/setting_profile/upload-avatar/${username.value}`,
             formData,
             { headers: { 'Content-Type': 'multipart/form-data' } }
         );
 
-        if (response.status === 200) {
-            // 重點：加上時間戳 (?t=...)
-            // 這是為了告訴瀏覽器：「這是一張新圖，不要用舊的快取！」
-            avatarUrl.value = response.data.avatar_url;
-            alert('上傳成功！');
+        if (response.data.success) {
+            // 更新圖片並加上時間戳記防快取
+            avatarUrl.value = response.data.avatar_url + '?t=' + Date.now();
+            alert("上傳成功！");
         }
     } catch (error) {
-        console.error('上傳失敗:', error);
+        console.error("上傳失敗:", error);
     }
 };
 
-// 3. 移除處理
+// 🗑️ 移除頭像 (這裡只保留一個版本)
 const removePhoto = async () => {
-    // ... 呼叫後端成功後
-    avatarUrl.value = null; // 變回 null，藍色圓圈就會出現
+    if (!confirm("確定要移除頭像嗎？")) return;
 
-}
+    if (!username.value) {
+        alert("請先登入");
+        return;
+    }
 
-
+    try {
+        const response = await axios.post(
+            `http://localhost:8000/api/setting/setting_profile/remove-avatar/${username.value}`
+        );
+        if (response.data.success) {
+            avatarUrl.value = null; // 清空前端顯示
+            alert("移除成功");
+        }
+    } catch (error) {
+        console.error("移除失敗:", error);
+        alert("移除失敗，請稍後再試");
+    }
+};
 
 
 </script>
