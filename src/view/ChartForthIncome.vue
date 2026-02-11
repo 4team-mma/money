@@ -160,7 +160,7 @@ watch([period, startDate, endDate, groupBy], (newVal, oldVal) => {
         <div style="display: flex; min-height: 100vh;">
             <!-- 本月收入 -->
             <div class="dashboard-container_1" style="flex: 1;">
-                <h3>收入分析</h3>
+                <h3 style="color: var(--text-primary);">收入分析</h3>
                 <span class="date">{{ today }}</span>
                 <hr>
                 <!-- 收入分析頁面 -->
@@ -233,6 +233,10 @@ watch([period, startDate, endDate, groupBy], (newVal, oldVal) => {
 <style scoped>
 @import '../assets/css/dashboard.css';
 
+.date{
+    color: var(--text-primary);
+}
+
 .PageTurn {
     display: flex;
     justify-content: center;
@@ -261,7 +265,7 @@ h2 {
 }
 
 .chart-card {
-    background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+    background: var(--bg-input);
     border-radius: 16px;
     padding: 24px;
     border: 1px solid #e5e7eb;
@@ -353,6 +357,7 @@ h2 {
     /* 兩欄等寬 */
     text-align: center;
     font-weight: 700;
+    color: var(--text-primary);
 }
 
 .summary>div {
@@ -368,7 +373,7 @@ h2 {
     padding: 12px 24px 24px 24px;
     max-width: 1400px;
     margin: 0 auto;
-    background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%);
+    background: var(--bg-card);
     min-height: 100vh;
 }
 

@@ -22,10 +22,17 @@
 <style scoped>
 @import'/src/assets/css/add.css';
 
+.btn.btn-outline-primary{
+  border-color:var(--text-primary);
+  color:var(--text-primary);
+}
+
 h2 {
     text-align: center;
     margin-top: 20px;
     margin-bottom: 20px;
+    color: var(--text-primary);
+    font-weight:700
 }
 .out {
     display: flex;

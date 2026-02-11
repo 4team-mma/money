@@ -43,19 +43,24 @@
             @did-move="handlePageChange"
         >
             <template #footer>
-                <button class="btn-icon" @click="moveToday">今天</button>
+            <div style="display: flex; justify-content: center;">
+                <button class="btn-icon" @click="moveToday" style="margin: 10px;">今天</button>
                 <RouterLink 
+                    style="margin: 10px;"
                     class="btn-icon btn-outline-primary" 
                     :to="{ path: '/Add', state: { date: props.selectedDate } }"
                 >新增支出</RouterLink>
                 <RouterLink 
+                    style="margin: 10px;"
                     class="btn-icon btn-outline-primary" 
                     :to="{ path: '/AddIncome', state: { date: props.selectedDate } }"
                 >新增收入</RouterLink>
                 <RouterLink 
+                    style="margin: 10px;"
                     class="btn-icon btn-outline-primary" 
                     :to="{ path: '/AddTrans', state: { date: props.selectedDate } }"
                 >新增轉帳</RouterLink>
+            </div>
             </template>
         </Calendar>
     </div>
@@ -63,14 +68,14 @@
 
 <style scoped>
     .calendar-section {
-        background: #fff;
+        background: var(--bg-sidebar);
         border-radius: 12px;
         padding: 16px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
 
     .btn-icon {
-        background: #2563eb;
+        background: var(--color-primary);
         color: white;
         padding: 10px 20px;
         border: 0px;
@@ -88,7 +93,26 @@
         background: none;
     }
 
+    :deep(.vc-header .vc-title) {
+        color: var(--text-inverse);
+    }
+
     :deep(.vc-arrow) {
         background: none;
+    }
+
+    :deep(.vc-pane-container) {
+        background:var(--bg-sidebar);
+        color:var(--text-inverse);
+    }
+
+    :deep(.vc-day-content.vc-focusable.vc-focus.vc-attr){
+        color:var(--text-primary);
+    }
+    
+    :deep(.vc-day-content.vc-focusable.vc-focus.vc-attr.vc-highlight-content-outline.vc-orange){
+        color:var(--text-primary);
+        background-color: var(--bg-card);
+        border: 1px solid
     }
 </style>

@@ -126,7 +126,7 @@ const monthlyMOMStats = computed(() => {
 
 <template>
     <div class="full-width">
-        <h2>圖表分析</h2>
+        <h2 style="color: var(--text-primary) ;font-weight:700">圖表分析</h2>
 
         <div class="PageTurn">
             <div class="btn-group t-btn-group" role="group">
@@ -210,6 +210,11 @@ const monthlyMOMStats = computed(() => {
 <style scoped>
 @import '../assets/css/dashboard.css';
 
+.btn-outline-primary{
+    border-color: var(--text-primary);
+    color:var(--text-primary);
+}
+
 .PageTurn {
     display: flex;
     justify-content: center;
@@ -251,12 +256,13 @@ h2 {
 
 .stat-card {
     flex: 0 0 230px;
+    background-color: var(--bg-card);
 }
 
 .card-title {
-    font-size: 10px;
+    font-size: 14px;
     font-weight: 500;
-    color: #64748b;
+    color:var(--text-secondary);
 }
 
 .card-header {
@@ -269,29 +275,29 @@ h2 {
 .card-content .amount {
     font-size: 20px;
     font-weight: 700;
-    color: #000000;
+    color: var(--text-primary);
     margin-bottom: 4px;
 }
 
 .change-text_1 {
     font-size: 11px;
-    color: #64748b;
+    color: var(--text-secondary);
     margin: 0;
 }
 
 
 /* 1. 當前選中狀態：藍底白字 (你之前要的) */
 .t-btn-group .btn.active {
-    background-color: #0d6efd !important;
-    color: white !important;
-    border-color: #0d6efd !important;
+    background-color: var(--text-primary);
+    color: var(--bg-body);
+    border-color: var(--text-primary);
 }
 
 /* 2. 滑鼠移過去 (Hover) 狀態：顯示白框 */
 .t-btn-group .btn:hover {
-    background-color: #0d6efd !important; /* 保持透明或原色，不要變藍 */
-    color: white !important;              /* 字體保持藍色 */
-    border: 2px solid white !important;      /* 關鍵：顯現白框  */
+    background-color: var(--bg-sidebar); /* 保持透明或原色，不要變藍 */
+    color: var(--text-primary) !important;              /* 字體保持藍色 */
+    border: 2px solid var(--text-primary) !important;      /* 關鍵：顯現白框  */
     box-shadow: 0 0 5px rgba(255, 255, 255, 0.5); /* 選配：加一點點發光感更明顯 */
 }
 

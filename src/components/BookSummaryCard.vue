@@ -33,7 +33,7 @@
 <style scoped>
     .summary-card {
         margin-top: 24px;
-        background: #fff;
+        background: var(--bg-input);
         padding: 16px;
         border-radius: 12px;
     }
@@ -54,5 +54,9 @@
     
     .summary-value.balance {
         color: #0ea5e9;
+    }
+
+    .summary-item {
+        color: var(--text-primary);
     }
 </style>

@@ -50,7 +50,7 @@ const totalSavingsProgress = computed(() => {
     <div class="budget-app-container">
       <header class="page-header">
         <div class="title-group">
-          <h1>理財規劃方案</h1>
+          <h1 style="color: var(--text-primary);">理財規劃方案</h1>
           <p class="subtitle">精準控制 Money MMA 流量，實現您的儲蓄目標</p>
         </div>
         <div class="header-action">
@@ -185,6 +185,9 @@ const totalSavingsProgress = computed(() => {
 
 
 <style scoped>
+.status-badge{
+  color: var(--text-primary);
+}
 /* 基本字體與佈局 */
 .budget-app-container {
   font-family: 'Inter', -apple-system, sans-serif;

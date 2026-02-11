@@ -93,7 +93,7 @@ const handleFormSubmit = async () => {
 
             <label>
                 暱稱
-                <input 
+                <input
             type="text" 
             v-model="form.name" 
             required 
@@ -153,6 +153,9 @@ const handleFormSubmit = async () => {
     </template>
 
     <style scoped>
+    .textarea::placeholder{
+        color: var(--text-secondary);
+    }
 
     .textarea {
         min-height: 20px;
@@ -160,12 +163,14 @@ const handleFormSubmit = async () => {
         border-radius: 12px;
         border: 2px solid #e2e8f0;
         resize: vertical;
+        background-color:var(--bg-sidebar);
+        color: var(--text-primary);  
     }
 
     .page-title {
         font-size: 32px;
         font-weight: 700;
-        color: #1e293b;
+        color: var(--text-primary);
         margin: 0 0 8px 0;
         }
 
@@ -183,6 +188,7 @@ const handleFormSubmit = async () => {
     display: block;
     margin-bottom: 12px;
     font-size: 14px;
+    color: var(--text-primary);
     }
 
     input,
@@ -192,11 +198,13 @@ const handleFormSubmit = async () => {
     margin-top: 4px;
     padding: 8px;
     box-sizing: border-box;
+    color: var(--text-primary);  
     }
 
     textarea {
     min-height: 80px;
     resize: vertical;
+    color: var(--text-primary);
     }
 
     button {
@@ -222,14 +230,14 @@ const handleFormSubmit = async () => {
     }
 
     .readonly-input {
-    background-color: #f8fafc; /* 淺灰色背景 */
-    color: #64748b;           /* 灰字 */
+    background-color:var(--bg-sidebar); /* 淺灰色背景 */
+    color: var(--text-primary);           /* 灰字 */
     cursor: not-allowed;      /* 滑鼠變成禁止符號 */
     border: 2px solid #e2e8f0;
 }
 
 .card{
-    background: #ffffff;
+    background:var(--bg-card);
     border-radius: 16px;
     padding: 24px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);

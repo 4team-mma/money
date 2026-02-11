@@ -219,7 +219,7 @@ onMounted(fetchData);
                     </div>
                     <div class="chart-container"><canvas ref="trendChartCanvas"></canvas></div>
                 </div>
-
+                <br>
                 <div class="card ai-section">
                     <div class="ai-header">🚁 <h3>理財建議:</h3>
                     </div>
@@ -235,15 +235,15 @@ onMounted(fetchData);
                             這抵消了大部分的物價漲幅。
                         </p>
 
-                        <div class="strategy-box">
-                            <strong>🚀 專屬策略：</strong>
-                            <span v-if="performanceRatio > 20">
+                        <div class="strategy-box" >
+                            <strong style="color: var(--text-secondary)">🚀 專屬策略：</strong>
+                            <span v-if="performanceRatio > 20" style="color: var(--text-secondary);">
                                 您的收入增長已跑贏通膨！建議將薪資的 20% 投入抗通膨資產（如美股 ETF 或房地產 REITs），發揮複利效應。
                             </span>
-                            <span v-else-if="performanceRatio >= 0">
+                            <span v-else-if="performanceRatio >= 0" style="color: var(--text-secondary);">
                                 目前處於穩健階段。建議維持記帳習慣，確保實質薪資的增長不被隨之擴張的慾望抵銷。
                             </span>
-                            <span v-else>
+                            <span v-else style="color: var(--text-secondary);">
                                 目前的薪資增長跟不上物價。建議重新審視訂閱服務或餐飲支出，並規劃轉職或技能進修以突破薪資天花板。
                             </span>
                         </div>
@@ -255,6 +255,13 @@ onMounted(fetchData);
 </template>
 
 <style scoped>
+.legend{color: var(--text-primary);}
+p{color: var(--text-primary);}
+h3{color: var(--text-primary);}
+.subtitle{color: var(--text-primary);}
+.page-title{
+    color: var(--text-primary);
+}
 
 .stat-info{
     text-align: center;
@@ -295,6 +302,8 @@ onMounted(fetchData);
     border: 1px solid #cbd5e1;
     margin-left: 5px;
     cursor: pointer;
+    background-color: var(--bg-card);
+    color: var(--text-primary)
 }
 
 .stats-cards {
@@ -305,7 +314,7 @@ onMounted(fetchData);
 }
 
 .card {
-    background: white;
+    background-color: var(--bg-card);;
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -327,7 +336,7 @@ onMounted(fetchData);
 .stat-value {
     font-size: 26px;
     font-weight: 800;
-    color: #1e293b;
+    color: var(--text-primary);
     margin: 0;
     text-align: center;
 }
@@ -386,7 +395,7 @@ onMounted(fetchData);
 
 .ai-section {
     border-left: 5px solid #10b981;
-    background: #f0fdf4;
+    background: var(--bg-card);
 }
 
 .ai-header {
