@@ -519,6 +519,10 @@ const handleSaveSuccess = () => {
     padding: 30px;
     width: 90%;
     max-width: 440px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: hwb(0 100% 0% / 0) hwb(0 100% 0% / 0);
+    max-height: 90vh;
 }
 
 @media (max-width: 768px) {

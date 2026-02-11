@@ -13,11 +13,11 @@
 
     /* --- 文字色 --- */
     --text-primary: #1e293b;  /* 主要深色文字 */
-    --text-secondary: #64748b;/* 次要灰色文字 */
+    --text-secondary: #7e8690;/* 次要灰色文字 */
     --text-inverse: #ffffff;  /* 反白文字 */
 
     /* --- 品牌與功能色 --- */
-    --color-primary: #6e96d6; /* 品牌藍 */
+    --color-primary: #3b82f6; /* 品牌藍 */
     --color-success: #10b981; /* 成功綠 */
     --color-danger: #ef4444;  /* 危險紅 */
 
@@ -40,9 +40,9 @@
     --text-secondary: #94a3b8;/* 淺灰 */
     --text-inverse: #ffffff;
 
-    --color-primary: #e7ecf1; /* 淺藍 */
+    --color-primary: #60a5fa; /* 淺藍 */
     --color-success: #34d399; /* 淺綠 */
-    --color-danger: #c32525;  /* 淺紅 */
+    --color-danger: #f87171;  /* 淺紅 */
 
     --border-color: #334155;
     --shadow-card: none;

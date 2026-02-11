@@ -12,6 +12,7 @@ const accountTypes = [
     { value: 'cash', label: '現金' },
     { value: 'bank', label: '銀行帳戶' },
     { value: 'investment', label: '投資帳戶' },
+    { value: 'savings', label: '儲蓄帳戶' },
     { value: 'other', label: '其他資產' },
     { value: 'credit', label: '信用卡' },
     { value: 'loan', label: '貸款' },
@@ -83,7 +84,7 @@ const submit = () => {
                 <h3 class="acc_button_word">新增帳戶</h3>
                 <button @click="showAddDialog = false" class="btn-icon">✕</button>
             </div>
-            <hr>
+            <hr style="color: var(--text-primary);">
             <div>
                 <h4 class="acc_button_word_small">帳戶名稱:</h4>
                 <input type="text" placeholder="例如：玉山銀行" v-model="account.name" class="textarea">
@@ -164,8 +165,10 @@ const submit = () => {
         min-height: 3px;
         padding: 3px;
         border-radius: 12px;
-        border: 2px solid #e2e8f0;
+        border: 1px solid var(--text-inverse);
         resize: vertical;
+        background-color: var(--bg-body);
+        color: var(--text-primary);
     }
 
     .add_account_button{
@@ -208,7 +211,7 @@ const submit = () => {
 
 .modal-card {
     width: 440px;
-    background: rgb(244, 235, 235);
+    background: var(--bg-card);
     padding: 40px;
     border-radius: 28px;
     box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
@@ -242,13 +245,13 @@ const submit = () => {
     .acc_button_word{
         font-size: 30px;
         font-weight: 600;
-        color: #1e293b;
+        color: var(--text-primary);
     }
 
     .acc_button_word_small{
         font-size: 20px;
         font-weight: 400;
-        color: #626367;
+        color: var(--text-secondary);
     }
 
 
@@ -275,8 +278,8 @@ const submit = () => {
 
 
     .submit_button{
-        background-color: #1e293b;
-        color: white;
+        background-color: var(--border-color);
+        color: var(--text-primary);
         padding: 10px 20px;
         border: 0px;
         margin-top: 10px;
