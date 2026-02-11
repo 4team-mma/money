@@ -162,8 +162,8 @@
     <Nav>
         <h1 class="page-title">行事曆</h1>
         <div class="view-mode-selector">
-            <button :class="{ active: displayMode === 'day' }" @click="displayMode = 'day'">按日顯示</button>
-            <button :class="{ active: displayMode === 'month' }" @click="displayMode = 'month'">按月顯示</button>
+            <button class="word" :class="{ active: displayMode === 'day' }" @click="displayMode = 'day'">按日顯示</button>
+            <button class="word" :class="{ active: displayMode === 'month' }" @click="displayMode = 'month'">按月顯示</button>
         </div>
         <div class="calendar-page-layout">
             <div class="calendar-grid">
@@ -199,7 +199,7 @@
     .page-title {
         font-size: 32px;
         font-weight: 700;
-        color: #1e293b;
+        color: var(--text-primary);
         margin: 0 0 8px 0;
     }
 
@@ -221,7 +221,7 @@
         display: flex;
         gap: 0; /* 讓按鈕連在一起 */
         margin-bottom: 20px;
-        background: #f1f5f9;
+        background:var(--bg-input);
         padding: 4px;
         border-radius: 8px;
         width: fit-content;
@@ -240,8 +240,8 @@
     }
 
     .view-mode-selector button.active {
-        background: #ffffff;
-        color: #0f172a;
+        background:var(--bg-card);
+        color: var(--text-primary);
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 </style>

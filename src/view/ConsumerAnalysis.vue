@@ -159,7 +159,7 @@ onMounted(fetchDataAndRender);
                 <div class="card chart-section">
                     <div class="chart-container"><canvas ref="chartCanvas"></canvas></div>
                 </div>
-
+                <br>
                 <div class="card ai-section">
                     <div class="ai-header">🚁 <h3>理財建議 :</h3></div>
                     <div class="ai-content">
@@ -175,10 +175,13 @@ onMounted(fetchDataAndRender);
 </template>
 
 <style scoped>
+p{color: var(--text-primary);}
+h3{color: var(--text-primary);}
+.subtitle{color: var(--text-primary);}
 .page-container { max-width: 1000px; margin: 0 auto; padding: 20px; }
 .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.page-title { font-size: 24px; color: #1e293b; margin: 0; }
-.date-select { padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; margin-left: 10px; }
+.page-title { font-size: 24px; color: var(--text-primary); margin: 0; font-weight: 700;}
+.date-select { padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; margin-left: 10px; background-color: var(--bg-card); color: var(--text-primary)}
 
 /* 狀態標籤樣式 */
 .status-banner { margin-bottom: 20px; }
@@ -187,14 +190,14 @@ onMounted(fetchDataAndRender);
 .fallback { background: #fef3c7; color: #92400e; }
 
 .stats-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-.card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+.card { background: var(--bg-card); border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
 .stat-card { display: flex; align-items: center; gap: 15px; }
 .stat-icon { font-size: 30px; }
-.stat-value { font-size: 22px; font-weight: 700; margin: 0; text-align: center; }
+.stat-value { font-size: 22px; font-weight: 700; margin: 0; text-align: center; color: var(--text-primary);}
 .stat-value.warning { color: #ef4444; }
 
 .chart-container { height: 350px; }
-.ai-section { border-left: 5px solid #fbbf24; background: #fffdfa; }
+.ai-section { border-left: 5px solid #fbbf24; background: var(--bg-card); }
 .ai-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; color: #b45309; }
 
 .loading-state { text-align: center; padding: 50px; }

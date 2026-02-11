@@ -56,7 +56,7 @@ const onSave = async () => {
 <template>
     <div class="edit-form-wrap">
         <div class="edit-header">
-            <h3>{{ form.add_type ? '編輯收入' : '編輯支出' }}</h3>
+            <h3> {{ form.add_type ? '編輯收入' : '編輯支出' }}</h3>
             <DatePicker v-model="form.add_date" mode="date" :masks="{ title: 'YYYY年 MMM' }">
                 <template #default="{ togglePopover, inputValue }">
                     <div class="date-trigger" @click="togglePopover">
@@ -117,21 +117,21 @@ const onSave = async () => {
 <style scoped>
 @import '../assets/css/add.css';
 .edit-form-wrap { padding: 10px; font-family: sans-serif; }
-.edit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.date-trigger { cursor: pointer; background: #f8fafc; padding: 6px 12px; border-radius: 6px; border: 1px solid #e2e8f0; }
+.edit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; color: var(--text-primary);}
+.date-trigger { cursor: pointer; background: var(--bg-input); padding: 6px 12px; border-radius: 6px; border: 1px solid var(--bg-input); }
 
 .form-item { margin-bottom: 16px; }
 .form-item label { display: block; font-size: 14px; color: #64748b; margin-bottom: 6px; }
 
-.amount-input-box { display: flex; align-items: center; border-bottom: 2px solid #3b82f6; padding: 4px 0; }
-.currency { font-size: 18px; font-weight: bold; margin-right: 8px; color: #1e293b; }
-.main-amount { border: none; outline: none; font-size: 28px; font-weight: bold; width: 100%; color: #1e293b; }
+.amount-input-box { display: flex; align-items: center; border-bottom: 2px solid var(--text-primary); padding: 4px 0; }
+.currency { font-size: 18px; font-weight: bold; margin-right: 8px; color: var(--text-primary); }
+.main-amount { border: none; outline: none; font-size: 28px; font-weight: bold; width: 100%; color: var(--text-primary); background: var(--bg-card);}
 
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
 .note-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .btn-auto { font-size: 12px; color: #3b82f6; background: #eff6ff; border: none; padding: 2px 8px; border-radius: 4px; cursor: pointer; }
-textarea { width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; font-size: 14px; resize: none; box-sizing: border-box; }
+textarea { width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; font-size: 14px; resize: none; box-sizing: border-box; background-color: var(--bg-input);}
 
 .actions { display: flex; gap: 10px; margin-top: 10px; }
 .btn-submit { flex: 2; background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }

@@ -229,7 +229,7 @@ onMounted(async () => {
     <Nav>
         <Chart_Preface />
         <div class="dashboard-container_1">
-            <h3>淨資產趨勢</h3>
+            <h3 style="color: var(--text-primary);">淨資產趨勢</h3>
             <span class="date">{{ today }}</span>
             <hr>
             <div class="chart-card">
@@ -250,7 +250,7 @@ onMounted(async () => {
                 </div>
                 <br>
                 <div class="chart-wrapper">
-                    <canvas ref="dailyChartRef"></canvas>
+                    <canvas ref="dailyChartRef" style="color: var(--text-primary);"></canvas>
                     <div v-if="isLoading" class="loading-overlay">數據加載中...</div>
                 </div>
             </div>
@@ -282,16 +282,20 @@ onMounted(async () => {
 <style scoped>
 @import '../assets/css/dashboard.css';
 
+.date{
+    color: var(--text-primary);
+}
+
 .dashboard-container_1 {
     padding: 12px 24px 24px 24px;
     max-width: 1400px;
     margin: 0 auto;
-    background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%);
+    background: var(--bg-card);
     min-height: 100vh;
 }
 
 .chart-card {
-    background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+    background: var(--bg-input);
     border-radius: 16px;
     padding: 24px;
     border: 1px solid #e5e7eb;
@@ -369,6 +373,10 @@ onMounted(async () => {
     color: white;
     border-bottom: 1px solid rgba(119, 159, 191, 0.35);
     /* 每列底線 */
+}
+
+td{
+    color: var(--text-primary);
 }
 
 .money-table td {

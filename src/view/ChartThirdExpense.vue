@@ -153,7 +153,7 @@ const today = computed(() => {
         <Chart_Preface />
         <div style="display: flex; min-height: 100vh;">
             <div class="dashboard-container_1" style="flex: 1;">
-                <h3>支出分析</h3>
+                <h3 style="color: var(--text-primary);">支出分析</h3>
                 <span class="date">{{ today }}</span>
                 <hr>
                 <div class="charts-grid">
@@ -242,7 +242,7 @@ h2 {
 }
 
 .chart-card {
-    background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+    background: var(--bg-input);
     border-radius: 16px;
     padding: 24px;
     border: 1px solid #e5e7eb;
@@ -305,6 +305,10 @@ h2 {
     padding: 12px 24px;
 }
 
+td{
+    color: var(--text-primary);
+}
+
 .money-table td {
     border-bottom: 1px solid rgba(119, 159, 191, 0.35);
     /* 每列底線 */
@@ -332,6 +336,7 @@ h2 {
     /* 兩欄等寬 */
     text-align: center;
     font-weight: 700;
+    color: var(--text-primary);
 }
 
 .summary>div {
@@ -347,7 +352,7 @@ h2 {
     padding: 12px 24px 24px 24px;
     max-width: 1400px;
     margin: 0 auto;
-    background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%);
+    background: var(--bg-card);
     min-height: 100vh;
 }
 
@@ -383,5 +388,9 @@ h2 {
 .custom-select:focus {
     border-color: #94a3b8;
     outline: none;
+}
+
+.date{
+    color: var(--text-primary);
 }
 </style>

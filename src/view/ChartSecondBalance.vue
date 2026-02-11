@@ -243,7 +243,7 @@ const today = computed(() => {
     <Nav>
         <Chart_Preface />
         <div class="dashboard-container_1">
-            <h3>收支趨勢</h3>
+            <h3 style="color: var(--text-primary);">收支趨勢</h3>
             <span class="date">{{ today }}</span>
             <hr>
             <div class="chart-card">
@@ -294,7 +294,7 @@ const today = computed(() => {
 @import '../assets/css/dashboard.css';
 
 .chart-card {
-    background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+    background: var(--bg-input);
     border-radius: 16px;
     padding: 24px;
     border: 1px solid #e5e7eb;
@@ -372,6 +372,10 @@ const today = computed(() => {
     text-align: center;
 }
 
+th{
+    color: var(--text-primary);
+}
+
 .money-table th {
     background-color: #779FBF;
     color: white;
@@ -415,7 +419,11 @@ const today = computed(() => {
     padding: 12px 24px 24px 24px;
     max-width: 1400px;
     margin: 0 auto;
-    background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%);
+    background: var(--bg-card);
     min-height: 100vh;
+}
+
+.date{
+    color: var(--text-primary);
 }
 </style>
