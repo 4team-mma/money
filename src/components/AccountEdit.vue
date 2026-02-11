@@ -168,8 +168,10 @@ const submitEdit = async () => {
         min-height: 3px;
         padding: 3px;
         border-radius: 12px;
-        border: 2px solid #e2e8f0;
+        border: 1px solid var(--text-inverse);
         resize: vertical;
+        background-color: var(--bg-body);
+        color: var(--text-primary);
     }
 
     .acc_head3{
@@ -211,13 +213,13 @@ const submitEdit = async () => {
         letter-spacing:2px ;
         font-size: 30px;
         font-weight: 500;
-        color: #1e293b;
+        color: var(--text-primary);
     }
 
     .acc_button_word_small{
         font-size: 20px;
         font-weight: 300;
-        color: #626367;
+        color: var(--text-secondary);
     }
 
     .acc_button_color {
@@ -227,6 +229,7 @@ const submitEdit = async () => {
         margin: 8px;
         border-radius: 8px;
         transition: 0.2s;
+
     }
 
     .acc_button_color.active {
@@ -242,8 +245,8 @@ const submitEdit = async () => {
 
 
     .submit_button{
-        background-color: #1e293b;
-        color: white;
+        background-color: var(--border-color);
+        color: var(--text-primary);
         padding: 10px 20px;
         border: 0px;
         margin-top: 10px;
