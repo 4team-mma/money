@@ -1,7 +1,9 @@
 <script setup>
 import { ref, nextTick, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { robotApi } from '../api/robot';
+
+// ⚡️ 修改點 1：改用具名匯入，直接引入需要的函式
+import { postAiRobotChat } from '@/api/robot';
 
 const route = useRoute()
 const messagesContainer = ref(null)
@@ -77,7 +79,7 @@ const checkAndGreet = () => {
 const clearChat = () => {
   if (confirm('喵？確定要清空所有對話紀錄嗎？')) {
     const clearMsgId = Date.now();
-    
+
     // 1. 清空紀錄並放入「暫時性」的清空提示
     messages.value = [{
       id: clearMsgId,
@@ -108,16 +110,28 @@ const scrollToBottom = () => {
   })
 }
 
-// 🚀 核心發送邏輯 (已修復：自動清空、隨機語錄、Console Log)
+// ⚡️ 新增一個 helper 函式來格式化秒數
+const formatDuration = (seconds) => {
+  if (!seconds) return '';
+  if (seconds < 60) {
+    return `${seconds}s`;
+  } else {
+    const mins = Math.floor(seconds / 60);
+    const secs = (seconds % 60).toFixed(1);
+    return `${mins}m ${secs}s`;
+  }
+}
+
+// 🚀 核心發送邏輯
 const handleSend = async () => {
   if (!input.value.trim() || isTyping.value) return
-  
+
   const query = input.value
   messages.value.push({ id: Date.now(), text: query, sender: 'user', timestamp: new Date().toISOString() })
-  
+
   // ✅ 1. 馬上清空輸入框
   input.value = ''
-  
+
   isTyping.value = true
   loadingText.value = "思考中喵..."
   scrollToBottom()
@@ -139,17 +153,18 @@ const handleSend = async () => {
     // ✅ 3. Console Log 回歸
     console.log(`🚀 [Chat] 發送請求: "${query}"`);
 
-    const response = await robotApi.postAiRobotChat({ 
+    // ⚡️ 修改點 2：直接呼叫 postAiRobotChat 函式，而不是透過物件
+    const response = await postAiRobotChat({
       message: query,
-      instruction_override: smartInstruction 
+      instruction_override: smartInstruction
     });
 
-    const replyText = response.data?.reply || response.reply;
-    const duration = response.data?.duration || 0;
-    const provider = response.data?.provider || 'unknown';
+    const replyText = response.reply;
+    const duration = response.duration;
+    const provider = response.provider;
 
     // ✅ 4. 顯示回應來源模型
-    console.log(`✨ [Chat] 收到回應 (${provider}):`, replyText);
+    console.log(`✨ [Chat] 收到回應 (${provider}):`, replyText, `耗時: ${duration}s`);
 
     messages.value.push({
       id: Date.now() + 1,
@@ -209,7 +224,12 @@ onMounted(() => { if (isOpen.value) checkAndGreet() })
             <p style="white-space: pre-wrap;">{{ message.text }}</p>
             <span class="time">
               {{ formatTime(message.timestamp) }}
-              <span v-if="message.sender === 'bot' && message.duration" class="duration">({{ message.duration }}s)</span>
+
+              <span v-if="message.sender === 'bot' && message.duration" class="meta-info">
+                <span class="provider-tag" v-if="message.provider">[{{ message.provider.toUpperCase() }}]</span>
+                <span class="duration-tag">⏱️{{ formatDuration(message.duration) }}</span>
+              </span>
+
             </span>
           </div>
         </div>
@@ -231,45 +251,266 @@ onMounted(() => { if (isOpen.value) checkAndGreet() })
 
 <style scoped>
 /* 🎯 恢復您最愛的 Win11 原始樣式 */
-.money-ai-bot { position: fixed; bottom: 30px; right: 30px; z-index: 9999; }
-.bot-toggle-transparent { background: transparent !important; border: none !important; cursor: pointer; padding: 0; position: relative; width: 90px; height: 90px; display: flex; align-items: center; justify-content: center; }
-.floating-cat { width: 100%; height: 100%; object-fit: contain; transition: transform 0.3s; }
-.bot-toggle-transparent:hover .floating-cat { transform: scale(1.1) translateY(-5px); }
-.stars-container { position: absolute; top: 0; right: 0; width: 100%; height: 100%; pointer-events: none; }
-.star { position: absolute; color: #ffca28; text-shadow: 0 0 5px rgba(255, 202, 40, 0.5); animation: blink 1.5s infinite alternate; }
-.s1 { top: 20%; right: 5%; font-size: 0.9rem; }
-.s3 { top: 35%; right: 18%; font-size: 0.7rem; animation-delay: 0.8s; }
-@keyframes blink { 0% { opacity: 0.4; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1.2); } }
+.money-ai-bot {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 9999;
+}
+
+.bot-toggle-transparent {
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  width: 90px;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.floating-cat {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 0.3s;
+}
+
+.bot-toggle-transparent:hover .floating-cat {
+  transform: scale(1.1) translateY(-5px);
+}
+
+.stars-container {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.star {
+  position: absolute;
+  color: #ffca28;
+  text-shadow: 0 0 5px rgba(255, 202, 40, 0.5);
+  animation: blink 1.5s infinite alternate;
+}
+
+.s1 {
+  top: 20%;
+  right: 5%;
+  font-size: 0.9rem;
+}
+
+.s3 {
+  top: 35%;
+  right: 18%;
+  font-size: 0.7rem;
+  animation-delay: 0.8s;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
 
 /* 對話窗與頭像防變形處理 */
-.chat-window-custom { width: 360px; height: 520px; background: white; border-radius: 24px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); display: flex; flex-direction: column; overflow: hidden; border: 1px solid #f0f0f0; }
-.chat-header-custom { padding: 12px 16px; background: #f8faff; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; }
-.avatar-container-header { width: 32px; height: 32px; flex-shrink: 0; }
-.header-icon { width: 100%; height: 100%; object-fit: contain; }
-.avatar-container-msg { width: 30px; height: 30px; flex-shrink: 0; margin-top: 5px; }
-.msg-avatar { width: 100%; height: 100%; object-fit: contain; }
-.bot-status { display: flex; flex-direction: column; justify-content: center; margin-left: 8px; } /* 新增 */
-.name { font-weight: bold; font-size: 0.95rem; color: #333; } /* 新增 */
-.status { font-size: 0.75rem; color: #888; } /* 新增 */
+.chat-window-custom {
+  width: 360px;
+  height: 520px;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #f0f0f0;
+}
 
-.header-left { display: flex; align-items: center; } /* 新增 */
+.chat-header-custom {
+  padding: 12px 16px;
+  background: #f8faff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+}
 
-.header-actions { display: flex; gap: 8px; align-items: center; }
-.clear-btn { background: none; border: none; cursor: pointer; font-size: 1.1rem; opacity: 0.5; transition: opacity 0.2s; }
-.clear-btn:hover { opacity: 1; }
-.close-x { background: #eee; border: none; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; }
+.avatar-container-header {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
 
-.messages-container { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: #fff; }
-.msg-row { display: flex; gap: 10px; max-width: 85%; }
-.msg-row.user { align-self: flex-end; flex-direction: row-reverse; }
-.bubble { padding: 10px 14px; border-radius: 14px; font-size: 0.9rem; line-height: 1.4; position: relative; }
-.bot .bubble { background: #f0f2f5; color: #333; border-top-left-radius: 2px; }
-.user .bubble { background: #3b82f6; color: white; border-top-right-radius: 2px; }
-.time { font-size: 0.7rem; opacity: 0.5; margin-top: 4px; display: block; text-align: right; }
-.duration { font-size: 9px; color: #9ca3af; margin-left: 4px; }
-.typing { color: #888; font-style: italic; font-size: 0.85rem; } /* 新增 */
+.header-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
 
-.input-area { padding: 12px; display: flex; gap: 8px; border-top: 1px solid #f0f0f0; }
-.input-area input { flex: 1; border: 1px solid #ddd; padding: 8px 12px; border-radius: 10px; outline: none; }
-.send-btn { background: #3b82f6; border: none; border-radius: 8px; padding: 0 12px; color: white; cursor: pointer; }
+.avatar-container-msg {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+.msg-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.bot-status {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-left: 8px;
+}
+
+/* 新增 */
+.name {
+  font-weight: bold;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+/* 新增 */
+.status {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+/* 新增 */
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+/* 新增 */
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.clear-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.clear-btn:hover {
+  opacity: 1;
+}
+
+.close-x {
+  background: #eee;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.messages-container {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  background: #fff;
+}
+
+.msg-row {
+  display: flex;
+  gap: 10px;
+  max-width: 85%;
+}
+
+.msg-row.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.bubble {
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  position: relative;
+}
+
+.bot .bubble {
+  background: #f0f2f5;
+  color: #333;
+  border-top-left-radius: 2px;
+}
+
+.user .bubble {
+  background: #3b82f6;
+  color: white;
+  border-top-right-radius: 2px;
+}
+
+.time {
+  font-size: 0.7rem;
+  opacity: 0.5;
+  margin-top: 4px;
+  display: block;
+  text-align: right;
+}
+
+.duration {
+  font-size: 9px;
+  color: #9ca3af;
+  margin-left: 4px;
+}
+
+.typing {
+  color: #888;
+  font-style: italic;
+  font-size: 0.85rem;
+}
+
+/* 新增 */
+
+.input-area {
+  padding: 12px;
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.input-area input {
+  flex: 1;
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  border-radius: 10px;
+  outline: none;
+}
+
+.send-btn {
+  background: #3b82f6;
+  border: none;
+  border-radius: 8px;
+  padding: 0 12px;
+  color: white;
+  cursor: pointer;
+}
 </style>
