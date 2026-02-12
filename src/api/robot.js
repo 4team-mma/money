@@ -1,43 +1,28 @@
-import axios from "axios";
+// src/api/robot.js
+import api from '@/api'; // 引用你的 index.js (已包含攔截器)
 
-// 1. 建立 API 實例
-const api = axios.create({
-  // 為了相容不同環境，建議使用相對路徑並搭配 Vite Proxy
-  baseURL: import.meta.env.VITE_API_BASE_URL || "/",
-  timeout: 120000, // 🚀 統一使用 120 秒，確保 Mac 的本地模型不會超時
-});
+// 1. 取得 AI 設定
+// 對應後端: GET /api/ai_models/config
+export const getAiRobotConfig = (provider = null) => {
+  // 你的後端支援 Query Parameter: ?provider=gemini
+  const url = provider ? `/ai_models/config?provider=${provider}` : "/ai_models/config";
+  return api.get(url);
+};
 
-// 2. 🚀 通用攔截器：解決 Token 命名與注入問題
-api.interceptors.request.use(
-  (config) => {
-    // 🛡️ 同時嘗試讀取 Mac 版的 'user_token' 與 Win 版的 'token'
-    const token =
-      localStorage.getItem("user_token") || localStorage.getItem("token");
+// 2. 儲存 AI 設定
+// 對應後端: POST /api/ai_models/save
+// 對應 Schema: AIConfigSave (JSON)
+export const saveAiRobotConfig = (data) => {
+  return api.post("/ai_models/save", data);
+};
 
-    if (token) {
-      // 確保 Header 格式正確注入
-      config.headers.Authorization = `Bearer ${token.trim()}`;
-    }
-
-    // 🛠️ 路徑自動修正：確保路徑開頭包含 /api (防止兩邊路徑配置不同)
-    if (!config.url.startsWith("/api")) {
-      config.url = `/api${config.url.startsWith("/") ? "" : "/"}${config.url}`;
-    }
-
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  },
-);
-
-// 3. 匯出通用 API 介面
-export const robotApi = {
-  // 🚀 修正：支援傳入 provider 參數 (例如 ?provider=gemini)
-  getAiRobotConfig: (provider = null) => {
-    const url = provider ? `/ai_models/config?provider=${provider}` : "/ai_models/config";
-    return api.get(url);
-  },
-  saveAiRobotConfig: (data) => api.post("/ai_models/save", data),
-  postAiRobotChat: (data) => api.post("/ai_models/chat", data),
+// 3. 與 AI 對話 (最關鍵的部分)
+// 對應後端: POST /api/ai_models/chat
+// 對應 Schema: ChatRequest
+export const postAiRobotChat = (data) => {
+  return api.post("/ai_models/chat", data, {
+    // ⚠️ 關鍵：這裡必須覆蓋全域的 10秒 設定，改成 120秒
+    // 因為 AI 生成很慢，不加這個會導致前端報錯 "timeout of 10000ms exceeded"
+    timeout: 120000 
+  });
 };

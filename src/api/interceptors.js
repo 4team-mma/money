@@ -7,7 +7,7 @@ import router from '@/router';
 service.interceptors.request.use((config) => {
   // 1. 自動添加 JWT token
   // 確保 Key 與 Home.vue 存入時的名字一致
-  const token = localStorage.getItem('user_token'); 
+  const token = localStorage.getItem('user_token')|| localStorage.getItem("token"); 
   if (token) {
     config.headers["Authorization"] = `Bearer ${token}`;
   }

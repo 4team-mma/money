@@ -80,6 +80,11 @@ const logout = () => {
   if (confirm('確定要登出系統嗎？')) {
     localStorage.removeItem('currentUser')
     localStorage.removeItem('user_token')
+
+    // 2. ⚡️ 新增：清除喵喵機器人的聊天紀錄與開關狀態
+    localStorage.removeItem('meowChatHistory')
+    localStorage.removeItem('isMeowChatOpen')
+
     router.push('/')
   }
 }

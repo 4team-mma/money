@@ -1,7 +1,9 @@
 // web_app/frontend/src/stores/useAiAdminStore.js
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { robotApi } from '../api/robot'
+
+// ⚡️ 修改點 1：改用具名匯入，只引入需要的 getAiRobotConfig
+import { getAiRobotConfig } from '../api/robot'
 
 export const useAiAdminStore = defineStore('aiAdmin', () => {
     // 儲存各個 Provider 的完整狀態
@@ -16,7 +18,9 @@ export const useAiAdminStore = defineStore('aiAdmin', () => {
     // 抓取並暫存特定大腦的設定
     const fetchConfig = async (provider) => {
         try {
-            const res = await robotApi.getAiRobotConfig(provider);
+            // ⚡️ 修改點 2：直接呼叫函式，拿掉 robotApi.
+            const res = await getAiRobotConfig(provider);
+            
             const d = res?.data || res;
             if (d) {
                 if (provider === 'gemini') {
