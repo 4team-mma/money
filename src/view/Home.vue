@@ -133,12 +133,16 @@ const handleRegister = () => router.push('/Register')
                     <form @submit.prevent="handleLogin" class="login-form">
                         <div class="form-group">
                             <label for="email">帳號 / 電子郵件</label>
-                            <input id="email" v-model="formData.email" type="text" placeholder="your@email.com" required />
+                            <input id="email" v-model="formData.email" type="text" placeholder="your@email.com" required 
+                            autocomplete="username"
+                            />
                         </div>
 
                         <div class="form-group">
                             <label for="password">密碼</label>
-                            <input id="password" v-model="formData.password" type="password" placeholder="••••••••" required />
+                            <input id="password" v-model="formData.password" type="password" placeholder="••••••••" required
+                            autocomplete="current-password"
+                            />
                         </div>
 
                         <button type="submit" class="login-button">
