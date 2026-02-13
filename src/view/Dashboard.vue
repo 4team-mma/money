@@ -237,7 +237,7 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div class="stat-card expense-card">
+          <div class="stat-card expenditure-card">
             <div class="card-header">
               <span class="card-title">本月支出</span>
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -251,7 +251,7 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div class="stat-card balance-card">
+          <div class="stat-card net-card">
             <div class="card-header">
               <span class="card-title">淨收支</span>
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -607,4 +607,12 @@ onMounted(async () => {
   color: var(--text-secondary);
   background: var(--bg-body);
 }
+
+.income-card { border-left: 4px solid #3b82f6;}
+.expenditure-card   { border-left: 4px solid #ef4444;}
+.net-card  { border-left: 4px solid #10b981;}
+
+.income-card .icon{color: #3b82f6;}
+.expenditure-card .icon{color:#ef4444;}
+.net-card .icon { color:  #10b981;}
 </style>
