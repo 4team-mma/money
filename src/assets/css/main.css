@@ -369,3 +369,15 @@ h1 {
     100% { background-position: 100% 100%; }
 }
 
+
+/* 3. 處理頁面中間容器的白底遮擋 (根據你的 class 名稱) */
+[data-theme="nt_gold"] .dashboard-container_1,
+[data-theme="sp_ocean"] .dashboard-container_1,
+[data-theme="sj_wood"] .dashboard-container_1 {
+    background: transparent !important;
+}
+
+/* 4. 修改原本的 --bg-body 邏輯 (不要全部透明，給組件一個底色參考) */
+[data-theme="nt_gold"] { --bg-body: #11080067 !important; }
+[data-theme="sp_ocean"] { --bg-body: #082f4979 !important; }
+[data-theme="sj_wood"] { --bg-body: #f5ebe085 !important; }

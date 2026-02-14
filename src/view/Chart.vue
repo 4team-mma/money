@@ -229,7 +229,7 @@ onMounted(async () => {
     <Nav>
         <Chart_Preface />
         <div class="dashboard-container_1">
-            <h3 style="color: var(--text-primary);">淨資產趨勢</h3>
+            <h3 >淨資產趨勢</h3>
             <span class="date">{{ today }}</span>
             <hr>
             <div class="chart-card">
