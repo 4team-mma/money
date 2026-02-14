@@ -49,7 +49,7 @@ const navigation = [
   { name: '圖表分析', to: '/Chart', icon: '📈' },
   { name: '消費趨勢', to: '/ConsumerAnalysis', icon: '⛽' },
   { name: '薪資趨勢', to: '/SalaryAnalysis', icon: '💵' },
-  { name: '舊款成就', to: '/Achievements', icon: '🏆' },
+  // { name: '舊款成就', to: '/Achievements', icon: '🏆' },
   { name: '成就系統', to: '/Achievements_new', icon: '🏆' },
   { name: '問題回饋', to: '/Feedback', icon: '❓' },
   { name: '設定', to: '/Settings', icon: '⚙️' }
