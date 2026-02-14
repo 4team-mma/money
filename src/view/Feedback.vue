@@ -154,7 +154,7 @@ const handleFormSubmit = async () => {
 
     <style scoped>
     .textarea::placeholder{
-        color: var(--text-secondary);
+        color: var(--text-primary);
     }
 
     .textarea {
@@ -220,8 +220,8 @@ const handleFormSubmit = async () => {
     }
 
     .submit_button {
-        background-color: #2563eb;
-        color: white;
+        background: var(--color-primary);
+        color: var(--text-inverse);
         padding: 10px 20px;
         border: 0px;
         margin-top: 10px;

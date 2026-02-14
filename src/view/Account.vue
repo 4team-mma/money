@@ -115,14 +115,24 @@ const handleAddAccount = async (newAccountData) => {
 };
 
 const handleDelete = async (id) => {
-    if (!window.confirm('確定刪除？')) return;
+    const targetAccount = accounts.value.find(acc => acc.id === id);
+    const accountName = targetAccount ? targetAccount.name : '此帳戶';
+    if (!window.confirm(`確定刪除「${accountName}」嗎？\n這將會：\n1. 永久刪除此帳戶\n2. 刪除此帳戶的所有收支紀錄\n3. 相關轉帳紀錄將標記為「帳戶已刪除」`)) return;
     try {
         await accountApi.delete(id);
-        ElMessage.success('刪除成功！');
+        ElMessage({
+            message: '帳戶及其相關紀錄已成功處理！',
+            type: 'success',
+        });
         await fetchAccounts();
-        if (activeId.value === id) activeId.value = null;
+        if (activeId.value === id) {
+            activeId.value = null;
+        }
     } catch (error) {
-        ElMessage.error('刪除失敗');
+        console.error("Delete failed:", error);
+        // 捕捉後端傳回的詳細錯誤訊息
+        const errorMsg = error.response?.data?.detail || '刪除失敗';
+        ElMessage.error(errorMsg);
     }
 };
 

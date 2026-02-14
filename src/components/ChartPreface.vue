@@ -157,7 +157,7 @@ const monthlyMOMStats = computed(() => {
                         </div>
                     </div>
 
-                    <div class="stat-card expense-card">
+                    <div class="stat-card expenditure-card">
                         <div class="card-header">
                             <span class="card-title">本月支出</span>
                             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -171,7 +171,7 @@ const monthlyMOMStats = computed(() => {
                         </div>
                     </div>
 
-                    <div class="stat-card balance-card">
+                    <div class="stat-card net-card">
                         <div class="card-header">
                             <span class="card-title">本月淨收支</span>
                             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -185,7 +185,7 @@ const monthlyMOMStats = computed(() => {
                         </div>
                     </div>
 
-                    <div class="stat-card balance-card">
+                    <div class="stat-card net-card">
                         <div class="card-header">
                             <span class="card-title">淨資產</span>
                             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -212,7 +212,7 @@ const monthlyMOMStats = computed(() => {
 
 .btn-outline-primary{
     border-color: var(--text-primary);
-    color:var(--text-primary);
+    color:var(--text-primary);  
 }
 
 .PageTurn {
@@ -286,7 +286,7 @@ h2 {
 }
 
 
-/* 1. 當前選中狀態：藍底白字 (你之前要的) */
+/* 1. 當前選中狀態 */
 .t-btn-group .btn.active {
     background-color: var(--text-primary);
     color: var(--bg-body);
@@ -304,4 +304,7 @@ h2 {
 /* 如果你的背景是深色的，白框才看得到；
    如果背景是白色的，建議把 border 改成更深的藍色或陰影 */
 
+.income-card { border-left: 4px solid #3b82f6;}
+.expenditure-card   { border-left: 4px solid #ef4444;}
+.net-card  { border-left: 4px solid #10b981;}
 </style>
