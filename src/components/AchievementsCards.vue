@@ -37,7 +37,7 @@ onMounted(async () => {
 // 3. 資料整合
 const cardSets = computed(() => {
   const names = { 'SJ': '理財初心者', 'NF': '節流冒險者', 'SP': '投資先鋒', 'NT': '財富領主' }
-  const rewards = { 'SJ': '專屬金屬頭像框', 'NF': '年度資產圖表', 'SP': '複利計算器', 'NT': '自定義主題' }
+  const rewards = { 'SJ': '解鎖特殊主題背景1', 'NF': '年度資產圖表', 'SP': '解鎖特殊主題背景2', 'NT': '解鎖特殊主題背景3' }
 
   return groupKeys.map(group => {
     // 找出該組 API 資料
