@@ -30,6 +30,8 @@ import BudgetManager from "@/view/BudgetManager.vue";
 import Achievements_new from "@/view/Achievements_new.vue";
 import AdminModel from "@/view/AdminModel.vue";
 
+
+
 const routes = [
   {
     path: "/",
@@ -184,6 +186,7 @@ const routes = [
     name: "Achievements_new",
   }
   ,
+
     {
     path: "/AdminModel",
     component: AdminModel,

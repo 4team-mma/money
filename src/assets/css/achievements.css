@@ -1,0 +1,316 @@
+/* 修改主容器：移除寫死的背景色，改為透明，讓 body 的主題動態特效透出來！ */
+.mms-full-layout {
+    padding: 2rem 4rem; 
+    background-color: transparent; /* 關鍵修改：讓主題背景透出來 */
+    min-height: 100vh;
+    width: 100%; 
+    margin: 0; 
+    box-sizing: border-box;
+}
+
+/* 英雄卡片 Banner：使用主題主色調建立漸層 */
+.hero-identity-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    /* 改用主題的 primary 顏色來做漸層，這樣每個主題的 Banner 顏色都會跟著變 */
+    background: linear-gradient(135deg, var(--color-primary) 0%, rgba(0,0,0,0.4) 100%);
+    padding: 1.3rem 4rem; 
+    border-radius: 2rem;
+    color: var(--text-inverse); /* 使用反白文字變數 */
+    margin-bottom: 1.5rem; 
+    width: 100%;
+    box-sizing: border-box;
+    box-shadow: var(--shadow-card); /* 套用主題陰影 */
+    transition: all 0.3s ease; /* 加入轉場動畫 */
+}
+
+.interactive-split-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.1fr; 
+    gap: 3rem;
+    margin-bottom: 3rem;
+    width: 100%;
+}
+
+/* 簽到區：套用主題卡片背景與邊框 */
+.board-card {
+    background: var(--bg-card);
+    padding: 2.5rem;
+    border-radius: 2rem;
+    border: 1px solid var(--border-color);
+    margin-bottom: 3rem;
+    width: 100%;
+    box-sizing: border-box;
+    box-shadow: var(--shadow-card);
+    transition: all 0.3s ease;
+}
+
+.banner-left {
+    display: flex;
+    align-items: center;
+    gap: 3.5rem;
+}
+
+.main-orb {
+    width: 8rem;
+    height: 8rem;
+    border: 0.5rem solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.orb-label {
+    font-size: 1.4rem;
+    opacity: 0.8;
+}
+
+.orb-number {
+    font-size: 4rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.rank-tag {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.4rem 1.4rem;
+    border-radius: 5rem;
+    font-size: 1.2rem;
+}
+
+.identity-title {
+    font-size: 3.2rem;
+    font-weight: 800;
+    margin: 0.8rem 0 1.5rem;
+}
+
+/* 區塊通用標題 */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.card-header h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary); /* 套用主題主要文字顏色 */
+}
+
+/* 打卡區域 */
+.checkin-flex {
+    display: flex;
+    gap: 1.2rem;
+    margin-top: 1.5rem;
+}
+
+.checkin-node {
+    flex: 1;
+    background: var(--bg-card); /* 套用卡片背景 */
+    border-radius: 1.5rem;
+    padding: 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 0.2rem solid var(--border-color); /* 套用邊框色 */
+    position: relative;
+    transition: all 0.3s ease;
+    color: var(--text-primary);
+}
+
+.checkin-node.claimed {
+    background: var(--bg-hover); /* 套用 hover 的底色當作已領取背景 */
+    border-color: var(--color-primary); /* 邊框變為主色 */
+    opacity: 0.8;
+}
+
+.ci-completed {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-hover);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--color-primary);
+    border-radius: 1.5rem;
+}
+
+/* 任務(2/3) + 卡片(1/3) 排版 */
+.main-interactive-grid {
+    display: grid;
+    grid-template-columns: 1.8fr 1fr;
+    gap: 3.5rem;
+    margin-bottom: 4rem;
+    padding-top: 30px;
+}
+
+.mission-stack {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.m-card-elite {
+    background: var(--bg-card); /* 替換 white */
+    border-radius: 2rem;
+    padding: 2.2rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    position: relative;
+    border: 1px solid var(--border-color); /* 替換 #eef2f6 */
+    transition: all 0.3s ease-out;
+    color: var(--text-primary);
+    box-shadow: var(--shadow-card);
+}
+
+.m-card-elite:hover {
+    transform: scale(1.02);
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.15); /* 加深 Hover 陰影 */
+}
+
+.m-rarity-label {
+    position: absolute;
+    top: 1.2rem;
+    right: 2rem;
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--text-secondary); /* 替換 #94a3b8 */
+}
+
+.m-visual {
+    font-size: 3.5rem;
+}
+
+.m-content h3 {
+    font-size: 1.3rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+/* 卡片收集槽 */
+.collection-set-card {
+    background: var(--bg-card);
+    padding: 2.5rem;
+    border-radius: 2rem;
+    border: 1px solid var(--border-color);
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-card);
+    transition: all 0.3s ease;
+}
+
+.card-slot-grid {
+    display: flex;
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.card-slot {
+    width: 4.5rem;
+    height: 6rem;
+    background: var(--bg-input); /* 替換 #f1f5f9 */
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.card-slot.active {
+    background: var(--color-primary); /* 替換 #3b82f6 */
+    border-color: var(--color-primary);
+    box-shadow: 0 0.5rem 1.5rem var(--bg-hover);
+}
+
+.card-icon {
+    font-size: 2.5rem;
+}
+
+/* 成就徽章牆 */
+.achievement-grid-rwd {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 2rem;
+}
+
+.badge-elite {
+    background: var(--bg-card);
+    border-radius: 2rem;
+    padding: 3rem 2rem;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    color: var(--text-primary);
+    box-shadow: var(--shadow-card);
+}
+
+.badge-elite.locked {
+    opacity: 0.5;
+    filter: grayscale(1);
+}
+
+.badge-icon-wrap {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+}
+
+.pts-badge {
+    margin-top: 1.5rem;
+    display: inline-block;
+    background: var(--bg-hover); /* 替換 #eff6ff */
+    color: var(--color-primary); /* 替換 #3b82f6 */
+    padding: 0.5rem 1.5rem;
+    border-radius: 5rem;
+    font-weight: 800;
+    font-size: 1.1rem;
+}
+
+/* 按鈕美化 */
+.btn-primary-large {
+    background: var(--color-primary); /* 替換寫死的藍綠色 */
+    color: var(--text-inverse);
+    border: none;
+    padding: 1rem 2.5rem;
+    border-radius: 1rem;
+    font-size: 1.4rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 0.5rem 1.5rem var(--bg-hover);
+    transition: all 0.3s ease;
+}
+
+.btn-primary-large:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+}
+
+/* 核心排版：鎖定比例，防止卡牌溢出 */
+.interactive-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.25fr; 
+    gap: 2.5rem;
+    margin-top: 2rem;
+    align-items: start;
+    width: 100%;
+}
+
+/* 防止子組件內部內容撐開導致跑版 */
+.mission-side, .cards-side {
+    min-width: 0; 
+    width: 100%;
+}
+
+/* RWD 適應 */
+@media (max-width: 1200px) {
+    .main-interactive-grid {
+        grid-template-columns: 1fr;
+    }
+    .mms-full-layout {
+        padding: 1.5rem;
+    }
+}

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue' 
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 
 /* ========================
@@ -7,14 +7,22 @@ import { ElMessage } from 'element-plus'
    ======================== */
 
 const themeUnlocks = {
-    light: 1,      
+    light: 1,
     nordic: 1,
     sunset: 1,
     forest: 1,
     lavender: 1,
     dark: 1,
     oasis: 5,   // Lv 5解鎖
-    cyber: 10    // Lv 10解鎖
+    cyber: 10,  // Lv 10解鎖
+
+    // --- 【解鎖位置備註】 ---
+    // 這裡原本應該綁定 API 取得的卡牌解鎖狀態 (檢查是否擁有對應的 reward_unlock_feature)。
+    // 為了讓你先預覽效果，我先將門檻設為 1 (預設開啟)。
+    // 之後串接後端時，可以將這裡改成 true/false 的布林值判斷。
+    nt_gold: 1,  // 對應 NT 財富領主 (UNLOCK_CUSTOM_THEME1)
+    sp_ocean: 1, // 對應 SP 投資先鋒 (UNLOCK_CUSTOM_THEME2)
+    sj_wood: 1   // 對應 SJ 理財初心者 (UNLOCK_CUSTOM_THEME3)
 };
 
 // 假設你從 API 或成就系統獲取的當前等級
@@ -22,68 +30,94 @@ const userLevel = ref(3);
 
 const themes = computed(() => {
     const baseThemes = {
-    light: { 
-        name: 'MMA 經典', 
-        bgGradient: '#f8fafc', 
-        sidebarBg: '#ffffff', 
-        primary: '#3b82f6' 
-    },
-    nordic: { 
-        name: '北歐極簡', 
-        bgGradient: '#eceff4', 
-        sidebarBg: '#d8dee9', 
-        primary: '#5e81ac',
-        text: '#2e3440'
-    },
-        sunset: { 
-        name: '微醺夕陽', 
-        bgGradient: '#fffbeb', 
-        sidebarBg: '#ffffff', 
-        primary: '#f59e0b' 
-    },
-    forest: { 
-        name: '森林晨曦', 
-        bgGradient: '#f0fdf4', 
-        sidebarBg: '#ffffff', 
-        primary: '#10b981' 
-    },
-    lavender: { 
-        name: '薰衣草園', 
-        bgGradient: '#f3f0ff', 
-        sidebarBg: '#ffffff', 
-        primary: '#b39cd0',
-        text: '#4b4453'
-    },
-    dark: { 
-        name: '極客深邃', 
-        bgGradient: '#0f172a', 
-        sidebarBg: '#1e293b', 
-        primary: '#60a5fa' 
-    },
-    oasis: { 
-        name: '沙漠綠洲', 
-        bgGradient: '#f7f3f0', 
-        sidebarBg: '#caebdf', 
-        primary: '#c2a383',
-        text: '#4a3f35'
-    },
-        cyber: { 
-        name: '午夜霓虹',
-        bgGradient: '#0a0a12', 
-        sidebarBg: '#161625', 
-        primary: '#ff00ff',
-        text: '#e0e0ff'
-    }
+        light: {
+            name: 'MMA 經典',
+            bgGradient: '#f8fafc',
+            sidebarBg: '#ffffff',
+            primary: '#3b82f6'
+        },
+        nordic: {
+            name: '北歐極簡',
+            bgGradient: '#eceff4',
+            sidebarBg: '#d8dee9',
+            primary: '#5e81ac',
+            text: '#2e3440'
+        },
+        sunset: {
+            name: '微醺夕陽',
+            bgGradient: '#fffbeb',
+            sidebarBg: '#ffffff',
+            primary: '#f59e0b'
+        },
+        forest: {
+            name: '森林晨曦',
+            bgGradient: '#f0fdf4',
+            sidebarBg: '#ffffff',
+            primary: '#10b981'
+        },
+        lavender: {
+            name: '薰衣草園',
+            bgGradient: '#f3f0ff',
+            sidebarBg: '#ffffff',
+            primary: '#b39cd0',
+            text: '#4b4453'
+        },
+        dark: {
+            name: '極客深邃',
+            bgGradient: '#0f172a',
+            sidebarBg: '#1e293b',
+            primary: '#60a5fa'
+        },
+        oasis: {
+            name: '沙漠綠洲',
+            bgGradient: '#f7f3f0',
+            sidebarBg: '#caebdf',
+            primary: '#c2a383',
+            text: '#4a3f35'
+        },
+        cyber: {
+            name: '午夜霓虹',
+            bgGradient: '#0a0a12',
+            sidebarBg: '#161625',
+            primary: '#ff00ff',
+            text: '#e0e0ff'
+        },
+        // --- 新增的三個卡牌特殊解鎖主題 ---
+        nt_gold: {
+            name: '科技流金 (NT獎勵)',
+            // 改為深褐金漸層，完美對應實際背景色
+            bgGradient: 'linear-gradient(135deg, #110800 0%, #2a1600 100%)',
+            // 側邊欄改為對應的半透明深色
+            sidebarBg: 'rgba(26, 15, 0, 0.95)',
+            // 品牌高光色改為亮金橘
+            primary: '#f59e0b',
+            // 文字改為亮金
+            text: '#fef3c7'
+        },
+        sp_ocean: {
+            name: '深海波光 (SP獎勵)',
+            bgGradient: 'radial-gradient(circle at 50% 0%, #0369a1, #082f49)',
+            sidebarBg: '#0c4a6e',
+            primary: '#38bdf8',
+            text: '#e0f2fe'
+        },
+        sj_wood: {
+            name: '木質散步 (SJ獎勵)',
+            bgGradient: '#f5ebe0',
+            sidebarBg: '#faf4f0',
+            primary: '#9c6644',
+            text: '#5c4033'
+        }
     };
 
     Object.keys(baseThemes).forEach(id => {
-    const requiredLevel = themeUnlocks[id] || 1;
-    baseThemes[id].locked = userLevel.value < requiredLevel;
-    baseThemes[id].requiredLevel = requiredLevel; // 順便存起來，顯示在介面上
+        const requiredLevel = themeUnlocks[id] || 1;
+        baseThemes[id].locked = userLevel.value < requiredLevel;
+        baseThemes[id].requiredLevel = requiredLevel; // 順便存起來，顯示在介面上
     });
 
     return baseThemes;
-    });
+});
 
 // 讀取當前前台主題 (注意：key 是 appTheme)
 const currentTheme = ref(localStorage.getItem('appTheme') || 'light')
@@ -102,10 +136,10 @@ const changeTheme = (id) => {
 
     currentTheme.value = id
     localStorage.setItem('appTheme', id)
-    
+
     // 設定 html 屬性以觸發 main.css 變數切換
     document.documentElement.setAttribute('data-theme', id)
-    
+
     // 發送事件通知 Nav.vue 或其他組件
     window.dispatchEvent(new CustomEvent('theme-changed', { detail: id }))
 }
@@ -128,7 +162,7 @@ const savePreferences = () => {
 onMounted(() => {
     // 初始化選中的主題狀態
     const saved = localStorage.getItem('appTheme')
-    if (saved && themes[saved]) {
+    if (saved && themes.value[saved]) {
         currentTheme.value = saved
     }
 })
@@ -136,10 +170,10 @@ onMounted(() => {
 
 <template>
     <div class="tab-content">
-        
+
         <div class="settings-section">
             <h2>介面外觀</h2>
-            
+
             <div class="preference-item">
                 <div class="preference-info">
                     <h3>貨幣</h3>
@@ -160,7 +194,8 @@ onMounted(() => {
                 </div>
                 <div class="theme-picker">
                     <div v-for="(style, id) in themes" :key="id" class="theme-item"
-                        :class="{ 'is-selected': currentTheme === id }" @click="changeTheme(id)">
+                        :class="{ 'is-selected': currentTheme === id, 'is-locked': style.locked }"
+                        @click="changeTheme(id)">
                         <div class="theme-preview" :style="{ background: style.bgGradient }">
                             <div class="preview-sidebar" :style="{ background: style.sidebarBg }"></div>
                             <div class="preview-accent" :style="{ background: style.primary }"></div>
@@ -169,7 +204,7 @@ onMounted(() => {
                                 <span class="lock-text">Lv.{{ style.requiredLevel }} 解鎖</span>
                             </div>
                         </div>
-                        <span class="theme_name_color" >{{ style.name }}</span>
+                        <span class="theme_name_color">{{ style.name }}</span>
                     </div>
                 </div>
             </div>
@@ -177,7 +212,7 @@ onMounted(() => {
 
         <div class="settings-section">
             <h2>預算設定</h2>
-            
+
             <div class="preference-item">
                 <div class="preference-info">
                     <h3>預算週期</h3>
@@ -230,8 +265,9 @@ onMounted(() => {
 .theme-picker {
     display: grid;
     /* 核心設定：分成 6 等份，每份 1fr */
-    grid-template-columns: repeat(6, 1fr); 
-    gap: 10px; /* 項目之間的間距 */
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    /* 項目之間的間距 */
     width: 70%;
 }
 
@@ -244,7 +280,8 @@ onMounted(() => {
     transition: transform 0.2s;
 }
 
-.theme-item:hover, .theme-item.is-selected {
+.theme-item:hover,
+.theme-item.is-selected {
     opacity: 1;
     transform: translateY(-2px);
 }
@@ -256,12 +293,13 @@ onMounted(() => {
 
 .theme-preview {
     width: 100%;
-    aspect-ratio: 16 / 10; /* 保持固定寬高比 */
+    aspect-ratio: 16 / 10;
+    /* 保持固定寬高比 */
     border-radius: 12px;
     position: relative;
     overflow: hidden;
     border: 2px solid transparent;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     transition: all 0.3s;
 }
 
@@ -275,7 +313,7 @@ onMounted(() => {
     height: 100%;
     position: absolute;
     left: 0;
-    border-right: 1px solid rgba(0,0,0,0.05);
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .preview-accent {
@@ -293,27 +331,31 @@ onMounted(() => {
 
 /* 鎖定狀態的容器 */
 .theme-item.is-locked {
-    cursor: not-allowed; /* 顯示禁止點擊的手勢 */
+    cursor: not-allowed;
+    /* 顯示禁止點擊的手勢 */
     opacity: 0.8;
 }
 
 /* 鎖定時的預覽圖模糊效果 */
 .theme-item.is-locked .theme-preview {
-    filter: grayscale(0.8) blur(2px); /* 變灰且模糊 */
-    border: 1px dashed rgba(0,0,0,0.1);
+    filter: grayscale(0.8) blur(2px);
+    /* 變灰且模糊 */
+    border: 1px dashed rgba(0, 0, 0, 0.1);
 }
 
 /* 鎖定遮罩層 */
 .lock-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4); /* 半透明黑底 */
+    background: rgba(0, 0, 0, 0.4);
+    /* 半透明黑底 */
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     z-index: 10;
-    backdrop-filter: blur(4px); /* 加強模糊感 */
+    backdrop-filter: blur(4px);
+    /* 加強模糊感 */
     transition: background 0.3s;
 }
 
@@ -321,14 +363,16 @@ onMounted(() => {
 .lock-icon {
     font-size: 24px;
     margin-bottom: 4px;
-    filter: none; /* 圖示本身不要模糊 */
+    filter: none;
+    /* 圖示本身不要模糊 */
 }
 
 .lock-text {
     font-size: 12px;
-    color: #ffd700; /* 使用金色文字，對應成就獎勵的感覺 */
+    color: #ffd700;
+    /* 使用金色文字，對應成就獎勵的感覺 */
     font-weight: 800;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 /* 移除鎖定項目的懸浮位移效果 */
