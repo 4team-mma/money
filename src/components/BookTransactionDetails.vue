@@ -257,4 +257,8 @@
 
 <style scoped>
     @import "../assets/css/bookTransactionDetails.css";
+    .tab-container button.active{
+        background: var(--color-primary);
+        color: var(--text-inverse);
+    }
 </style>

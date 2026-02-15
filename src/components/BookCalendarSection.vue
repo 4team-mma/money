@@ -113,6 +113,6 @@
     :deep(.vc-day-content.vc-focusable.vc-focus.vc-attr.vc-highlight-content-outline.vc-orange){
         color:var(--text-primary);
         background-color: var(--bg-card);
-        border: 1px solid
+        border: 2px solid
     }
 </style>
