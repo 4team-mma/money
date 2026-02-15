@@ -1,13 +1,15 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { checkinApi } from '@/api/checkin';
 import Nav from '@/components/Nav.vue'
+import { ElMessage, ElMessageBox } from 'element-plus';
 
 // --- 1. 使用者身份等級 (精準對接 Excel 稱號) ---
 const userLevel = ref({
     level: 12,
     currentXP: 2850,
     nextLevelXP: 4000,
-    streak: 15,
+    streak: 0,
     hasCheckedIn: false
 })
 
@@ -63,15 +65,110 @@ const achievements = ref([
     { id: 4, title: '投資先驅', icon: '📈', req: '完成首筆投資', pts: 80, unlocked: false }
 ])
 
-const checkInDays = ref([
-    { day: 1, xp: 10, status: 'claimed' },
-    { day: 2, xp: 10, status: 'claimed' },
-    { day: 3, xp: 20, status: 'ready' },
-    { day: 4, xp: 10, status: 'locked' },
-    { day: 5, xp: 10, status: 'locked' },
-    { day: 6, xp: 10, status: 'locked' },
-    { day: 7, xp: 100, status: 'locked', big: true }
-])
+
+// 簽到領獎功能
+
+// 簽到狀態回應 (對應後端 CheckinStatus Schema) ---
+const checkinStatus = ref({
+    hasCheckedIn: false,
+    currentCycleDay: 0, // 這是後端傳回來的 1~7 循環
+    todayXpReward: 0,
+    weeklyRewards: [10, 10, 20, 20, 20, 20, 50] // 預設值，之後會被後端覆蓋
+});
+
+
+// 取得打卡狀態
+const fetchMyCheckinStatus = async () => {
+    try {
+        const res = await checkinApi.getStatus();
+        const data = res.data || res;
+
+        if (data) {
+            checkinStatus.value.hasCheckedIn = data.has_checked_in;
+            checkinStatus.value.currentCycleDay = data.current_cycle_day; 
+            checkinStatus.value.todayXpReward = data.today_xp_reward;
+            checkinStatus.value.weeklyRewards = data.weekly_rewards;
+        }
+    } catch (err) {
+        console.error("無法載入打卡狀態", err);
+    }
+};
+
+// 執行打卡動作
+const handleDoCheckin = async () => {
+    try {
+        const res = await checkinApi.performAction();
+        const data = res.data || res;
+
+        if (data) {
+            // 1. 基本領取成功通知
+            ElMessage.success(`簽到成功！獲得了 ${data.earned_xp} XP`);
+            
+            // 2. 更新本機等級資訊 (可選)
+            userLevel.value.streak = data.streak_count;
+
+            // 3. 🎯 處理特別 Bonus 彈窗
+            if (data.show_bonus_modal) {
+                await ElMessageBox.alert(
+                    '🎉 恭喜！你已累計打卡滿 10 次，額外獲得 50 XP！', 
+                    '成就達成', 
+                    { confirmButtonText: '太棒了', type: 'success' }
+                );
+            }
+
+            if (data.show_monthly_bonus) {
+                await ElMessageBox.alert(
+                    '🏆 太強了！本月全勤達成，額外獎勵 100 XP！', 
+                    '月全勤大師', 
+                    { confirmButtonText: '領取獎勵', type: 'success' }
+                );
+            }
+            // 4. 重新刷狀態
+            await fetchMyCheckinStatus();
+        }
+    } catch (err) {
+        const errorMsg = err.response?.data?.detail || "簽到失敗";
+        ElMessage.error(errorMsg);
+    }
+};
+
+// 簽到卡片介面設定
+const checkInDays = computed(() => {
+    const rewards = checkinStatus.value.weeklyRewards || [10, 10, 20, 20, 20, 20, 50];
+
+    // 💡 關鍵：如果 cycle_day 是 0，代表是新的一輪，要把目標對準第 1 天
+    // 注意：這裡要確認你的變數名是 currentCycleDay 還是 current_cycle_day (根據 API 欄位)
+    const currentDay = (checkinStatus.value.currentCycleDay === 0)
+                    ? 1
+                    : checkinStatus.value.currentCycleDay;
+
+    const isTodayClaimed = checkinStatus.value.hasCheckedIn;
+
+    return rewards.map((xp, index) => {
+        const dayNum = index + 1;
+        let status = 'locked';
+
+        if (dayNum < currentDay) {
+            status = 'claimed'; // 過去的進度
+        } else if (dayNum === currentDay) {
+            // 今天的進度：沒領過就是 ready (會亮起來)，領過就是 claimed
+            status = isTodayClaimed ? 'claimed' : 'ready';
+        } else {
+            status = 'locked'; // 未來的進度
+        }
+
+        return {
+            day: dayNum,
+            xp: xp,
+            status: status,
+            big: xp >= 50
+        };
+    });
+});
+
+onMounted(() => {
+    fetchMyCheckinStatus();
+});
 
 </script>
 <template>
@@ -118,20 +215,22 @@ const checkInDays = ref([
 
             <section class="board-card">
                 <div class="card-header">
-                    <h2>📅 每日簽到領獎</h2>
-                    <button class="btn-primary-large" :disabled="userLevel.hasCheckedIn"
-                        @click="userLevel.hasCheckedIn = true">
-                        {{ userLevel.hasCheckedIn ? '今日已領取' : '立即簽到領取獎勵' }}
+                    <h2>💰 連續簽到獎勵</h2>
+                    <button class="btn-primary-large" :disabled="checkinStatus.hasCheckedIn"
+                        @click="handleDoCheckin">
+                        {{ checkinStatus.hasCheckedIn ? '今日已領取' : `立即領取 ${checkinStatus.todayXpReward} XP` }}
                     </button>
                 </div>
                 <div class="checkin-flex">
-                    <div v-for="d in checkInDays" :key="d.day" class="checkin-node" :class="d.status">
+                    <div v-for="d in checkInDays" :key="d.day" class="checkin-node" :class="[d.status, { 'special-card': d.big }]">
                         <span class="ci-day">DAY {{ d.day }}</span>
-                        <span class="ci-icon">{{ d.big ? '💎' : '💰' }}</span>
+                        <span class="ci-icon">💰</span>
                         <span class="ci-reward">+{{ d.xp }} XP</span>
                         <div v-if="d.status === 'claimed'" class="ci-completed">✔</div>
                     </div>
                 </div>
+                <p style="margin: 8px 0 0 8px; font-size: 12px; color: #888;">* 連續簽到獎勵每 7 天循環一次，若簽到中斷，則從 DAY 1 重新累計。</p>
+                <p style="margin: 0px 0 0 8px; font-size: 12px; color: #888;">* 累積滿 10 次及月全勤另有額外驚喜！</p>
             </section>
 <!-- 每日簽到部分結尾 -->
 
@@ -472,5 +571,24 @@ const checkInDays = ref([
     .mms-full-layout {
         padding: 1.5rem;
     }
+}
+
+.checkin-node.locked {
+    /* 1. 使用淡紫色或淡灰色，增加一點點色偏，比純灰色高級 */
+    background-color: rgba(200, 200, 210, 0.15); 
+    
+    /* 2. 使用虛線或點狀邊框，暗示「結構不穩定，還沒成形」 */
+    border: 1.5px dashed rgba(150, 150, 150, 0.4);
+    
+    /* 3. 縮小一點點，製造物理上的壓抑感 */
+    transform: scale(0.95);
+    
+    /* 4. 內容物變淡變灰 */
+    color: #999;
+    filter: grayscale(1);
+    
+    /* 5. 加上一點點毛玻璃 (如果背景有顏色的話很有感) */
+    backdrop-filter: blur(2px);
+
 }
 </style>
