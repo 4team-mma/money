@@ -20,8 +20,10 @@ const displayAvatarUrl = computed(() => {
         return avatarUrl.value;
     }
 
-    // 如果是後端的路徑，才加上後端伺服器的網址
-    return `http://localhost:8000${avatarUrl.value}`;
+    // ✅ 關鍵：在路徑後面加上時間戳記 t=...
+    // 這樣網址會變成 /static/ProfilePicture/user_6.png?t=1707897600
+    const timestamp = Date.now();
+    return `http://localhost:8000${avatarUrl.value}?t=${timestamp}`;
 });
 
 // =========================
@@ -161,7 +163,7 @@ const saveProfile = async () => {
         }
 
         // --- 3. 全部成功後的狀態同步 ---
-        alert("✨ 個人資料與頭像已更新！");
+        alert("個人資料已更新！");
         originalProfile.value = { ...profile.value }; // 讓按鈕熄滅
 
     } catch (error) {
@@ -299,5 +301,17 @@ button:disabled:hover {
     box-shadow: none !important;
     transform: none !important;
     /* 如果你有寫縮放效果也要移除 */
+}
+
+.user-avatar {
+    width: 150px;
+    /* 固定的顯示寬度 */
+    height: 150px;
+    /* 固定的顯示高度 */
+    border-radius: 50%;
+    /* 變成圓形，更有質感 */
+    object-fit: cover;
+    /* 關鍵！這會自動裁切並填滿容器，防止圖片被壓扁或拉長 */
+    border: 2px solid #ddd;
 }
 </style>
