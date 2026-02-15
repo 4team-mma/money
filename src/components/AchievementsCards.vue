@@ -7,7 +7,6 @@ const rawCards = ref([])
 const flippedState = ref({})
 const isLoading = ref(true)
 
-// 1. 定義 MBTI 靜態結構 (確保佔位)
 const mbtiStructure = {
   'SJ': { rare: '守護長老', normals: ['ESTJ', 'ISTJ', 'ESFJ', 'ISFJ'] },
   'NF': { rare: '幻夢領袖', normals: ['ENFJ', 'INFJ', 'ENFP', 'INFP'] },
@@ -15,97 +14,70 @@ const mbtiStructure = {
   'NT': { rare: '永恆智者', normals: ['ENTJ', 'INTJ', 'ENTP', 'INTP'] }
 }
 
-const groupsFull = { 'SJ': 'SJ 守成組', 'NF': 'NF 說故事組', 'SP': 'SP 破局組', 'NT': 'NT 造局組' }
 const groupKeys = ['SJ', 'NF', 'SP', 'NT']
 
-// 2. 取得 API 資料
 onMounted(async () => {
   try {
+    isLoading.value = true
     const res = await getCardCollection()
-    // 防呆：無論回傳格式為何，都轉為陣列
-    if (Array.isArray(res)) rawCards.value = res
-    else if (res && Array.isArray(res.data)) rawCards.value = res.data
-    else rawCards.value = []
+    // Axios 攔截器若已處理 data，則 res 即為陣列
+    rawCards.value = Array.isArray(res) ? res : (res.data || [])
   } catch (error) {
     console.error("卡牌API錯誤:", error)
-    rawCards.value = []
   } finally {
     isLoading.value = false
   }
 })
 
-// 3. 資料整合
 const cardSets = computed(() => {
   const names = { 'SJ': '理財初心者', 'NF': '節流冒險者', 'SP': '投資先鋒', 'NT': '財富領主' }
   const rewards = { 'SJ': '解鎖特殊主題背景1', 'NF': '年度資產圖表', 'SP': '解鎖特殊主題背景2', 'NT': '解鎖特殊主題背景3' }
 
   return groupKeys.map(group => {
-    // 找出該組 API 資料
-    const apiGroupCards = rawCards.value.filter(c => c.series_name === group)
+    // 🌟 修正點 1：使用 category 進行篩選
+    const apiGroupCards = rawCards.value.filter(c => c.category === group)
     
     // --- 普通卡處理 ---
     const targetNormals = mbtiStructure[group].normals
     const normalCards = targetNormals.map(targetName => {
-        // 比對 Title 是否包含檔名 (例如 "ESTJ")
-        const found = apiGroupCards.find(c => c.title && c.title.includes(targetName))
-        
-        if (found) {
-            // 已獲得：使用 API 的 image_url (後端已給完整網址)
-            return { ...found, is_owned: true, displayTitle: found.title, image_url: found.image_url }
+        // 🌟 修正點 2：使用 includes 模糊匹配 "ENTP 發明貓" 裡的 "ENTP"
+        const found = apiGroupCards.find(c => c.title.includes(targetName))
+        if (found && found.is_owned) {
+            return { ...found, is_owned: true }
         } else {
-            // 未獲得：佔位
-            return { lib_id: `placeholder-${targetName}`, title: targetName, displayTitle: '???', is_owned: false, image_url: '' }
+            return { lib_id: `lock-${targetName}`, is_owned: false, displayTitle: '???' }
         }
     })
 
     // --- 稀有卡處理 ---
-    const rareFront = apiGroupCards.find(c => c.title.includes('SP01'))
-    const rareBack = apiGroupCards.find(c => c.title.includes('SP02'))
+    // 🌟 修正點 3：改用難度 RARE 且標題包含特定關鍵字或圖片包含 SP01
+    const rareFront = apiGroupCards.find(c => c.difficulty === 'RARE')
     const ownedCount = normalCards.filter(c => c.is_owned).length
 
     return {
       name: names[group],
       group: group,
-      groupFull: groupsFull[group],
       reward: rewards[group],
       ownedCount: ownedCount,
-      
-      isRareOwned: !!rareFront,
-      isRareReady: ownedCount === 4 && !rareFront,
-      
+      isRareOwned: !!(rareFront && rareFront.is_owned),
+      isRareReady: ownedCount === 4 && !(rareFront && rareFront.is_owned),
       rareCard: {
-        title: rareFront ? rareFront.description : mbtiStructure[group].rare,
-        // 直接使用後端 URL，若無則預備拼接 (確保前端路徑正確)
-        frontImg: rareFront ? rareFront.image_url : new URL(`../assets/images/${group}/${group}_SP01.png`, import.meta.url).href,
-        backImg: rareBack ? rareBack.image_url : new URL(`../assets/images/${group}/${group}_SP02.png`, import.meta.url).href
+        title: (rareFront && rareFront.is_owned) ? rareFront.title : mbtiStructure[group].rare,
+        frontImg: (rareFront && rareFront.is_owned) ? rareFront.image_url : null
       },
       normalCards: normalCards
     }
   })
 })
 
-const currentSet = computed(() => {
-  if (cardSets.value.length > 0 && cardSets.value[activeTab.value]) {
-    return cardSets.value[activeTab.value]
-  }
-  return null
-})
+const currentSet = computed(() => cardSets.value[activeTab.value] || null)
 
-const toggleFlip = (index) => {
-  flippedState.value[index] = !flippedState.value[index]
-}
+const toggleFlip = (index) => { flippedState.value[index] = !flippedState.value[index] }
 </script>
 
 <template>
   <div class="ach-card-container">
-    <div class="card-header">
-      <div class="header-main" v-if="currentSet">
-        <h2>🃏 卡片收集進度</h2>
-        <span class="group-badge">{{ currentSet.groupFull }}</span>
-      </div>
-    </div>
-
-    <div class="card-tabs-nav" v-if="cardSets.length > 0">
+    <div class="card-tabs-nav">
       <button v-for="(set, i) in cardSets" :key="i" 
         @click="activeTab = i" :class="{ active: activeTab === i }">
         {{ set.name }}
@@ -114,40 +86,20 @@ const toggleFlip = (index) => {
 
     <div class="card-content-wrapper" v-if="!isLoading && currentSet">
       <div class="meta-status">
-        <span>解鎖卡牌: <strong>{{ currentSet.ownedCount }} / 4</strong></span>
-        <span class="reward-hint">🎁 {{ currentSet.reward }}</span>
+        <span>解鎖進度: <strong>{{ currentSet.ownedCount }} / 4</strong></span>
       </div>
       
       <div class="card-visual-layout">
-        
-        <div class="rare-card-perspective" 
-             @click="currentSet.isRareOwned && toggleFlip(activeTab)">
-          
-          <div class="rare-card-inner" :class="{ 'is-flipped': flippedState[activeTab] }">
+        <div class="rare-card-perspective">
             <div class="rare-face front">
-              <span class="rare-tag">RARE</span>
               <div class="card-center-content">
                 <img v-if="currentSet.isRareOwned" :src="currentSet.rareCard.frontImg" class="cat-main-img" />
-                <div v-else-if="currentSet.isRareReady" class="mission-alert">
-                   <span class="mission-icon">📜</span>
-                   <p class="mission-text">特殊任務開啟！</p>
-                </div>
                 <div v-else class="lock-circle">
                    <span class="lock-icon">🔒</span>
-                   <p class="lock-text">收齊 4 張解鎖</p>
+                   <p class="lock-text">{{ currentSet.isRareReady ? '特殊任務待完成' : '收齊 4 張一般卡解鎖' }}</p>
                 </div>
-                <p v-if="currentSet.isRareOwned" class="rare-name">{{ currentSet.rareCard.title }}</p>
               </div>
             </div>
-
-            <div class="rare-face back">
-              <span class="rare-tag">INFO</span>
-              <div class="card-center-content">
-                <img :src="currentSet.rareCard.backImg" class="cat-main-img" />
-                <p class="rare-desc">隱藏天賦已覺醒</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div class="normal-cards-grid">
@@ -155,22 +107,19 @@ const toggleFlip = (index) => {
             class="normal-slot" :class="{ active: card.is_owned }">
             <div class="small-card-content">
               <img v-if="card.is_owned" :src="card.image_url" class="small-cat-img" />
-              <div v-else class="small-lock-wrap">
-                <span class="small-lock-icon">🔒</span>
-                <p class="small-lock-name">???</p> 
-              </div>
+              <span v-else class="small-lock-icon">🔒</span>
             </div>
           </div>
         </div>
-
       </div>
     </div>
-
-    <div v-else-if="isLoading" class="state-msg">載入中...</div>
   </div>
 </template>
 
 <style scoped>
+
+.cat-main-img, .small-cat-img { object-fit: contain; width: 100%; height: 100%; border-radius: 1rem; }
+.normal-slot.active { background: #fff; border: 2px solid #3b82f6; box-shadow: 0 4px 12px rgba(59,130,246,0.1); }
 .ach-card-container {
   background: white; padding: 2rem; border-radius: 2rem; border: 1px solid #eef2f6; width: 100%; box-sizing: border-box;
 }
