@@ -1,13 +1,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { checkinApi } from '@/api/checkin' // 引入隊友的 API
+import { checkinApi } from '@/api/checkin' 
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Nav from '@/components/Nav.vue'
 import AchievementsMission from '@/components/AchievementsMission.vue'
 import AchievementsCards from '@/components/AchievementsCards.vue'
 import AchievementsReward from '@/components/AchievementsReward.vue'
 
-// --- 1. 使用者身份與等級資訊 (整合 Julia 的動態稱號) ---
+// --- 1. 使用者等級與身分引用 ---
 const userLevel = ref({ 
     level: 12, 
     currentXP: 2850, 
@@ -15,8 +15,17 @@ const userLevel = ref({
     streak: 15, 
     hasCheckedIn: false 
 })
+const cardsRef = ref(null);
+const refreshCards = () => {
+    // 當收到任務領獎成功的訊號時，叫卡牌組件去跑 fetchCollection()
+    if (cardsRef.value && typeof cardsRef.value.fetchCollection === 'function') {
+        cardsRef.value.fetchCollection();
+    }
+};
 
-// 稱號邏輯：根據等級自動變換 [來自 Julia 的更新]
+// 元件引用，用於觸發子元件刷新
+const missionRef = ref(null)
+
 const identity = computed(() => {
     const lv = userLevel.value.level;
     if (lv >= 61) return { rank: '財富領主', title: '財務自由大師', theme: 'legendary' };
@@ -27,7 +36,7 @@ const identity = computed(() => {
 
 const xpProgress = computed(() => Math.floor((userLevel.value.currentXP / userLevel.value.nextLevelXP) * 100))
 
-// --- 2. 簽到功能邏輯 (完全保留 Julia 的 API 介接) ---
+// --- 2. 簽到功能邏輯 ---
 const checkinStatus = ref({
     hasCheckedIn: false,
     currentCycleDay: 0,
@@ -35,7 +44,6 @@ const checkinStatus = ref({
     weeklyRewards: [10, 10, 20, 20, 20, 20, 50]
 });
 
-// 取得打卡狀態
 const fetchMyCheckinStatus = async () => {
     try {
         const res = await checkinApi.getStatus();
@@ -51,29 +59,29 @@ const fetchMyCheckinStatus = async () => {
     }
 };
 
-// 執行打卡動作
 const handleDoCheckin = async () => {
     try {
         const res = await checkinApi.performAction();
         const data = res.data || res;
         if (data) {
             ElMessage.success(`簽到成功！獲得了 ${data.earned_xp} XP`);
-            userLevel.value.streak = data.streak_count; // 更新連續天數
+            userLevel.value.streak = data.streak_count; 
             
+            // 🌟 核心：立刻讓下方的任務元件重新抓取進度
+            if (missionRef.value && typeof missionRef.value.fetchMissions === 'function') {
+                missionRef.value.fetchMissions();
+            }
+
             if (data.show_bonus_modal) {
                 await ElMessageBox.alert('🎉 恭喜！你已累計打卡滿 10 次，額外獲得 50 XP！', '成就達成', { type: 'success' });
             }
-            if (data.show_monthly_bonus) {
-                await ElMessageBox.alert('🏆 太強了！本月全勤達成，額外獎勵 100 XP！', '月全勤大師', { type: 'success' });
-            }
-            await fetchMyCheckinStatus(); // 重新刷狀態
+            await fetchMyCheckinStatus(); 
         }
     } catch (err) {
         ElMessage.error(err.response?.data?.detail || "簽到失敗");
     }
 };
 
-// 動態計算簽到節點狀態
 const checkInDays = computed(() => {
     const rewards = checkinStatus.value.weeklyRewards;
     const currentDay = checkinStatus.value.currentCycleDay === 0 ? 1 : checkinStatus.value.currentCycleDay;
@@ -127,8 +135,7 @@ onMounted(() => {
             <section class="board-card">
                 <div class="card-header">
                     <h2>💰 連續簽到獎勵</h2>
-                    <button class="btn-primary-large" :disabled="checkinStatus.hasCheckedIn"
-                        @click="handleDoCheckin">
+                    <button class="btn-primary-large" :disabled="checkinStatus.hasCheckedIn" @click="handleDoCheckin">
                         {{ checkinStatus.hasCheckedIn ? '今日已領取' : `立即領取 ${checkinStatus.todayXpReward} XP` }}
                     </button>
                 </div>
@@ -145,10 +152,9 @@ onMounted(() => {
             </section>
 
             <div class="interactive-split-grid">
-                <AchievementsMission />
-                <AchievementsCards />
+                <AchievementsMission ref="missionRef" @reward-claimed="refreshCards" />
+                <AchievementsCards ref="cardsRef" />
             </div>
-
             <AchievementsReward />
         </div>
     </Nav>
