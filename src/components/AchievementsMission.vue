@@ -80,7 +80,7 @@ const handleAbandon = async (m) => {
         // 使用者取消操作
     }
 }
-
+const emit = defineEmits(['reward-claimed'])
 // 領取獎勵
 const handleClaim = async (m) => {
     try {
@@ -88,6 +88,7 @@ const handleClaim = async (m) => {
         ElMessage.success('領取獎勵成功！')
         // 領取完畢後重新抓取列表，此時該任務狀態會變為 2 (已完成)
         fetchMissions()
+        emit('reward-claimed'); // 🌟 發出一個事件通知父元件
     } catch (error) {
         console.error("領取失敗", error)
     }
