@@ -1,7 +1,7 @@
 <script setup>
 import Nav from '@/components/Nav.vue'
-import { ref, computed } from 'vue';
-
+import { ref, computed,onMounted } from 'vue';
+import { triggerMissionAction } from '@/api/gamification';
 // 控制分頁狀態
 const activeTab = ref('monthly');
 const tabs = [
@@ -41,6 +41,12 @@ const totalSavingsProgress = computed(() => {
   const totalCurrent = savingsGoals.value.reduce((sum, goal) => sum + goal.current, 0);
   const totalTarget = savingsGoals.value.reduce((sum, goal) => sum + goal.target, 0);
   return Math.round((totalCurrent / totalTarget) * 100);
+});
+
+onMounted(() => {
+    
+    // 進入頁面即觸發「設定目標」任務進度
+    triggerMissionAction('view_targets');
 });
 </script>
 

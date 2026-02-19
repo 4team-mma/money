@@ -6,7 +6,7 @@ import { statsApi } from '@/api/stats';
 import { calculatePeriodDays } from '@/utils/financeHelper';
 import { getLocalDate, getLocalDateString } from '@/utils/dateHelper';
 import Chart from 'chart.js/auto';
-
+import { triggerMissionAction } from '@/api/gamification';
 // 顯示當天日期
 const today = computed(() => {
     const now = new Date();
@@ -67,7 +67,11 @@ const loadData = async () => {
     }
 }
 
-onMounted(() => loadData())
+onMounted(() => {
+    loadData();
+    triggerMissionAction('view_charts_pie_inn');
+
+})
 
 // 🌟 計算屬性 (保留在前端，處理 UI 邏輯)
 const periodDays = computed(() => calculatePeriodDays(period.value, startDate.value, endDate.value))

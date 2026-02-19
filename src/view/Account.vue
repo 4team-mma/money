@@ -6,7 +6,7 @@ import AccountAdd1 from '@/components/AccountAdd1.vue';
 import AccountEdit from '@/components/AccountEdit.vue';
 import Nav from '@/components/Nav.vue';
 import { ElMessage } from 'element-plus';
-
+import { triggerMissionAction } from '@/api/gamification';
 const accounts = ref([])
 
 const assetTypes = [
@@ -90,6 +90,7 @@ const closeMenu = (event) => {
 onMounted(() => {
     window.addEventListener('click', closeMenu);
     fetchAccounts();
+    triggerMissionAction('view_accounts');
 });
 
 // API 操作
@@ -153,6 +154,9 @@ const handleSaveSuccess = () => {
     activeMenuIndex.value = null;
     fetchAccounts();
 };
+
+
+
 </script>
 
 <template>

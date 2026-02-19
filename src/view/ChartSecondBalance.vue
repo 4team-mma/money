@@ -5,7 +5,7 @@ import Chart from 'chart.js/auto'
 import Nav from '@/components/Nav.vue'
 import Chart_Preface from '@/components/ChartPreface.vue'
 import { getLocalDate, getLocalDateString } from '@/utils/dateHelper'
-
+import { triggerMissionAction } from '@/api/gamification';
 const dailyChartRef = ref(null)
 const chartInstance = shallowRef(null)
 
@@ -45,6 +45,7 @@ onMounted(() => {
     startDate.value = getLocalDateString(new Date(now.getFullYear(), now.getMonth() - 11, 1))
     endDate.value = getLocalDate()
     loadData()
+    triggerMissionAction('view_trends');
 })
 
 const baseTrendData = computed(() => {

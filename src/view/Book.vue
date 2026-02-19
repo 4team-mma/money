@@ -7,7 +7,7 @@
     import { ref, computed, onMounted, watch } from "vue";
     import { ElMessage } from 'element-plus';
     import { getLocalDate, getLocalDateString } from '@/utils/dateHelper'
-
+    import { triggerMissionAction } from '@/api/gamification';
     const transactions = ref([]);
 
     // 修正日期為本地時間 yyyy-mm-dd
@@ -69,6 +69,7 @@
     // 初始化
     onMounted(() => {
         fetchTransactions();
+        triggerMissionAction('view_calendar');
     });
 
     // 當年份或月份改變時，重新抓取 API

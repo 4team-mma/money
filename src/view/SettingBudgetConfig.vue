@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-
+import { triggerMissionAction } from '@/api/gamification';
 /* ========================
     Theme System (與 main.css 對應)
    ======================== */
@@ -142,6 +142,8 @@ const changeTheme = (id) => {
 
     // 發送事件通知 Nav.vue 或其他組件
     window.dispatchEvent(new CustomEvent('theme-changed', { detail: id }))
+
+    triggerMissionAction('change_theme');
 }
 
 // 偏好設定資料

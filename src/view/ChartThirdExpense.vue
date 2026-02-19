@@ -6,7 +6,7 @@ import { getLocalDate, getLocalDateString } from '@/utils/dateHelper'
 import Chart from 'chart.js/auto'
 import Nav from '@/components/Nav.vue'
 import Chart_Preface from '@/components/ChartPreface.vue'
-
+import { triggerMissionAction } from '@/api/gamification';
 const dailyChartRef = ref(null)
 let chartInstance = null
 
@@ -56,7 +56,11 @@ const loadData = async () => {
     }
 }
 
-onMounted(() => loadData())
+onMounted(() =>{ 
+    
+    loadData();
+    triggerMissionAction('view_charts_pie_exp');
+})
 
 // 🌟 計算屬性 (保留在前端，處理 UI 邏輯)
 const periodDays = computed(() => calculatePeriodDays(period.value, startDate.value, endDate.value))
