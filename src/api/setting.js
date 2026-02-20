@@ -1,8 +1,35 @@
 // src/api/setting.js
-import api from './interceptors';
+import api from '@/api';
 
 export const settingApi = {
-/**
+    /** * 1. 獲取當前使用者的個人設定*/
+    getSetting: (userId) => {
+        return api.get('/setting/setting_preference/me', {
+            params: { user_id: userId }
+        });
+    },
+
+    /**
+     * 2. 僅更新主題顏色 (PATCH)
+     */
+    updateTheme: (userId, themeName) => {
+        return api.patch(`/setting/setting_preference/update-theme`, 
+            { app_theme: themeName }, // Body 資料
+            { params: { user_id: userId } } // Query String
+        );
+    },
+
+    /**
+     * 3. 更新所有偏好設定 (PUT)    
+     */
+    updateAllSetting: (userId, config) => {
+        return api.put(`/setting/setting_preference/update-all`, 
+            config, // Body 資料 (包含 budget_cycle, currency 等)
+            { params: { user_id: userId } }
+        );
+    },
+    
+    /**
      * 導出報表 API
      * @param {string} type - report_type (monthly/yearly/quarterly)
      * @param {string} format - report_format (excel/pdf/csv)
