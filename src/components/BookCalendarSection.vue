@@ -94,7 +94,7 @@
     }
 
     :deep(.vc-header .vc-title) {
-        color: var(--text-inverse);
+        color: var(--text-primary);
     }
 
     :deep(.vc-arrow) {
