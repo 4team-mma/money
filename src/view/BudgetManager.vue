@@ -4,7 +4,7 @@ import { ref, computed, onMounted } from 'vue';
 import api from "@/api";
 import { ElMessage } from 'element-plus';
 import { useCategoryStore } from "@/stores/useCategoryStore";
-
+import { triggerMissionAction } from '@/api/gamification';
 const categoryStore = useCategoryStore();
 
 // 控制新增選單的顯示
@@ -302,6 +302,8 @@ const saveAllBudgets = async () => {
 // 頁面載入時執行
 onMounted(() => {
   fetchCurrentBudget();
+  triggerMissionAction('view_targets');
+
 });
 
 /**
