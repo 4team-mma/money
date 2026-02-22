@@ -2,6 +2,19 @@
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { triggerMissionAction } from '@/api/gamification';
+import { ElMessage, ElLoading } from 'element-plus'
+import { settingApi } from '@/api/setting';
+import api from '@/api';
+
+const userId = 1
+// 偏好設定資料
+const preferences = ref({
+    currency: 'TWD',
+    budget_cycle: 'monthly',
+    budget_alert_threshold: 75,
+    start_of_week: 0
+});
+
 /* ========================
     Theme System (與 main.css 對應)
    ======================== */
@@ -20,16 +33,17 @@ const themeUnlocks = {
     // 這裡原本應該綁定 API 取得的卡牌解鎖狀態 (檢查是否擁有對應的 reward_unlock_feature)。
     // 為了讓你先預覽效果，我先將門檻設為 1 (預設開啟)。
     // 之後串接後端時，可以將這裡改成 true/false 的布林值判斷。
-    nt_gold: 1,  // 對應 NT 財富領主 (UNLOCK_CUSTOM_THEME1)
-    sp_ocean: 1, // 對應 SP 投資先鋒 (UNLOCK_CUSTOM_THEME2)
-    sj_wood: 1   // 對應 SJ 理財初心者 (UNLOCK_CUSTOM_THEME3)
+    nt_gold: 15,  // 對應 NT 財富領主 (UNLOCK_CUSTOM_THEME1)
+    sp_ocean: 18, // 對應 SP 投資先鋒 (UNLOCK_CUSTOM_THEME2)
+    sj_wood: 20,   // 對應 SJ 理財初心者 (UNLOCK_CUSTOM_THEME3)
 };
 
 // 假設你從 API 或成就系統獲取的當前等級
 const userLevel = ref(3);
+const currentTheme = ref('light');
 
 const themes = computed(() => {
-    const baseThemes = {
+    const baseThemes = { 
         light: {
             name: 'MMA 經典',
             bgGradient: '#f8fafc',
@@ -107,9 +121,7 @@ const themes = computed(() => {
             sidebarBg: '#faf4f0',
             primary: '#9c6644',
             text: '#5c4033'
-        }
-    };
-
+        } };
     Object.keys(baseThemes).forEach(id => {
         const requiredLevel = themeUnlocks[id] || 1;
         baseThemes[id].locked = userLevel.value < requiredLevel;
@@ -119,55 +131,92 @@ const themes = computed(() => {
     return baseThemes;
 });
 
-// 讀取當前前台主題 (注意：key 是 appTheme)
-const currentTheme = ref(localStorage.getItem('appTheme') || 'light')
+// 1. 初始化：從後端獲取設定
+const fetchUserData = async () => {
+    const loading = ElLoading.service({ target: '.tab-content', text: '載入設定中...' });
+    try {
+        // 同時獲取個人資料(等級)與系統設定
+        const [userRes, settingRes] = await Promise.all([
+            api.get(`/users/me`),
+            settingApi.getSetting(userId)
+        ]);
+
+        // 更新等級
+        userLevel.value = userRes.level || 1;
+
+        // 更新設定與主題
+        const s = settingRes;
+        currentTheme.value = s.app_theme;
+        preferences.value = {
+            currency: s.currency || 'TWD',
+            budget_cycle: s.budget_cycle,
+            budget_alert_threshold: s.budget_alert_threshold,
+            start_of_week: s.start_of_week
+        };
+
+        // 套用主題
+        document.documentElement.setAttribute('data-theme', s.app_theme);
+        
+    } catch (error) {
+        console.error('初始化失敗:', error);
+        ElMessage.error('無法連線至伺服器');
+    } finally {
+        loading.close();
+    }
+};
 
 // 2. 切換主題函式
-const changeTheme = (id) => {
+const changeTheme = async (id) => {
     if (themes.value[id].locked) {
-        // 如果你有引入 ElMessage
-        if (typeof ElMessage !== 'undefined') {
-            ElMessage.warning(`尚未解鎖！需要 Lv.${themes.value[id].requiredLevel}`);
-        } else {
-            alert(`尚未解鎖！需要 Lv.${themes.value[id].requiredLevel}`);
-        }
+        ElMessage.warning(`尚未解鎖！需要 Lv.${themes.value[id].requiredLevel}`);
         return;
     }
 
-    currentTheme.value = id
-    localStorage.setItem('appTheme', id)
+    // 樂觀更新：先變色
+    const oldTheme = currentTheme.value;
+    currentTheme.value = id;
+    document.documentElement.setAttribute('data-theme', id);
 
-    // 設定 html 屬性以觸發 main.css 變數切換
-    document.documentElement.setAttribute('data-theme', id)
+    try {
+        await settingApi.updateTheme(userId, id);
+        window.dispatchEvent(new CustomEvent('theme-changed', { detail: id }));
+        triggerMissionAction('change_theme');
+    } catch (error) {
+        // 失敗則回滾
+        currentTheme.value = oldTheme;
+        document.documentElement.setAttribute('data-theme', oldTheme);
+        ElMessage.error('主題同步失敗');
+    }
+};
 
-    // 發送事件通知 Nav.vue 或其他組件
-    window.dispatchEvent(new CustomEvent('theme-changed', { detail: id }))
-
-    triggerMissionAction('change_theme');
-}
-
-// 偏好設定資料
-const preferences = ref({
-    language: 'zh-TW',
-    currency: 'TWD',
-    theme: 'light',
-    budgetPeriod: 'monthly',
-    budgetAlert: '75',
-    weekStart: '0'
-})
 
 // 儲存設定
-const savePreferences = () => {
-    alert('偏好設定已儲存！')
-}
+const savePreferences = async () => {
+    try {
+        // ✅ 修正：使用封裝好的 settingApi，避免手寫 URL 噴 404
+        // ✅ 修正：傳送結構對齊後端 SettingBase
+        await settingApi.updateAllSetting(userId, {
+            app_theme: currentTheme.value,
+            currency: preferences.value.currency,
+            budget_cycle: preferences.value.budget_cycle,
+            budget_alert_threshold: Number(preferences.value.budget_alert_threshold),
+            start_of_week: Number(preferences.value.start_of_week),
+            // 如果後端 Schema 要求完整欄位，補上預設值
+            avatar_url: null,
+            birthday: null,
+            about: ""
+        });
+        
+        ElMessage.success('設定已同步至雲端');
+    } catch (error) {
+        // 攔截器會自動彈出 ElMessage.error，這裡通常不用重複寫
+        console.error('儲存失敗:', error);
+    }
+};
 
 onMounted(() => {
-    // 初始化選中的主題狀態
-    const saved = localStorage.getItem('appTheme')
-    if (saved && themes.value[saved]) {
-        currentTheme.value = saved
-    }
-})
+    fetchUserData();
+});
 </script>
 
 <template>
@@ -196,7 +245,7 @@ onMounted(() => {
                 </div>
                 <div class="theme-picker">
                     <div v-for="(style, id) in themes" :key="id" class="theme-item"
-                        :class="{ 'is-selected': currentTheme === id, 'is-locked': style.locked }"
+                        :class="{ 'is-selected': currentTheme === id}"
                         @click="changeTheme(id)">
                         <div class="theme-preview" :style="{ background: style.bgGradient }">
                             <div class="preview-sidebar" :style="{ background: style.sidebarBg }"></div>
@@ -220,7 +269,7 @@ onMounted(() => {
                     <h3>預算週期</h3>
                     <p>預算重置週期</p>
                 </div>
-                <select v-model="preferences.budgetPeriod" class="select-input">
+                <select v-model="preferences.budget_cycle" class="select-input">
                     <option value="monthly">每月</option>
                     <option value="weekly">每週</option>
                     <option value="yearly">每年</option>
@@ -232,7 +281,7 @@ onMounted(() => {
                     <h3>預算提醒</h3>
                     <p>預算達到多少時提醒</p>
                 </div>
-                <select v-model="preferences.budgetAlert" class="select-input">
+                <select v-model="preferences.budget_alert_threshold" class="select-input">
                     <option value="50">50%</option>
                     <option value="75">75%</option>
                     <option value="90">90%</option>
@@ -245,7 +294,7 @@ onMounted(() => {
                     <h3>週起始日</h3>
                     <p>每週從哪一天開始</p>
                 </div>
-                <select v-model="preferences.weekStart" class="select-input">
+                <select v-model="preferences.start_of_week" class="select-input">
                     <option value="0">星期日</option>
                     <option value="1">星期一</option>
                 </select>
