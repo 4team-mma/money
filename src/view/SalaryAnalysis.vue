@@ -3,7 +3,7 @@ import Nav from '@/components/Nav.vue';
 import { ref, onMounted, computed, nextTick, watch } from 'vue';
 import Chart from 'chart.js/auto';
 import { getSalaryComparison, getRealSalaryTrend } from '@/api/analysis';
-
+import { triggerMissionAction } from '@/api/gamification';
 // --- 官方行業清單 (請確保與資料庫中的 industry 欄位完全一致) ---
 const INDUSTRIES = [
     "教育業",
@@ -156,7 +156,11 @@ const renderTrendChart = (data) => {
     });
 };
 
-onMounted(fetchData);
+onMounted(() => {
+    fetchData();
+    // 🌟 核心修改：進入頁面即觸發「了解行情」任務進度
+    triggerMissionAction('view_salary');
+});
 </script>
 
 <template>

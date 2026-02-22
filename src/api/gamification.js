@@ -37,6 +37,19 @@ export const claimMissionReward = (missId) => {
   return api.post(`/game/missions/${missId}/claim`);
 };
 
+/**
+ * 🌟 新增：觸發行為任務進度 (如瀏覽頁面)
+ * @param {String} actionCode - 後端定義的行為代碼
+ */
+export const triggerMissionAction = (actionCode) => {
+  // 這裡使用 silent 模式，不論失敗與否都不跳彈窗，以免干擾用戶正常瀏覽
+  return api.post(`/game/missions/trigger/${actionCode}`).catch(err => {
+    console.warn(`[Mission] 觸發 ${actionCode} 失敗，可能目前無相關任務`, err);
+  });
+};
+
+
+
 // ==================== 成就與卡牌 (Cards) ====================
 
 /**

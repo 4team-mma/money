@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { triggerMissionAction } from '@/api/gamification';
 import { ElMessage, ElLoading } from 'element-plus'
-import axios from 'axios'
 import { settingApi } from '@/api/setting';
 import api from '@/api';
 
@@ -179,6 +179,7 @@ const changeTheme = async (id) => {
     try {
         await settingApi.updateTheme(userId, id);
         window.dispatchEvent(new CustomEvent('theme-changed', { detail: id }));
+        triggerMissionAction('change_theme');
     } catch (error) {
         // 失敗則回滾
         currentTheme.value = oldTheme;
