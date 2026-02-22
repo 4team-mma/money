@@ -26,7 +26,7 @@ export function useAddRecord(initialType = false) {
         account: null,
         source_account: null,
         add_member: '自己',
-        add_tag: '一般',
+        add_tag: '',
         add_note: ''
     })
 
