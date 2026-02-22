@@ -24,39 +24,40 @@ const emit = defineEmits(['update:modelValue'])
  * 🌟 監聽器：負責編輯時的資料回填
  */
 watch(() => props.modelValue, (newVal) => {
-    if (!newVal) return;
+    // 1. 如果傳進來的是完全空的，我們才進行初始化遞補
+    if (!newVal || newVal === '' || (Array.isArray(newVal) && newVal.length === 0)) {
+        if (categoryItems.value.length > 0) {
+            const defaultTag = categoryItems.value[0];
+            selectedIds.value = [defaultTag.id];
+            emit('update:modelValue', [defaultTag]);
+        }
+        return;
+    }
 
+    // 2. 正常解析傳入的標籤名稱
     let targetNames = [];
     if (typeof newVal === 'string') {
-        targetNames = newVal.split(',').map(s => s.trim());
+        targetNames = newVal.split(',').map(s => s.trim()).filter(s => s !== '');
     } else if (Array.isArray(newVal)) {
         targetNames = newVal.map(i => typeof i === 'object' ? i.itemName : i);
     }
 
     const matchedIds = [];
-
     targetNames.forEach(name => {
-        // 1. 先去 Store 找看看有沒有現成的標籤
         const found = categoryItems.value.find(tag => tag.itemName === name);
-
         if (found) {
             matchedIds.push(found.id);
-        } else {
-            // 2. 🌟 關鍵修正：如果在 Store 找不到 (代表自定義標籤因重新整理消失了)
-            // 我們手動幫它重建一個臨時標籤，並加回 Store，這樣畫面就能顯示「可可愛愛」
-            const tempId = Date.now() + Math.random(); // 產生臨時 ID
-            const newTempTag = {
-                id: tempId,
-                itemName: name,
-                color: '#94a3b8' // 給個預設的灰色 先暫時用這個方法QQ
-            };
-            // 將這個消失的自定義標籤塞回 Store 的 tags 陣列中
-            categoryStore.tags.push(newTempTag);
-            matchedIds.push(tempId);
         }
     });
-    // 最後更新選中的 ID 列表
-    selectedIds.value = matchedIds;
+
+    // 🌟 關鍵：只有當「傳進來有名字，但 Store 裡一個都對不到」時，才強制修正為第一個
+    if (targetNames.length > 0 && matchedIds.length === 0 && categoryItems.value.length > 0) {
+        const fallbackTag = categoryItems.value[0];
+        selectedIds.value = [fallbackTag.id];
+        emit('update:modelValue', [fallbackTag]);
+    } else {
+        selectedIds.value = matchedIds;
+    }
 }, { immediate: true });
 
 
@@ -138,11 +139,24 @@ const addNewItem = () => {
 }
 
 const removeItem = (id) => {
-    categoryStore.$patch((state) => {
-        state.tags = state.tags.filter(i => i.id !== id)
-    })
-    selectedIds.value = selectedIds.value.filter(sid => sid !== id)
-    emit('update:modelValue', selectedItems.value)
+    const itemToRemove = categoryItems.value.find(i => i.id === id);
+    if (!itemToRemove) return;
+
+    // 先刪除 Store
+    categoryStore.removeCustomTag(itemToRemove.itemName);
+
+    // 更新本組件 ID 清單
+    selectedIds.value = selectedIds.value.filter(sid => sid !== id);
+
+    // 🌟 遞補邏輯：如果刪完後沒東西選了，自動選第一個
+    if (selectedIds.value.length === 0 && categoryItems.value.length > 0) {
+        const nextTag = categoryItems.value[0];
+        selectedIds.value = [nextTag.id];
+        emit('update:modelValue', [nextTag]);
+    } else {
+        // 如果還有剩標籤，就傳剩餘的
+        emit('update:modelValue', selectedItems.value);
+    }
 }
 
 // 在 script 加入一個計算屬性
