@@ -203,11 +203,11 @@ const closePreview = () => {
   background: linear-gradient(135deg, transparent 45%, rgba(255, 255, 255, 0.9) 50%, transparent 55%);
   mix-blend-mode: overlay; animation: techLaserSweep 4s infinite linear; z-index: 10; pointer-events: none;
 }
-
+/* 雷射線條
 .tech-scan-bar {
-  position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: rgba(168, 85, 247, 0.8);
-  box-shadow: 0 0 15px #a855f7; animation: techScanMove 5s infinite ease-in-out; z-index: 11; opacity: 0.6;
-}
+  position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: rgba(47, 34, 228, 0.8);
+  box-shadow: 0 0 15px #a855f7; animation: techScanMove 5s infinite ease-in-out; z-index: 11; opacity: 0.8;
+} */
 
 @keyframes techLaserSweep { 0% { transform: translate(-10%, -10%); } 100% { transform: translate(30%, 30%); } }
 @keyframes techScanMove { 0% { top: 0%; } 50% { top: 100%; } 100% { top: 0%; } }
@@ -252,7 +252,7 @@ const closePreview = () => {
 /* Modal 基礎樣式修正 */
 .modal-overlay-global {
   position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-  background: rgba(0, 0, 0, 0.92); backdrop-filter: blur(15px);
+  background: rgba(0, 0, 0, 0.92); backdrop-filter: blur(2px);
   display: flex; align-items: center; justify-content: center; z-index: 10000;
 }
 
@@ -261,7 +261,7 @@ const closePreview = () => {
   background: #1e293b; box-shadow: 0 0 50px rgba(0,0,0,0.5);
 }
 
-.tech-rare-modal { background: #0f0a1f !important; border: 3px solid #a855f7 !important; }
+.tech-rare-modal { background: #0f0a1f !important; border: 3px solid #143fff !important; }
 .rare-glow { box-shadow: 0 0 80px rgba(168, 85, 247, 0.4) !important; }
 
 /* 🌟 限制圖片高度，確保描述區塊有足夠空間 */
@@ -279,7 +279,8 @@ const closePreview = () => {
   flex: 1; /* 自動適應剩下的空間 */
   padding: 20px; background: rgba(15, 23, 42, 0.95); 
   color: white; border-top: 1px solid rgba(255,255,255,0.1); 
-  z-index: 5;
+  z-index: 20;
+  transform: translateZ(1px); /* 強制在 3D 空間中推向最前方，減少渲染干擾 */
 }
 .card-text-content h3 { margin: 0 0 8px 0; font-size: 1.4rem; color: #f8fafc; }
 .card-text-content p { margin: 0; font-size: 0.9rem; color: #94a3b8; line-height: 1.5; }
