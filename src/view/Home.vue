@@ -58,9 +58,9 @@ const handleGoogleCallback = async (response) => {
             setTimeout(() => {
                 // 如果後端回傳 user.role，可在此判斷跳轉
                 if (res.user && res.user.role === 'admin') {
-                    router.push('/admins');
+                    router.push('/loading');
                 } else {
-                    router.push('/book');
+                    router.push('/loading');
                 }
             }, 100);
         }
@@ -94,9 +94,9 @@ const handleLogin = async () => {
             ElMessage.success('登入成功！');
 
             if (user.role === 'admin') {
-                router.push('/admins');
+                router.push('/loading');
             } else {
-                router.push('/book');
+                router.push('/loading');
             }
         }
     } catch (err) {

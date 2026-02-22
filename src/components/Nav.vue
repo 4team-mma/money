@@ -2,16 +2,22 @@
 import { useRouter,useRoute } from 'vue-router'
 import { ref, onMounted, computed, onUnmounted } from 'vue'
 import MoneyAIBot from '../components/MoneyAIBot.vue'
+
+// 引入 Pinia Stores
+import { useUserStore } from '@/stores/user'
+
 const sidebarOpen = ref(false)
 
 
 
 const router = useRouter() //執行動作。用來指令電腦「去哪裡」。
 const route = useRoute() // 讀取狀態。用來查看「目前在哪」
+const userStore = useUserStore()
+
 // 判斷是否要顯示機器人 (例如：不希望在登入頁 Login.vue 看到它)
 
 const showBot = computed(() => {
-  const hiddenRoutes = ['Home'] // 這些頁面不顯示
+  const hiddenRoutes = ['Home', 'Login', 'Register'] // 這些頁面不顯示
   return !route.name || !hiddenRoutes.includes(route.name)
 })
 // === 補上主題樣式 (避免機器人讀不到顏色報錯) ===
@@ -20,13 +26,19 @@ const currentStyle = computed(() => {
   return { primary: 'var(--color-primary)' } 
 })
 
+// === 1. 使用者資訊 (響應式 Computed) ===
+// 優先從 Pinia 拿 (API 同步後的最新資料)，備援則從 localStorage 拿 (登入時的快取)
+const userData = computed(() => {
+  const localUser = JSON.parse(localStorage.getItem('currentUser') || '{}')
+  
+  // 從 Store 中尋找符合目前 Email 的用戶資料
+  const current = userStore.users.find(u => u.email === localUser.email) || localUser
 
-// === 1. 使用者資訊 ===
-const userData = ref({
-  name: '用戶',
-  email: '',
-  avatar: 'U',
-  role: 'user'
+  return {
+    name: current.name || '用戶',
+    email: current.email || '',
+    role: current.role || 'user'
+  }
 })
 
 // === 2. 跑馬燈通知 ===
@@ -55,24 +67,12 @@ const navigation = [
   { name: '設定', to: '/Settings', icon: '⚙️' }
 ]
 
-// === 4. 功能函式 ===
-const loadUserData = () => {
-  try {
-    const userJson = localStorage.getItem('currentUser')
-    if (userJson) {
-      const user = JSON.parse(userJson)
-      userData.value = {
-        name: user.name || '用戶',
-        email: user.email || '',
-        role: user.role || 'user',
-        avatar: (user.name || user.email || 'U').substring(0, 2).toUpperCase()
-      }
-    } else {
-      router.push('/')
-    }
-  } catch (e) {
-    console.error('解析使用者資料失敗', e)
-    router.push('/')
+// === 4. 功能函式 (權限檢查與登出) ===
+const checkAuth = () => {
+  const token = localStorage.getItem('user_token')
+  if (!token) {
+    console.warn('🍍 [Layout] 未偵測到登入狀態，導回登入頁')
+    window.location.href = '/'
   }
 }
 
@@ -85,7 +85,13 @@ const logout = () => {
     localStorage.removeItem('meowChatHistory')
     localStorage.removeItem('isMeowChatOpen')
 
-    router.push('/')
+    // 清除 Pinia 持久化快取 (確保不同帳號登入時資料不打架)
+    localStorage.removeItem('category')
+    localStorage.removeItem('categoryStats')
+    localStorage.removeItem('account')
+
+    // 終極清除：強制重整並導回首頁，確保記憶體變數完全釋放
+    window.location.href = '/';
   }
 }
 
@@ -97,19 +103,26 @@ const initTheme = () => {
   document.documentElement.setAttribute('data-theme', savedTheme);
 }
 
-onMounted(() => {
-  loadUserData()
-  initTheme()
+// 處理主題切換的監聽函式
+const handleThemeChange = (e) => {
+  const newTheme = e.detail || localStorage.getItem('appTheme');
+  document.documentElement.setAttribute('data-theme', newTheme);
+}
 
-  // 監聽來自 Settings 頁面的切換事件 (如果有的話)
-  window.addEventListener('theme-changed', (e) => {
-    const newTheme = e.detail || localStorage.getItem('appTheme');
-    document.documentElement.setAttribute('data-theme', newTheme);
-  })
+onMounted(() => {
+  checkAuth() // 檢查是否有 Token
+  initTheme() // 初始化主題
+
+  // 防禦性補抓：若 Store 是空的 (如使用者直接在功能頁重新整理)，則補抓資料
+  if (userStore.users.length === 0) {
+    userStore.loadUsers()
+  }
+
+  window.addEventListener('theme-changed', handleThemeChange)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('theme-changed', () => {})
+  window.removeEventListener('theme-changed', handleThemeChange)
 })
 </script>
 

@@ -45,22 +45,31 @@ const handleDeleteAccount = () => {
             confirmButtonText: '確定刪除',
             cancelButtonText: '我再想想',
             type: 'warning',
-            confirmButtonClass: 'el-button--danger'
+            confirmButtonClass: 'el-button--danger', // 讓按鈕變紅色提醒危險
+            distinguishCancelAndClose: true,
         }
     ).then(async () => {
         try {
             await deleteMe()
-            ElMessage.success('帳號已成功刪除')
+            ElMessage.success('您的帳號與資料已全數清空。')
+
+            // 徹底清理瀏覽器殘留資料 (重要！)
+            // 這裡直接使用 localStorage.clear() 是最安全的，因為帳號都沒了，不需要保留任何偏好設定
+            localStorage.clear() 
+
+            // 重置所有 Pinia Store (如果不重整頁面，這是必須的)
+            // 但因為我們要用 window.location，這步可由瀏覽器代勞
             
-            //  1. 清除登入狀態
-            localStorage.removeItem('token')
-            
-            //  2. 跳轉回首頁 (home.vue 對應的路由通常是 '/')
-            router.push('/') 
+            // 終極跳轉：強制重新導向並重整
+            // 這樣可以確保 Axios Header、Pinia 記憶體變數完全被銷毀
+            window.location.href = '/'
         } catch (error) {
             console.error(error)
             ElMessage.error('刪除過程發生錯誤')
         }
+    }).catch(() => {
+        // 使用者點擊取消，不做任何事
+        console.log('使用者取消刪除操作')
     })
 }
 </script>

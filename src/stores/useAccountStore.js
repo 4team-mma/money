@@ -6,6 +6,7 @@ export const useAccountStore = defineStore("account", {
   state: () => ({
     accounts: [],
     loading: false,
+    isLoaded: false, // 標記是否已載入過
   }),
 
   actions: {
@@ -33,15 +34,19 @@ export const useAccountStore = defineStore("account", {
 
     /**
      * 讀取帳戶列表
+     * @param {Boolean} force - 是否強制刷新 (預設不刷新)
      */
-    async loadAccounts() {
+    async loadAccounts(force = false) {
+      // 🛡️ 檢查是否已經載入過且不要求強制刷新
+      if (this.isLoaded && !force) {
+        return;
+      }
+
       this.loading = true;
       try {
         const response = await api.get("/accounts/");
 
-        //  確保回傳的是陣列，避免 .map 崩潰
-        const rawData =
-          response?.data || (Array.isArray(response) ? response : []);
+        const rawData = response?.data || (Array.isArray(response) ? response : []);
 
         this.accounts = rawData.map((acc) => ({
           account_id: acc.account_id,
@@ -51,9 +56,12 @@ export const useAccountStore = defineStore("account", {
           currency: acc.currency || "NT$",
           current_balance: acc.current_balance,
         }));
+        
+        this.isLoaded = true; // 成功後標記為已載入
       } catch (err) {
         console.error("API 連線失敗:", err);
-        this.accounts = []; //  API 壞了，就給空陣列
+        this.accounts = [];
+        this.isLoaded = false; // 失敗則允許下次重試
       } finally {
         this.loading = false;
       }
@@ -66,7 +74,7 @@ export const useAccountStore = defineStore("account", {
     async addAccount(payload) {
       try {
         await api.post("/accounts/", payload);
-        await this.loadAccounts();
+        await this.loadAccounts(true);
         return true;
       } catch (err) {
         console.error("新增帳戶到資料庫失敗:", err);
@@ -77,7 +85,7 @@ export const useAccountStore = defineStore("account", {
     async deleteAccount(account_id) {
       try {
         await api.delete(`/accounts/${account_id}`);
-        await this.loadAccounts(); // 刪除後刷新
+        await this.loadAccounts(true); // 刪除後刷新
         return true;
       } catch (err) {
         console.error("刪除失敗:", err);

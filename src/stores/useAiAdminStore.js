@@ -15,8 +15,16 @@ export const useAiAdminStore = defineStore('aiAdmin', () => {
     
     const currentActiveProvider = ref('')
 
+    // 紀錄哪些 Provider 已經抓過資料
+    const initializedProviders = ref(new Set())
+
     // 抓取並暫存特定大腦的設定
-    const fetchConfig = async (provider) => {
+    const fetchConfig = async (provider, force = false) => {
+        // 🛡️ 檢查是否已載入過 (除非強制重新抓取)
+        if (initializedProviders.value.has(provider) && !force) {
+            return;
+        }
+
         try {
             // ⚡️ 修改點 2：直接呼叫函式，拿掉 robotApi.
             const res = await getAiRobotConfig(provider);
@@ -36,11 +44,21 @@ export const useAiAdminStore = defineStore('aiAdmin', () => {
                 }
                 
                 if (d.is_active) currentActiveProvider.value = d.provider;
+
+                // 標記為已初始化
+                initializedProviders.value.add(provider);
             }
         } catch (error) {
             console.error(`🍍 暫存 ${provider} 資訊失敗:`, error);
         }
     }
 
-    return { configs, currentActiveProvider, fetchConfig }
+    // 一次初始化所有機器人設定 (在中轉頁使用)
+    const initAllAiConfigs = async () => {
+        const providers = ['gemini', 'ollama', 'anythingllm'];
+        // 平行執行，節省時間
+        await Promise.all(providers.map(p => fetchConfig(p)));
+    }
+
+    return { configs, currentActiveProvider, fetchConfig, initAllAiConfigs }
 })
