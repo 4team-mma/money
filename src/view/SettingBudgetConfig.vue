@@ -1,6 +1,5 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { ElMessage } from 'element-plus'
 import { triggerMissionAction } from '@/api/gamification';
 import { ElMessage, ElLoading } from 'element-plus'
 import { settingApi } from '@/api/setting';
