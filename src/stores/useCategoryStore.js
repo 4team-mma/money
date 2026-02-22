@@ -42,8 +42,15 @@ export const useCategoryStore = defineStore("category", {
     //  新增：處理自定義收入類別的 Action
     addCustomIncomeCategory(newItem) {
         this.incomeCategories.push(newItem);
-    }
+    },
 
+    removeCustomCategory(itemName) {
+        this.categories = this.categories.filter(c => c.itemName !== itemName);
+    },
+
+    removeCustomTag(itemName) {
+        this.tags = this.tags.filter(t => t.itemName !== itemName);
+    }
 
     },
 });
