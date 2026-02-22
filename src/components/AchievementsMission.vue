@@ -1,32 +1,15 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { getDailyMissions, claimMissionReward } from '@/api/gamification'
 import api from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
+// 引入獨立的計時組件
+import MissionTimer from './MissionTimer.vue'
 
 const dailyMissions = ref([])
 const loading = ref(true)
-const countdownText = ref('00:00:00')
-let timer = null
 
-// 倒數計時邏輯
-const updateCountdown = () => {
-    const now = new Date()
-    const tomorrow = new Date()
-    tomorrow.setHours(24, 0, 0, 0)
-    const diff = tomorrow - now
-    if (diff <= 0) {
-        countdownText.value = '00:00:00'
-        fetchMissions()
-        return
-    }
-    const h = Math.floor(diff / 3600000).toString().padStart(2, '0')
-    const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0')
-    const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0')
-    countdownText.value = `${h}:${m}:${s}`
-}
-
-// Icon 映射
+// Icon 映射邏輯
 const getMissionIcon = (m) => {
     if (m.has_card_reward) return '🎯'
     const cat = m.category?.trim()
@@ -44,7 +27,7 @@ const fetchMissions = async () => {
     try {
         loading.value = true
         const res = await getDailyMissions()
-        // 確保資料依據 slot_num 排序，這樣位置才會固定
+        // 確保資料依據 slot_num 排序，位置才會固定
         const data = Array.isArray(res) ? res : []
         dailyMissions.value = data.sort((a, b) => a.slot_num - b.slot_num)
     } catch (error) {
@@ -54,7 +37,7 @@ const fetchMissions = async () => {
     }
 }
 
-// 接取任務 API
+// 接取任務
 const handleAccept = async (m) => {
     try {
         await api.post(`/game/missions/${m.miss_id}/accept`)
@@ -65,7 +48,7 @@ const handleAccept = async (m) => {
     }
 }
 
-// 放棄任務 API
+// 放棄任務
 const handleAbandon = async (m) => {
     try {
         await ElMessageBox.confirm('確定要放棄此修煉嗎？放棄後任務將重新回到隨機池。', '提示', {
@@ -80,15 +63,16 @@ const handleAbandon = async (m) => {
         // 使用者取消操作
     }
 }
+
 const emit = defineEmits(['reward-claimed'])
+
 // 領取獎勵
 const handleClaim = async (m) => {
     try {
         await claimMissionReward(m.miss_id)
         ElMessage.success('領取獎勵成功！')
-        // 領取完畢後重新抓取列表，此時該任務狀態會變為 2 (已完成)
         fetchMissions()
-        emit('reward-claimed'); // 🌟 發出一個事件通知父元件
+        emit('reward-claimed'); // 通知父組件同步更新數據
     } catch (error) {
         console.error("領取失敗", error)
     }
@@ -96,12 +80,6 @@ const handleClaim = async (m) => {
 
 onMounted(() => {
     fetchMissions()
-    updateCountdown()
-    timer = setInterval(updateCountdown, 1000)
-})
-
-onUnmounted(() => {
-    if (timer) clearInterval(timer)
 })
 </script>
 
@@ -109,7 +87,7 @@ onUnmounted(() => {
     <section class="mission-container">
         <div class="card-header">
             <h2>⚡ 隨機修煉任務</h2>
-            <span class="countdown">刷新倒數 {{ countdownText }}</span>
+            <MissionTimer class="countdown" @refresh="fetchMissions" />
         </div>
         
         <div v-if="loading" class="placeholder-box">修行載入中...</div>
@@ -259,4 +237,10 @@ onUnmounted(() => {
 .btn-action { padding: 0.8rem 1.5rem; border-radius: 1rem; border: none; font-weight: 800; cursor: pointer; transition: 0.2s; font-size: 1rem; }
 .btn-action.start { background: #1e293b; color: white; }
 .btn-action.claim { background: #3b82f6; color: white; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
+
+/* 增加 CSS Layer，減少 Painting 壓力 */
+.m-card-elite {
+    will-change: transform;
+    backface-visibility: hidden;
+}
 </style>
