@@ -8,6 +8,7 @@
     import { ElMessage } from 'element-plus';
     import { getLocalDate, getLocalDateString } from '@/utils/dateHelper'
     import { triggerMissionAction } from '@/api/gamification';
+
     const transactions = ref([]);
 
     // 修正日期為本地時間 yyyy-mm-dd
@@ -19,6 +20,9 @@
     const monthlyIncome = ref(0);
     const monthlyExpenses = ref(0);
     const monthlyBalance = ref(0);
+
+    // 顯示模式狀態
+    const displayMode = ref('day'); // 'day' 或 'month'
 
     // API 請求函數
     const fetchTransactions = async () => {
@@ -53,8 +57,9 @@
                     combinedData = [...combinedData, ...formattedTransfers];
                 }
 
-                // 3. 更新狀態
-                // 由新到舊排序 (最新的在最上面)
+                /** * 🚀 優化點 1：穩定賦值 
+                 * 避免 API 回傳微小差異導致整個 transactions 重新觸發所有子組件更新
+                 */
                 transactions.value = combinedData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                 
                 monthlyIncome.value = resRecords.monthly_income;
@@ -78,55 +83,55 @@
     });
 
     const selectDate = (day) => {
-        // 更新選中的日期
         selectedDate.value = getLocalDateString(day.date);
-        
-        // 自動切換回「按日顯示」模式
         displayMode.value = 'day';
     };
 
-    // 顯示模式狀態
-    const displayMode = ref('day'); // 'day' 或 'month'
-
-    // 選擇日期的事件清單
     const selectedDateTransactions = computed(() => {
-        // 如果是月模式，直接回傳當月所有交易
         if (displayMode.value === 'month') {
             return transactions.value;
         }
-        // 如果是日模式，且有選中日期，則過濾該日資料
         if (selectedDate.value) {
             return transactions.value.filter(e => e.add_date === selectedDate.value);
         }
-        // 預設（如剛進入頁面且為日模式）回傳今日資料
         return transactions.value.filter(e => e.add_date === today);
     });
 
-    // 處理子組件傳回的切換請求
     const handleChangeView = (payload) => {
-        displayMode.value = payload.mode;   // 切換到 'day'
-        selectedDate.value = payload.date;  // 設定選中的日期
+        displayMode.value = payload.mode;
+        selectedDate.value = payload.date;
     };
 
-    // v-calendar attributes (含重複事件)
+    /** * 🚀 優化點 2：快取日曆屬性 (Calendar Attributes)
+     * 這是解決「未知組件更新 42 次」的關鍵。
+     * 為每個對象提供穩定的 Key，避免 v-calendar 認為整個陣列都是新的而重新渲染每一天。
+     */
     const calendarAttributes = computed(() => {
         const attr = transactions.value.map(e => {
             let color = "red";
-            let amount = e.add_amount*1;
+            let amount = e.add_amount * 1;
             if (e.add_type === true) color = "green";
-            if (e.add_type === 'transfer') color = "blue"; // 轉帳用藍色區分
+            if (e.add_type === 'transfer') color = "blue";
 
             return {
+                key: `trans-${e.add_id}-${e.add_type}`, // 👈 穩定的 Key
                 dates: new Date(e.add_date),
                 bar: { color: color },
-                popover: { label: `${e.add_class} ${e.currency} ${amount.toLocaleString()}` },
+                popover: { 
+                    label: `${e.add_class} ${e.currency} ${amount.toLocaleString()}`,
+                    visibility: 'hover' // 👈 減少主動重繪
+                },
             };
         });
-        attr.push({ key: "today", dates: today, highlight: { color: "orange", fillMode: "outline" } });
+        // 今日高亮標記
+        attr.push({ 
+            key: "today-marker", 
+            dates: today, 
+            highlight: { color: "orange", fillMode: "outline" } 
+        });
         return attr;
     });
 
-    // 接收來自 BookCalendarSection 的資料並更新
     const updateBookDate = (payload) => {
         year.value = payload.year;
         month.value = payload.month;
@@ -137,20 +142,12 @@
         await fetchTransactions();
     }
 
-    /**
-     * 刪除資料
-     */
     const deleteTransaction = async (type, id) => {
         const confirmDelete = window.confirm('確定要刪除這筆交易嗎？此操作無法復原！');
         if (!confirmDelete) return;
         try {
-            // 根據類型決定路徑
-            const path = type === 'transfer' 
-                ? `/transfers/${id}` 
-                : `/records/${id}`;
-                
+            const path = type === 'transfer' ? `/transfers/${id}` : `/records/${id}`;
             await api.delete(path);
-            // 刪除成功後重新載入搜尋結果
             await fetchTransactions();
             ElMessage.success('刪除成功！');
         } catch (error) {
@@ -169,9 +166,9 @@
         <div class="calendar-page-layout">
             <div class="calendar-grid">
                 <BookCalendarSection
-                    :key="transactions.length"
                     :attributes="calendarAttributes"
-                    :today="today" @select-date="selectDate"
+                    :today="today" 
+                    @select-date="selectDate"
                     @move-today="selectedDate = today"
                     @update-date="updateBookDate"
                     :selectedDate="selectedDate"
@@ -197,6 +194,15 @@
 </template>
 
 <style scoped>
+    /* 🚀 優化點 4：強制 GPU 渲染 */
+    /* 告訴 macOS 的 WindowServer，日曆格子這塊不要用 CPU 精算，直接丟給顯卡，降低 CPU 負載。 */
+    .calendar-grid :deep(.vc-pane-container),
+    .calendar-grid :deep(.vc-day) {
+        transform: translateZ(0);
+        will-change: transform;
+        backface-visibility: hidden;
+    }
+
     .page-title {
         font-size: 32px;
         font-weight: 700;
@@ -206,23 +212,22 @@
 
     .calendar-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr; /* 左右等寬 */
+        grid-template-columns: 1fr 1fr;
         gap: 24px;
         margin-bottom: 24px;
     }
 
     @media (max-width: 1024px) {
         .calendar-grid {
-            grid-template-columns: 1fr; /* 手機版改單欄 */
+            grid-template-columns: 1fr;
         }
     }
 
-    /* 檢視模式切換器 */
     .view-mode-selector {
         display: flex;
-        gap: 0; /* 讓按鈕連在一起 */
+        gap: 0;
         margin-bottom: 20px;
-        background:var(--bg-input);
+        background: var(--bg-input);
         padding: 4px;
         border-radius: 8px;
         width: fit-content;
@@ -241,7 +246,7 @@
     }
 
     .view-mode-selector button.active {
-        background:var(--bg-card);
+        background: var(--bg-card);
         color: var(--text-primary);
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }

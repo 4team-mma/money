@@ -381,3 +381,15 @@ h1 {
 [data-theme="nt_gold"] { --bg-body: #11080067 !important; }
 [data-theme="sp_ocean"] { --bg-body: #082f4979 !important; }
 [data-theme="sj_wood"] { --bg-body: #f5ebe085 !important; }
+
+
+/* 強制將高負載組件交給 GPU 處理，減輕 CPU 負擔 */
+.ach-card-container, 
+.rare-card-perspective, 
+.tech-laser-beam, 
+.tech-scan-bar,
+.theme-preview {
+    will-change: transform, opacity;
+    transform: translateZ(0); /* 啟動硬體加速 */
+    backface-visibility: hidden;
+}
