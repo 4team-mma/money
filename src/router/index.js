@@ -29,6 +29,7 @@ import SettingUserProfile from "@/view/SettingUserProfile.vue";
 import BudgetManager from "@/view/BudgetManager.vue";
 import Achievements_new from "@/view/Achievements_new.vue";
 import AdminModel from "@/view/AdminModel.vue";
+import LoadingView from "@/view/LoadingView.vue";
 
 
 
@@ -37,6 +38,11 @@ const routes = [
     path: "/",
     component: Home,
     name: "Home",
+  },
+  {
+    path: '/loading',
+    component: LoadingView,
+    name: 'Loading'
   }, 
   {
     path: "/dashboard",
@@ -47,12 +53,12 @@ const routes = [
   {
     path: "/book",
     component: Book,
-    name: Book,
+    name: "Book",
   },
   {
     path: "/Account",
     component: Account,
-    name: Account,
+    name: "Account",
   },
   {
     path: "/Add",
@@ -65,23 +71,22 @@ const routes = [
   {
     path: "/chart",
     component: Chart,
-    name: Chart,
+    name: "Chart",
   },
-  ,
   {
     path: "/Achievements",
     component: Achievements,
-    name: Achievements,
+    name: "Achievements",
   },
   {
     path: "/AddIncome",
     component: AddIncome,
-    name: AddIncome,
+    name: "AddIncome",
   },
   {
     path: "/AddTrans",
     component: AddTrans,
-    name: AddTrans,
+    name: "AddTrans",
   },
   {
     path: "/Feedback",
@@ -201,6 +206,40 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+// 路由守衛 (Router Guard)
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('user_token');
+  const userJson = localStorage.getItem('currentUser');
+  const user = userJson ? JSON.parse(userJson) : null;
+
+  // 1. 定義公開頁面 (不需登入即可進入)
+  const publicPages = ['/', '/Register', '/ForgetPassword'];
+  const isPublicPage = publicPages.includes(to.path);
+
+  // 2. 定義管理員專屬頁面 (路徑包含 Admin 或 Admins)
+  const adminPages = ['/Admins', '/AdminMain', '/AdminModel', '/AdminsComments'];
+  const isAdminPage = adminPages.some(path => to.path.startsWith(path));
+
+  // 🛡️ 防護 A：未登入者存取私有頁面
+  if (!isPublicPage && !token) {
+    console.warn('🔒 未登入，攔截請求');
+    return next('/');
+  }
+
+  // 🛡️ 防護 B：已登入者存取管理員頁面 (但角色不對)
+  if (isAdminPage && user?.role !== 'admin') {
+    console.warn('🚫 非管理員，拒絕存取');
+    return next('/book'); 
+  }
+
+  // 🛡️ 防護 C：已登入者嘗試回首頁 (導向中轉頁重新初始化)
+  if (isPublicPage && token && to.path === '/') {
+    return next('/loading');
+  }
+
+  next(); // 通過檢查，放行
 });
 
 export default router;

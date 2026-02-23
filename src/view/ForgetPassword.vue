@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api' 
 import.meta.env.VITE_RECAPTCHA_SITE_KEY
+import { ElMessage } from 'element-plus'
 const router = useRouter()
 
 
@@ -43,6 +44,11 @@ onUnmounted(() => {
  * 功能 1：發送驗證碼
  */
 const sendVerifyCode = async () => {
+    if (!window.grecaptcha) {
+        errorMessage.value = '驗證系統尚未就緒，請重整頁面'
+        return
+    }
+
     if (!email.value || countdown.value > 0) return 
     // 如果正在倒數則不執行
 
@@ -122,8 +128,14 @@ const resetPassword = async () => {
             new_password: newPassword.value 
         })
 
-        alert('密碼重設成功！請使用新密碼登入')
-        router.push('/') 
+        localStorage.removeItem('user_token');
+        localStorage.removeItem('currentUser');
+        
+        ElMessage.success('密碼重設成功！即將前往登入頁面！請使用新密碼登入');
+
+        setTimeout(() => {
+            router.push('/'); // 跳回登入頁
+        }, 1500);
     } catch (err) {
         errorMessage.value = err.response?.data?.detail || '修改失敗，請稍後再試'
     } finally {
@@ -140,6 +152,10 @@ const canSubmit = computed(() => {
 })
 
 const goToLogin = () => router.push('/')
+
+const passwordMismatch = computed(() => {
+    return confirmPassword.value && newPassword.value !== confirmPassword.value
+})
 </script>
 
 <template>
@@ -207,6 +223,7 @@ const goToLogin = () => router.push('/')
                         </div>
                         <div class="input-block">
                             <label>確認新密碼</label>
+                            <span v-if="passwordMismatch" style="white-space: nowrap;">❌ 密碼輸入不一致</span>
                             <input v-model="confirmPassword" type="password" placeholder="••••••••"
                                 :disabled="!isOtpVerified" />
                         </div>

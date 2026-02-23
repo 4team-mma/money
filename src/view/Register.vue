@@ -11,8 +11,7 @@ const loading = ref(false)
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
 // 頁面載入後，直接呼叫 window.google 產生按鈕
-onMounted(() => {
-    // 1. 確保 Google SDK 已載入
+const initGoogleSDK = () => {
     if (window.google) {
         // 初始化 Google ID
         window.google.accounts.id.initialize({
@@ -33,8 +32,13 @@ onMounted(() => {
             }
         );
     } else {
-        console.error("Google SDK 尚未載入，請檢查網路或是 index.html");
+        // 若 SDK 尚未載入，延遲 500ms 重試
+        setTimeout(initGoogleSDK, 500);
     }
+}
+
+onMounted(() => {
+    initGoogleSDK();
 });
 
 // 處理 Google 回傳的 credential
@@ -44,19 +48,20 @@ const handleGoogleCallback = async (response) => {
     try {
         const res = await api.post('/auth/google', { token: credential });
         
-        // 🌟 1. 確保 Token 寫入 LocalStorage
-        localStorage.setItem('token', res.access_token);
-        // 🌟 2. 重要：同時更新 axios 的預設 header，確保下一次請求馬上帶上
-        // 假設您的 api 實例是從 @/api 引入的，這裡可以手動補強
-        api.defaults.headers.common['Authorization'] = `Bearer ${res.access_token}`;
+        if (res.access_token) {
+            // 🌟 1. 確保 Token 寫入 LocalStorage
+            localStorage.setItem('user_token', res.access_token);
+            // 🌟 2. 重要：同時更新 axios 的預設 header，確保下一次請求馬上帶上
+            // 假設您的 api 實例是從 @/api 引入的，這裡可以手動補強
+            api.defaults.headers.common['Authorization'] = `Bearer ${res.access_token}`;
 
-        ElMessage.success('Google 登入成功！');
-        
-        // 🌟 3. 短暫延遲 100ms 再跳轉，確保儲存完畢 (這是最保險的做法)
+            ElMessage.success('Google 登入成功！');
+            
+            // 🌟 3. 短暫延遲 100ms 再跳轉，確保儲存完畢 (這是最保險的做法)
         setTimeout(() => {
-            router.push('/book');
-        }, 100);
-
+                router.push('/loading');
+            }, 100);
+        }
     } catch (err) {
         console.error('Google 驗證失敗:', err);
         ElMessage.error('登入失敗，請稍後再試');

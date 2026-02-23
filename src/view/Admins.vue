@@ -69,7 +69,27 @@ const setTheme = (id) => { currentTheme.value = id; localStorage.setItem('adminT
    管理員驗證
    ======================== */
 const currentLoginAdmin = ref(JSON.parse(localStorage.getItem('currentUser') || '{}'))
-const handleLogout = () => { if (confirm('確定斷開連線並登出系統？')) router.push('/') }
+const handleLogout = () => {
+  if (confirm('確定斷開連線並登出系統？')) {
+    // 1. 🛑 清除身份驗證與 Token
+    localStorage.removeItem('user_token');
+    localStorage.removeItem('currentUser');
+
+    // 2. 🍍 清除 Pinia 持久化快取 (對應您的 store id)
+    localStorage.removeItem('category');
+    localStorage.removeItem('categoryStats');
+    localStorage.removeItem('account');
+
+    // 3. 🔗 斷開 API 連線 (清除 Axios 全域 Header)
+    if (api.defaults.headers.common['Authorization']) {
+      delete api.defaults.headers.common['Authorization'];
+    }
+
+    // 4. 🔄 終極清除：使用原生跳轉並重新整理
+    // 這比 router.push('/') 更安全，因為它會徹底銷毀記憶體中所有的 Store 變數
+    window.location.href = '/'; 
+  }
+}
 
 /* ========================
    編輯 Modal 邏輯
@@ -94,11 +114,27 @@ const saveAdmin = async () => {
 }
 
 onMounted(async () => {
+    // 1. 權限防護：優先檢查角色
     const user = currentLoginAdmin.value
-    if (user.role !== 'admin') { router.push('/book'); return; }
-    await userStore.loadUsers()
-    await categoryStore.fetchAllRankings()
+    if (!user || user.role !== 'admin') { 
+        console.warn('權限不足，導回一般頁面');
+        router.push('/book'); 
+        return; 
+    }
+
+    // 2. 觸發初始化：
+    // 如果 LoadingView 已經跑過，這裡的呼叫會因為 isLoaded = true 而秒回傳
+    // 如果使用者是「重新整理」直接進到這一頁，這裡則會補抓資料
+    try {
+        await Promise.all([
+            userStore.loadUsers(),
+            categoryStore.fetchAllRankings()
+        ]);
+    } catch (err) {
+        console.error("後台資料同步失敗:", err);
+    }
 })
+
 </script>
 
 <template>

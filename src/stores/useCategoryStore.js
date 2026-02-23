@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 
 export const useCategoryStore = defineStore("category", {
     state: () => ({
-    // 初始預設選項
+    // 初始預設選項，persist 會在初始化時優先用 localStorage 的資料覆蓋它們
     categories: [
     { id: 1, itemName: "飲食", icon: "🍔" },
     { id: 2, itemName: "交通", icon: "🚗" },
@@ -26,9 +26,22 @@ export const useCategoryStore = defineStore("category", {
     { id: 3, itemName: '旅遊', color: '#3b82f6' },
 
     ],
+    isInitialized: false, // 初始化標記
     }),
     persist: true, // 開啟持久化，重新整理就不會消失
     actions: {
+    /**
+     * 全域初始化方法
+     * 在 LoadingView 調用，確保資料已就緒且不重複執行
+     */
+    async initializeStore() {
+        if (this.isInitialized) {
+            return;
+        }
+
+        this.isInitialized = true;
+    },
+
     addCustomCategory(newItem) {
         this.categories.push(newItem);
     },

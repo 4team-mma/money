@@ -11,10 +11,20 @@ export const useCategoryStore = defineStore("categoryStats", {
             xp_immortals: []       // 修仙進度表
         },
         loading: false,
+        isLoaded: false, // 標記是否已同步過排行榜
     }),
 
     actions: {
-        async fetchAllRankings() {
+        /**
+         * 獲取綜合排名
+         * @param {Boolean} force - 是否強制刷新
+         */
+        async fetchAllRankings(force = false) {
+            // 🛡️ 避免重複初始化：如果已載入且不要求強制刷新，則跳過
+            if (this.isLoaded && !force) {
+                return;
+            }
+
             this.loading = true;
             try {
                 // 呼叫更新後的綜合排行 API
@@ -36,8 +46,10 @@ export const useCategoryStore = defineStore("categoryStats", {
                 }));
 
                 this.allRankings = data;
+                this.isLoaded = true; // 標記完成
             } catch (error) {
                 console.error("獲取綜合排名失敗:", error);
+                this.isLoaded = false;
             } finally {
                 this.loading = false;
             }

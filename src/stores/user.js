@@ -74,11 +74,31 @@ export const useUserStore = defineStore("user", {
      * 🌟 載入用戶：優先資料庫，失敗則回退本地
      */
     async loadUsers() {
-      try {
-        console.log("正在從資料庫獲取用戶名單...");
-        const response = await api.get("/users/");
+      // 🛡️ 避免重複載入：如果 users 已經有資料，就不再抓取
+      if (this.users.length > 0) {
+        return; 
+      }
 
-        this.users = response.map((u) => ({
+      // 1. 先抓出目前登入者的資訊
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+
+      // 防禦性判斷：如果不是管理員，直接進入本地模式，不發 API 請求
+      if (currentUser.role !== 'admin') {
+        this.users = [{
+          uid: currentUser.user_id || '0001',
+          username: currentUser.username,
+          name: currentUser.name || '測試者',
+          email: currentUser.email,
+          role: 'user',
+          job: currentUser.job || '小菜鳥'
+        }];
+        return; // 直接結束，就不會觸發 api.get 導致 403
+      }
+
+      // 如果是管理員，才執行原本的 API 請求
+      try {
+        const response = await api.get("/users/");
+        this.users = response.map(u => ({
           uid: u.user_id, // 資料庫原始 ID
           username: u.username,
           name: u.name,
@@ -89,42 +109,9 @@ export const useUserStore = defineStore("user", {
           totalSpent: u.totalSpent || (u.role === "user" ? 45800 : 0),
           transactions: u.transactions || (u.role === "user" ? 15 : 0),
         }));
-
-        console.log("資料庫載入成功！");
       } catch (err) {
-        console.warn("API 連線失敗，啟動本地備援模式");
-
-        const defaultAccount = [
-          {
-            uid: "0001",
-            username: "user",
-            name: "測試者",
-            email: "mma.save.money@gmail.com",
-            role: "user",
-            job: "小菜鳥",
-            totalSpent: 45800,
-            transactions: 15,
-            statusText: "正常",
-          },
-        ];
-
-        const registeredUser = JSON.parse(
-          localStorage.getItem("mma_users") || "[]",
-        );
-
-        this.users = [
-          ...defaultAccount,
-          ...registeredUser.map((u, idx) => ({
-            uid: u.uid || String(idx + 2).padStart(4, "0"),
-            username: u.username || u.email.split("@")[0],
-            name: u.name || "未命名用戶",
-            email: u.email,
-            role: this.normalizeRole(u.role),
-            totalSpent: u.totalSpent || 0,
-            transactions: u.transactions || 0,
-            statusText: "正常",
-          })),
-        ];
+        // 這裡的 catch 留著處理網路連線等其他錯誤
+        this.useLocalFallback(); 
       }
     },
 
