@@ -1,11 +1,15 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { triggerMissionAction, getCardCollection } from '@/api/gamification'; // 引入卡牌 API
+import { triggerMissionAction, getCardCollection } from '@/api/gamification';
 import { ElMessage, ElLoading } from 'element-plus'
 import { settingApi } from '@/api/setting';
 import api from '@/api';
 
-const userId = 1
+// 響應式狀態
+const currentUserId = ref(null);
+const userLevel = ref(1);
+const currentTheme = ref(localStorage.getItem('appTheme') || 'light');
+
 // 偏好設定資料
 const preferences = ref({
     currency: 'TWD',
@@ -15,23 +19,18 @@ const preferences = ref({
 });
 
 /* ========================
-    Theme System
+    Theme System & Unlocks
    ======================== */
-// 基礎等級解鎖門檻
 const levelUnlocks = {
     light: 1, nordic: 1, sunset: 1, forest: 1, lavender: 1, dark: 1,
     oasis: 5, cyber: 10
 };
 
-// 卡牌解鎖狀態 (對應卡牌系統的稀有卡)
 const cardUnlocks = ref({
-    NT: false, // 財富領主 -> 科技流金
-    SP: false, // 投資先鋒 -> 深海波光
-    SJ: false  // 理財初心者 -> 木質散步
+    NT: false,
+    SP: false,
+    SJ: false
 });
-
-const userLevel = ref(20);
-const currentTheme = ref(localStorage.getItem('appTheme') || 'light');
 
 const themes = computed(() => {
     const baseThemes = { 
@@ -43,7 +42,6 @@ const themes = computed(() => {
         dark: { name: '極客深邃', bgGradient: '#0f172a', sidebarBg: '#1e293b', primary: '#60a5fa' },
         oasis: { name: '沙漠綠洲', bgGradient: '#f7f3f0', sidebarBg: '#caebdf', primary: '#c2a383' },
         cyber: { name: '午夜霓虹', bgGradient: '#0a0a12', sidebarBg: '#161625', primary: '#ff00ff' },
-        // 獎勵主題
         nt_gold: { name: '科技流金 (NT獎勵)', bgGradient: 'linear-gradient(135deg, #110800 0%, #2a1600 100%)', sidebarBg: 'rgba(26, 15, 0, 0.95)', primary: '#f59e0b', text: '#fef3c7', isReward: true, group: 'NT' },
         sp_ocean: { name: '深海波光 (SP獎勵)', bgGradient: 'radial-gradient(circle at 50% 0%, #0369a1, #082f49)', sidebarBg: '#0c4a6e', primary: '#38bdf8', text: '#e0f2fe', isReward: true, group: 'SP' },
         sj_wood: { name: '木質散步 (SJ獎勵)', bgGradient: '#f5ebe0', sidebarBg: '#faf4f0', primary: '#9c6644', text: '#5c4033', isReward: true, group: 'SJ' }
@@ -52,37 +50,37 @@ const themes = computed(() => {
     Object.keys(baseThemes).forEach(id => {
         const theme = baseThemes[id];
         if (theme.isReward) {
-            // 🌟 卡牌獎勵解鎖邏輯：檢查對應的 Rare 卡是否已獲得
             theme.locked = !cardUnlocks.value[theme.group];
-            theme.lockReason = '需完成對應卡牌套組';
+            theme.lockReason = '需解鎖對應稀有卡牌';
         } else {
-            // 普通主題門檻邏輯
             const requiredLevel = levelUnlocks[id] || 1;
             theme.locked = userLevel.value < requiredLevel;
             theme.requiredLevel = requiredLevel;
         }
     });
-
     return baseThemes;
 });
 
-// 1. 初始化：同時抓取設定與卡牌狀態
+/* ========================
+    Data Fetching
+   ======================== */
 const fetchUserData = async () => {
-    const loading = ElLoading.service({ target: '.tab-content', text: '同步數據中...' });
+    const loading = ElLoading.service({ target: '.tab-content', text: '數據同步中...' });
     
     try {
-        const [userRes, settingRes, cardRes] = await Promise.allSettled([
-            api.get(`/users/me`),
-            settingApi.getSetting(userId),
-            getCardCollection() // 抓取卡牌
+        // 1. 獲取當前用戶資訊
+        const userRes = await api.get('/users/me');
+        // 🌟 雖然不傳給後端，但我們把 ID 存起來供本地判斷
+        currentUserId.value = userRes.user_id;
+        userLevel.value = userRes.level || 1;
+
+        // 2. 併發抓取設定與卡牌
+        const [settingRes, cardRes] = await Promise.allSettled([
+            settingApi.getSetting(), // ✅ 移除參數
+            getCardCollection()
         ]);
 
-        // 處理等級
-        if (userRes.status === 'fulfilled' && userRes.value) {
-            userLevel.value = userRes.value.level || 1;
-        }
-
-        // 處理系統設定
+        // 3. 處理設定結果
         if (settingRes.status === 'fulfilled' && settingRes.value) {
             const s = settingRes.value;
             currentTheme.value = s.app_theme || currentTheme.value;
@@ -92,29 +90,28 @@ const fetchUserData = async () => {
                 budget_alert_threshold: s.budget_alert_threshold || 75,
                 start_of_week: s.start_of_week || 0
             };
-            localStorage.setItem('appTheme', currentTheme.value);
+            document.documentElement.setAttribute('data-theme', currentTheme.value);
         }
 
-        // 🌟 處理卡牌解鎖主題狀態
+        // 4. 處理卡牌解鎖狀態
         if (cardRes.status === 'fulfilled') {
-            const data = Array.isArray(cardRes.value) ? cardRes.value : (cardRes.value.data || []);
-            // 找出各組的 Rare 卡是否擁有
-            cardUnlocks.value.NT = data.some(c => c.category === 'NT' && c.difficulty === 'RARE' && c.is_owned);
-            cardUnlocks.value.SP = data.some(c => c.category === 'SP' && c.difficulty === 'RARE' && c.is_owned);
-            cardUnlocks.value.SJ = data.some(c => c.category === 'SJ' && c.difficulty === 'RARE' && c.is_owned);
+            const data = Array.isArray(cardRes.value) ? cardRes.value : (cardRes.value?.data || []);
+            cardUnlocks.value.NT = data.some(c => c.category === 'NT' && c.difficulty === 'RARE' && (c.is_owned || c.is_unlocked));
+            cardUnlocks.value.SP = data.some(c => c.category === 'SP' && c.difficulty === 'RARE' && (c.is_owned || c.is_unlocked));
+            cardUnlocks.value.SJ = data.some(c => c.category === 'SJ' && c.difficulty === 'RARE' && (c.is_owned || c.is_unlocked));
         }
 
     } catch (error) {
-        console.warn('API 數據抓取部分失敗');
+        console.error('初始化失敗:', error);
+        ElMessage.error('無法取得雲端設定，請檢查網路連線');
     } finally {
-        setTimeout(() => {
-            loading.close();
-            document.documentElement.setAttribute('data-theme', currentTheme.value);
-        }, 300);
+        loading.close();
     }
 };
 
-// 2. 切換主題
+/* ========================
+    Actions
+   ======================== */
 const changeTheme = async (id) => {
     const theme = themes.value[id];
     if (theme.locked) {
@@ -123,29 +120,37 @@ const changeTheme = async (id) => {
         return;
     }
 
+    // 本地立即生效
     currentTheme.value = id;
     document.documentElement.setAttribute('data-theme', id);
     localStorage.setItem('appTheme', id);
-    
     window.dispatchEvent(new CustomEvent('theme-changed', { detail: id }));
 
+    // 同步後端 (422 錯誤修正點)
+    if (!currentUserId.value) return;
+
     try {
-        await settingApi.updateTheme(userId, id);
+        await settingApi.updateTheme(id); // ✅ 移除參數，只傳主題 ID
         triggerMissionAction('change_theme');
     } catch (e) {
-        console.warn('同步雲端失敗，已儲存本地');
+        console.warn('雲端同步失敗:', e.message);
     }
 };
 
 const savePreferences = async () => {
+    if (!currentUserId.value) return ElMessage.error('尚未取得使用者資訊');
+    
+    const loading = ElLoading.service({ text: '儲存中...' });
     try {
-        await settingApi.updateAllSetting(userId, {
+        await settingApi.updateAllSetting({
             ...preferences.value,
             app_theme: currentTheme.value
         });
-        ElMessage.success('設定已同步至雲端');
+        ElMessage.success('設定儲存成功');
     } catch (error) {
-        ElMessage.info('本地設定已儲存');
+        ElMessage.error('儲存失敗');
+    } finally {
+        loading.close();
     }
 };
 
