@@ -1141,15 +1141,10 @@ h1 {
 }
 
 .sync-icon {
-  margin-left: 8px;
-  font-.goal-account-select-zone {
-    margin-bottom: 15px;
-    padding: 10px;
-    background: var(--bg-hover);
-    border-radius: 12px;
-  }size: 14px;
-  color: var(--color-primary);
-  animation: spin 4s linear infinite;
+    margin-left: 8px;
+    font-size: 14px; /* 修正這裡 */
+    color: var(--color-primary);
+    animation: spin 4s linear infinite;
 }
 
 .goal-account-select-zone {
