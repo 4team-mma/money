@@ -39,9 +39,38 @@ const userData = computed(() => {
     email: current.email || '',
     role: current.role || 'user',
     // ✅ 新增 avatar_url，並加上後端位址
-    avatar: current.avatar_url ? `http://localhost:8000${current.avatar_url}` : null
+    avatar: localUser.avatar_url ? `http://localhost:8000${localUser.avatar_url}` : null
   }
 })
+
+// 假設這是你上傳圖片或儲存資料的 function
+const handleSaveProfile = async () => {
+  try {
+    const res = await api.updateProfile(formData); // 呼叫你的 API
+    
+    if (res.data.success) {
+      // 💡 關鍵動作：把新的資料同步到 localStorage
+      // 1. 先取出舊名片
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      
+      // 2. 把新的頭像路徑塞進去 (假設後端回傳 res.data.avatar_url)
+      currentUser.avatar_url = res.data.avatar_url; 
+      
+      // 3. 存回去
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      
+      // 4. (選填) 如果你有用 Pinia/Vuex，也要通知 store
+      // userStore.updateAvatar(res.data.avatar_url);
+
+      alert('資料更新成功！');
+      
+      // 💡 密技：如果想讓左下角立刻變色，可以強行重新整理或透過 EventBus 通知
+      // window.location.reload(); 
+    }
+  } catch (error) {
+    console.error(error);
+  }
+};
 
 // === 2. 跑馬燈通知 ===
 const notifications = ref([
