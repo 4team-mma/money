@@ -1,11 +1,23 @@
 <script setup>
 import Nav from '@/components/Nav.vue'
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import api from "@/api";
 import { ElMessage } from 'element-plus';
+import { storeToRefs } from 'pinia';
 import { useCategoryStore } from "@/stores/useCategoryStore";
+import { useAccountStore } from '@/stores/useAccountStore';
 import { triggerMissionAction } from '@/api/gamification';
+
 const categoryStore = useCategoryStore();
+const accountStore = useAccountStore();
+
+// 使用 storeToRefs 確保 accounts 是響應式的
+const { accounts, loading: accountsLoading } = storeToRefs(accountStore);
+
+// 篩選儲蓄型帳戶供下拉選單使用
+const savingsAccounts = computed(() => 
+  accounts.value.filter(acc => acc.account_type === 'savings')
+);
 
 // 控制新增選單的顯示
 const showAddCategory = ref(false)
@@ -108,19 +120,23 @@ const tagBudgets = ref([]);
 
 const isLoading = ref(true);
 
-const fetchCurrentBudget = async () => {
+const fetchAllData = async () => {
   try {
     isLoading.value = true;
 
-    // 1. 發送請求取得：所有預算設定 (all) 與 實際支出統計 (stats)
-    const [resAll, resStats] = await Promise.all([
+    await accountStore.loadAccounts(true);
+
+    // 同時取得：通用預算清單、當月支出統計、儲蓄目標
+    const [resAll, resStats, resSavings] = await Promise.all([
       api.get('/planning/budgets/all'),
-      api.get('/planning/budgets/stats')
+      api.get('/planning/budgets/stats'),
+      api.get('/planning/savings-goals')
     ]);
 
     // Axios 封裝已自動提取 data，不用 res.data
     const allBudgets = resAll || [];
     const statsData = resStats || { categories: [], tags: [] };
+    savingsGoals.value = resSavings || [];
 
     // --- A. 月總預算 ---
     const totalSetting = allBudgets.find(b => !b.category && !b.tag);
@@ -177,6 +193,15 @@ const fetchCurrentBudget = async () => {
       };
     });
 
+    // 處理儲蓄目標資料
+    savingsGoals.value = (resSavings || []).map(g => ({
+      ...g,
+      // 初始化時，若有連結帳戶，先從 Store 拿最新值
+      current_amount: g.account_id 
+        ? (accounts.value.find(a => a.account_id === g.account_id)?.current_balance || g.current_amount)
+        : g.current_amount
+    }));
+
   } catch (error) {
     console.error("數據同步失敗:", error);
     ElMessage.error('無法從伺服器取得最新預算資料');
@@ -197,16 +222,30 @@ const usagePercentage = computed(() => {
 });
 
 // 4. 儲蓄目標數據
-const savingsGoals = ref([
-  { id: 1, title: '日本旅遊基金', current: 15200, target: 20000, deadline: '2026-06' },
-  { id: 2, title: '緊急預備金', current: 80000, target: 100000, deadline: '2026-12' }
-]);
+const savingsGoals = ref([]);
 
-// 計算儲蓄總進度
+const addGoal = () => {
+  savingsGoals.value.push({
+    tempId: Date.now(), // 暫時 ID 用於 key
+    goal_id: null,
+    account_id: null,
+    goal_name: '新儲蓄目標',
+    target_amount: 10000,
+    current_amount: 0,
+    target_date: new Date().toISOString().split('T')[0],
+    status: 'active'
+  });
+};
+
+const removeGoal = (id) => {
+  savingsGoals.value = savingsGoals.value.filter(g => (g.goal_id || g.tempId) !== id);
+};
+
+// 計算屬性：總進度
 const totalSavingsProgress = computed(() => {
-  const totalCurrent = savingsGoals.value.reduce((sum, goal) => sum + goal.current, 0);
-  const totalTarget = savingsGoals.value.reduce((sum, goal) => sum + goal.target, 0);
-  return Math.round((totalCurrent / totalTarget) * 100);
+  const totalCurrent = savingsGoals.value.reduce((sum, g) => sum + g.current_amount, 0);
+  const totalTarget = savingsGoals.value.reduce((sum, g) => sum + g.target_amount, 0);
+  return totalTarget > 0 ? Math.round((totalCurrent / totalTarget) * 100) : 0;
 });
 
 const removeCategory = async (catName) => {
@@ -266,10 +305,11 @@ const removeTag = async (tagName) => {
 // --- 儲存按鈕邏輯 ---
 const isSaving = ref(false);
 
-const saveAllBudgets = async () => {
+const saveAllPlanning = async () => {
   try {
     isLoading.value = true;
-    const payload = [
+    // 構建預算批次 Payload
+    const budgetPayload = [
       // 1. 月總額
       { amount: monthlyLimit.value, category: null, tag: null },
       // 2. 類別 (飲食、交通...)
@@ -281,16 +321,32 @@ const saveAllBudgets = async () => {
       })),
       // 3. 標籤 (需要、想要...)
       ...tagBudgets.value.map(t => ({
-      amount: t.limit,
-      category: null,
-      tag: t.name,
-      tag_color: t.color
-    }))
+        amount: t.limit,
+        category: null,
+        tag: t.name,
+        tag_color: t.color
+      }))
     ];
 
-    // 呼叫你剛寫好的 FastAPI /batch 接口
-    await api.post('/planning/budgets/batch', payload);
+    // 構建儲蓄目標 Payload
+    const savingsPayload = savingsGoals.value.map(g => ({
+      goal_id: g.goal_id || null,
+      account_id: g.account_id,
+      goal_name: g.goal_name,
+      target_amount: g.target_amount,
+      current_amount: g.current_amount, // 傳回目前快照
+      target_date: g.target_date,
+      status: g.status
+    }));
+
+    // 平行發送儲存請求
+    await Promise.all([
+      api.post('/planning/budgets/batch', budgetPayload),
+      api.post('/planning/savings-goals/batch', savingsPayload)
+    ]);
+
     ElMessage.success('同步成功！已儲存所有規劃');
+    await fetchAllData(); // 重新整理資料
 
   } catch (error) {
     ElMessage.error('儲存失敗，請檢查網路');
@@ -300,11 +356,38 @@ const saveAllBudgets = async () => {
 };
 
 // 頁面載入時執行
-onMounted(() => {
-  fetchCurrentBudget();
-  triggerMissionAction('view_targets');
-
+onMounted(async () => {
+  try {
+    await accountStore.loadAccounts(); 
+    await fetchAllData();
+    triggerMissionAction('view_targets');
+  } catch (error) {
+    console.error("初始化資料失敗:", error);
+  }
 });
+
+// 當儲蓄目標的 account_id 改變時，自動從 Store 同步最新餘額
+watch(
+  () => savingsGoals.value,
+  (newGoals) => {
+    newGoals.forEach(goal => {
+      if (goal.account_id) {
+        const linkedAcc = accounts.value.find(a => a.account_id === goal.account_id);
+        if (linkedAcc) {
+          // 強制同步 Store 中的最新餘額
+          goal.current_amount = linkedAcc.current_balance;
+        }
+      }
+      // 自動判定狀態
+      if (goal.current_amount >= goal.target_amount && goal.target_amount > 0) {
+        goal.status = 'completed';
+      } else {
+        goal.status = 'active';
+      }
+    });
+  },
+  { deep: true }
+);
 
 /**
  * 根據達成率回傳對應的 CSS 變數顏色
@@ -572,41 +655,100 @@ const getSavingsColor = (current, target) => {
             </div>
           </section>
 
-          <section
-            v-else-if="activeTab === 'savings'"
-            key="savings"
-            class="budget-section"
-          >
+          <section v-else-if="activeTab === 'savings'" key="savings" class="budget-section">
+            <!-- 總覽卡片：展示全局進度 -->
             <div class="savings-summary-card">
-              <div class="summary-text">
-                <h3>總儲蓄達成率</h3>
-                <p>本月已完成 {{ totalSavingsProgress }}% 的儲蓄進度</p>
-              </div>
-              <div class="summary-value">{{ totalSavingsProgress }}%</div>
-            </div>
-            <div class="goals-list">
-              <div
-                v-for="goal in savingsGoals"
-                :key="goal.id"
-                class="goal-item"
-              >
-                <div class="goal-info">
-                  <span class="goal-title">{{ goal.title }}</span>
-                  <span class="goal-date">目標日期：{{ goal.deadline }}</span>
+              <div class="summary-content">
+                <span class="summary-label">儲蓄總達成率</span>
+                <h2 class="summary-value">{{ totalSavingsProgress }}%</h2>
+                <div class="summary-progress-mini">
+                  <div class="mini-bar-bg">
+                    <div class="mini-bar-fill" :style="{ width: totalSavingsProgress + '%' }"></div>
+                  </div>
                 </div>
-                <div class="goal-progress-wrapper">
+              </div>
+              <button class="add-goal-btn" @click="addGoal">
+                <span class="plus-icon">＋</span> 新增儲蓄目標
+              </button>
+            </div>
+
+            <!-- 儲蓄目標列表 -->
+            <div class="goals-grid">
+              <div 
+                v-for="goal in savingsGoals" 
+                :key="goal.goal_id || goal.tempId" 
+                class="goal-item-card"
+                :class="['status-' + goal.status, { 'is-linked': goal.account_id }]" 
+              >
+                <!-- 達成勳章 -->
+                <div v-if="goal.current_amount >= goal.target_amount" class="badge-completed">🏆 達成</div>
+                
+                <div class="goal-header">
+                  <div class="goal-title-group">
+                    <span class="goal-status-dot" :style="{ backgroundColor: (goal.current_amount >= goal.target_amount) ? '#48BB78' : '#3182ce' }"></span>
+                    <input v-model="goal.goal_name" class="goal-title-input" placeholder="目標名稱..." />
+                  </div>
+                  <button class="del-goal-x" @click="removeGoal(goal.goal_id || goal.tempId)">✕</button>
+                </div>
+
+                <!-- 新增：帳戶連結選擇器 -->
+                <div class="goal-account-select-zone">
+                  <label class="setting-label">連結儲蓄帳戶</label>
+                  <select v-model="goal.account_id" class="modern-select">
+                    <option :value="null">❌ 不連結帳戶 (手動輸入更新)</option>
+                    <option v-for="acc in savingsAccounts" :key="acc.account_id" :value="acc.account_id">
+                      {{ acc.icon }} {{ acc.itemName }} (餘額: ${{ acc.current_balance.toLocaleString() }})
+                    </option>
+                  </select>
+                </div>
+
+                <div class="goal-inputs">
+                  <div class="input-group">
+                    <label>已存金額 (連動帳戶)</label>
+                    <div class="amount-wrapper" :class="{ 'readonly-input': goal.account_id }">
+                      <span class="currency-symbol">$</span>
+                      <!-- 如果有連結帳戶，顯示格式化後的 Store 餘額 (唯讀) -->
+                      <input 
+                        v-if="goal.account_id"
+                        type="text" 
+                        :value="accountStore.formatAccountBalance(goal.account_id)" 
+                        readonly 
+                      />
+                      <!-- 未連結時，才顯示可編輯的數字輸入框 -->
+                      <input 
+                        v-else
+                        type="number" 
+                        v-model.number="goal.current_amount" 
+                      />
+                      <span v-if="goal.account_id" class="sync-icon">🔄</span>
+                    </div>
+                  </div>
+                  <div class="input-group">
+                    <label>目標總額 (TWD)</label>
+                    <div class="amount-wrapper">
+                      <span class="currency-symbol">$</span>
+                      <input type="number" v-model.number="goal.target_amount" />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="goal-date-setting">
+                  <label>預計達成日期</label>
+                  <input type="date" v-model="goal.target_date" class="date-picker-mini" />
+                </div>
+
+                <!-- 進度條區塊 -->
+                <div class="progress-container-mini">
                   <div class="progress-bar-bg">
-                    <div
-                      class="progress-bar-fill savings"
-                      :style="{
-                        width: (goal.current / goal.target) * 100 + '%',
-                        backgroundColor: getSavingsColor(goal.current, goal.target)
-                      }"
+                    <div 
+                      class="progress-bar-fill savings" 
+                      :style="{ width: Math.min((goal.current_amount / goal.target_amount) * 100, 100) + '%' }"
+                      :class="{ 'pulse-animation': (goal.current_amount >= goal.target_amount) }"
                     ></div>
                   </div>
-                  <div class="goal-amounts">
-                    <span>${{ goal.current.toLocaleString() }}</span>
-                    <span>${{ goal.target.toLocaleString() }}</span>
+                  <div class="progress-info-text">
+                    <span class="percent-num">{{ Math.round((goal.current_amount / goal.target_amount) * 100) || 0 }}%</span>
+                    <span class="status-text" v-if="(goal.current_amount >= goal.target_amount)">已達成！</span>
                   </div>
                 </div>
               </div>
@@ -616,10 +758,10 @@ const getSavingsColor = (current, target) => {
       </main>
 
       <footer class="page-footer">
-        <button class="btn-secondary" @click="fetchCurrentBudget">重置</button>
+        <button class="btn-secondary" @click="fetchAllData">重置</button>
         <button
           class="btn-primary"
-          @click="saveAllBudgets"
+          @click="saveAllPlanning"
           :disabled="isSaving"
         >
           {{ isSaving ? "儲存中..." : "儲存所有規劃" }}
@@ -875,17 +1017,322 @@ h1 {
   transition: all 0.5s ease; /* 當漸層隨 JavaScript 改變時觸發 */
 }
 
-.summary-value { font-size: 48px; font-weight: 900; opacity: 0.9; }
-
-.goal-item {
-  margin-bottom: 25px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--border-color);
+.summary-value {
+  font-size: 56px;
+  font-weight: 900;
+  margin: 10px 0;
+  letter-spacing: -2px;
+  color: var(--text-inverse);
 }
 
-.goal-info { display: flex; justify-content: space-between; margin-bottom: 10px; }
-.goal-title { font-weight: 700; font-size: 18px; color: var(--text-primary); }
-.goal-amounts { display: flex; justify-content: space-between; font-size: 14px; color: var(--text-secondary); margin-top: 8px; }
+.summary-progress-mini {
+  width: 150px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.mini-bar-fill {
+  height: 100%;
+  background: var(--color-success);
+  transition: width 0.6s ease;
+}
+
+/* 儲蓄目標卡片 Grid */
+.goals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+/* 個別目標卡片 */
+.goal-item-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 25px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  will-change: transform, box-shadow; /* 效能優化 */
+}
+
+/* 狀態：連動帳戶時 (根據主題微調背景) */
+.goal-item-card.is-linked {
+  background-color: var(--bg-hover);
+  border-color: var(--color-primary);
+}
+
+/* --- 達成狀態：金色光輝 --- */
+.goal-item-card.status-completed {
+    border: 2px solid var(--color-gold);
+    background: var(--bg-completed-grad);
+    box-shadow: 0 10px 20px rgba(236, 201, 75, 0.15); /* 增加金色的外發光 */
+}
+
+/* 達成勳章 (Badge) */
+.badge-completed {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: var(--color-gold);
+    color: var(--color-gold-text);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+}
+
+/* --- 失敗/過期狀態 --- */
+.goal-item-card.status-failed {
+    border-left: 5px solid var(--color-danger);
+    opacity: 0.8;
+    filter: grayscale(0.2); /* 稍微降低飽和度增加「過期感」 */
+}
+
+.goal-item-card.status-failed .goal-title-input {
+    color: var(--text-secondary);
+}
+
+.goal-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  background-color: var(--color-success);
+}
+
+/* 卡片頭部與標題輸入 */
+.goal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.goal-title-input {
+  border: none;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  outline: none;
+  width: 80%;
+  background: transparent;
+}
+
+/* 輸入群組佈局 */
+.goal-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.readonly-input {
+  background: var(--border-color) !important;
+  opacity: 0.7;
+}
+
+.readonly-input input {
+  cursor: not-allowed;
+  color: var(--text-secondary);
+}
+
+.sync-icon {
+  margin-left: 8px;
+  font-.goal-account-select-zone {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: var(--bg-hover);
+    border-radius: 12px;
+  }size: 14px;
+  color: var(--color-primary);
+  animation: spin 4s linear infinite;
+}
+
+.goal-account-select-zone {
+  margin-bottom: 15px;
+  padding: 10px;
+  background: var(--bg-hover);
+  border-radius: 12px;
+}
+
+.setting-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.modern-select {
+  width: 100%;
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.input-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+/* 金額輸入框區塊 */
+.amount-wrapper {
+  display: flex;
+  align-items: center;
+  background: var(--bg-body); /* 隨主題切換的淺色背景 */
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+}
+
+.amount-wrapper span {
+    color: var(--text-secondary);
+}
+
+.currency-symbol { 
+  color: var(--text-secondary); 
+  font-weight: bold; 
+  margin-right: 4px; 
+}
+
+.amount-wrapper input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+/* 日期選擇器 */
+.goal-date-setting { margin-bottom: 20px; }
+
+.date-picker-mini {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+/* 進度條增強 - 使用主題成功綠 */
+.progress-bar-fill.savings {
+  background: linear-gradient(90deg, var(--color-success) 0%, #68d391 100%);
+}
+
+.pulse-animation {
+  animation: bar-pulse 2s infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-green {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+/* 刪除按鈕 */
+.del-goal-x {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 5px;
+  transition: color 0.2s;
+}
+
+.del-goal-x:hover { 
+  color: var(--color-danger); 
+}
+
+/* =========================================
+    新增目標按鈕 - 多主題適配版
+   ========================================= */
+.add-goal-btn {
+  /* 使用帶有透明度的白色或淺色，確保毛玻璃效果 */
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px); /* 確保 Safari 兼容 */
+  
+  /* 邊框使用主題文字色的極淡版本，增加精緻感 */
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  
+  /* 文字顏色在深色背景下用反白，淺色背景則可依需求調整 */
+  color: var(--text-inverse); 
+  
+  padding: 12px 24px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* 加號圖示動畫 */
+.plus-icon {
+  font-size: 18px;
+  transition: transform 0.3s ease;
+  display: inline-block;
+}
+
+/* =========================================
+    懸停與動態效果 (適配不同主題)
+   ========================================= */
+.add-goal-btn:hover {
+  /* 懸停時，背景變為主題主色，或純白 (視設計偏好) */
+  background: var(--bg-card);      
+  color: var(--color-primary); /* 文字轉為品牌主色 */
+  
+  transform: translateY(-2px); 
+  border-color: var(--color-primary);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* 在深色主題下，懸停效果稍微增強亮度 */
+[data-theme="dark"] .add-goal-btn:hover {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.add-goal-btn:hover .plus-icon {
+  transform: rotate(90deg);
+}
+
+.add-goal-btn:active {
+  transform: translateY(0) scale(0.96);
+  opacity: 0.9;
+}
+
+/* 針對小螢幕的響應式調整 */
+@media (max-width: 480px) {
+  .add-goal-btn {
+    padding: 10px 16px;
+    font-size: 14px;
+    width: 100%; /* 手機端建議撐滿或置中 */
+    justify-content: center;
+  }
+}
 
 /* =========================================
   8. 按鈕與自定義類別入口
