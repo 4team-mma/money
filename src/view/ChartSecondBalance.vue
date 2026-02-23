@@ -41,9 +41,16 @@ const loadData = async () => {
 onMounted(() => {
     const now = new Date()
 
-    // 預設：月（最近 1 年）
-    startDate.value = getLocalDateString(new Date(now.getFullYear(), now.getMonth() - 11, 1))
+    // 1️⃣ 取得今天 (格式如: 2026-02-23)
     endDate.value = getLocalDate()
+
+    // 2️⃣ 計算去年今日
+    const lastYear = new Date()
+    lastYear.setFullYear(now.getFullYear() - 1) // 直接年份 - 1
+
+    // 3️⃣ 轉換成字串格式並賦值
+    startDate.value = getLocalDateString(lastYear)
+
     loadData()
     triggerMissionAction('view_trends');
 })
