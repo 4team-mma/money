@@ -30,14 +30,16 @@ const currentStyle = computed(() => {
 // 優先從 Pinia 拿 (API 同步後的最新資料)，備援則從 localStorage 拿 (登入時的快取)
 const userData = computed(() => {
   const localUser = JSON.parse(localStorage.getItem('currentUser') || '{}')
-  
-  // 從 Store 中尋找符合目前 Email 的用戶資料
-  const current = userStore.users.find(u => u.email === localUser.email) || localUser
+
+  // ✅ 確保先定義 current，再使用它
+  const current = userStore.users.find(u => u.username === localUser.username) || localUser
 
   return {
     name: current.name || '用戶',
     email: current.email || '',
-    role: current.role || 'user'
+    role: current.role || 'user',
+    // ✅ 新增 avatar_url，並加上後端位址
+    avatar: current.avatar_url ? `http://localhost:8000${current.avatar_url}` : null
   }
 })
 
@@ -156,7 +158,11 @@ onUnmounted(() => {
 
         <div class="sidebar-footer">
           <div class="user-info">
-            <div class="user-avatar">{{ userData.avatar }}</div>
+            <div class="user-avatar">
+              <img v-if="userData.avatar" :src="userData.avatar"
+              style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"/>
+              <span v-else>{{ userData.name.charAt(0).toUpperCase() }}</span>
+            </div>
             <div class="user-details">
               <div class="user-name">{{ userData.name }}</div>
               <div class="user-email">{{ userData.email }}</div>
