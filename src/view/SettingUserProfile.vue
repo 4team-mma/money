@@ -264,7 +264,12 @@ const getInitials = (name) => {
 
                 <div class="form-group">
                     <label>生日</label>
-                    <input type="date" v-model="profile.birthday">
+                    <input
+                    type="date"
+                    v-model="profile.birthday"
+                    class="your-input-style"
+                    :class="{ 'date-placeholder': !profile.birthday }"
+                    >
                 </div>
             </div>
 
@@ -324,4 +329,53 @@ button:disabled:hover {
     /* 關鍵！這會自動裁切並填滿容器，防止圖片被壓扁或拉長 */
     border: 2px solid #ddd;
 }
+
+/* 讓 date input 在沒選日期時呈現灰色 */
+input[type="date"] {
+  color: #333; /* 選取日期後的顏色 */
+}
+
+/* 針對 webkit 瀏覽器（Chrome, Safari, Edge）的內建文字進行顏色調整 */
+input[type="date"]::-webkit-datetime-edit {
+  /* 使用條件：如果 profile.birthday 是空的，就顯示灰色 */
+  /* 我們可以透過前端的 class 來控制 */
+  color: inherit; 
+}
+
+/* 針對 Webkit 瀏覽器內部的欄位調整間距 */
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  padding: 0; /* 移除包裹層的內距 */
+}
+
+/* 當沒有值時，強制讓裡面的編輯區域變灰色 */
+.date-placeholder::-webkit-datetime-edit {
+  color: #a0aec0; /* 這是淺灰色，你可以根據設計調整 */
+}
+
+/* 針對每一個小欄位（年、月、日）調整左右間距 */
+input[type="date"]::-webkit-datetime-edit-year-field,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field {
+  padding: 0 1px; /* 縮小左右間距，原本預設可能較大 */
+}
+
+/* 針對中間的斜線 (/) 調整間距 */
+input[type="date"]::-webkit-datetime-edit-text {
+  padding: 0 2px;
+  color: #666; /* 確保斜線顏色也一致 */
+}
+
+/* 當 v-model 為空時，套用灰色 */
+.date-placeholder::-webkit-datetime-edit-year-field,
+.date-placeholder::-webkit-datetime-edit-month-field,
+.date-placeholder::-webkit-datetime-edit-day-field,
+.date-placeholder::-webkit-datetime-edit-text {
+  color: #666 !important; /* 強制變灰 */
+}
+
+/* 為了確保萬一，如果上面失效，直接針對整個編輯區域 */
+.date-placeholder::-webkit-datetime-edit {
+  color: #666 !important;
+}
+
 </style>
