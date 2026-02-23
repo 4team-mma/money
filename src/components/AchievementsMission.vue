@@ -222,6 +222,7 @@ onMounted(() => {
     background: #3b82f6;
     border-radius: 50%;
     animation: blink 1.2s infinite;
+    will-change: opacity, transform;
 }
 @keyframes blink {
     0% { opacity: 1; transform: scale(1); }
