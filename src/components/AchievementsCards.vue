@@ -197,11 +197,14 @@ const closePreview = () => {
   border-color: #a855f7 !important;
   box-shadow: 0 0 20px rgba(168, 85, 247, 0.4), inset 0 0 15px rgba(168, 85, 247, 0.2) !important;
 }
-
+/* 稀有卡光束 */
 .tech-laser-beam {
   position: absolute; top: -100%; left: -100%; width: 300%; height: 300%;
   background: linear-gradient(135deg, transparent 45%, rgba(255, 255, 255, 0.9) 50%, transparent 55%);
   mix-blend-mode: overlay; animation: techLaserSweep 4s infinite linear; z-index: 10; pointer-events: none;
+  /* 👇 新增這兩行強制開啟硬體加速 👇 */
+  will-change: transform;
+  transform: translateZ(0);
 }
 /* 雷射線條
 .tech-scan-bar {
@@ -212,7 +215,13 @@ const closePreview = () => {
 @keyframes techLaserSweep { 0% { transform: translate(-10%, -10%); } 100% { transform: translate(30%, 30%); } }
 @keyframes techScanMove { 0% { top: 0%; } 50% { top: 100%; } 100% { top: 0%; } }
 
-.laser-shine-small { position: absolute; inset: 0; background-size: 200% 200%; animation: shine 5s infinite; }
+/* 動畫：改變背景位置 */
+.laser-shine-small { 
+  position: absolute; inset: 0; background-size: 200% 200%; animation: shine 5s infinite; 
+  /* 👇 新增這兩行強制開啟硬體加速 👇 */
+  will-change: background-position;
+  transform: translateZ(0);
+}
 @keyframes shine { 0% { background-position: -200% -200%; } 100% { background-position: 200% 200%; } }
 
 /* 🌟 3D 翻轉容器：修正高度被遮住問題 */
@@ -288,11 +297,14 @@ const closePreview = () => {
 .top-right-close { position: absolute; top: -45px; right: -10px; color: white; background: none; border: none; font-size: 2.5rem; cursor: pointer; z-index: 101; }
 .flip-hint { position: absolute; bottom: -45px; width: 100%; text-align: center; color: #a855f7; font-weight: bold; font-size: 1rem; text-shadow: 0 0 10px rgba(168,85,247,0.5); }
 
-/* 普通預覽雷射特效 */
+/* 預覽雷射特效:普通卡預覽的全息反光 */
 .card-holo-layer {
   position: absolute; inset: 0;
   background: linear-gradient(135deg, rgba(255,0,0,0.1) 0%, rgba(0,255,0,0.1) 25%, rgba(0,0,255,0.1) 50%, rgba(255,255,0,0.1) 75%, rgba(255,0,0,0.1) 100%);
   mix-blend-mode: color-dodge; background-size: 400% 400%; animation: holoMove 6s infinite linear; opacity: 0.6;
+  /* 👇 新增這兩行強制開啟硬體加速 👇 */
+  will-change: background-position;
+  transform: translateZ(0);
 }
 @keyframes holoMove { 0% { background-position: 0% 0%; } 100% { background-position: 100% 100%; } }
 
