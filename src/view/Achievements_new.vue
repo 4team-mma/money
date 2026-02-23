@@ -12,7 +12,7 @@ const userLevel = ref({
     level: 12, 
     currentXP: 2850, 
     nextLevelXP: 4000, 
-    streak: 15, 
+    streak: 0, 
     hasCheckedIn: false 
 })
 const cardsRef = ref(null);
@@ -75,24 +75,55 @@ const handleDoCheckin = async () => {
             if (data.show_bonus_modal) {
                 await ElMessageBox.alert('🎉 恭喜！你已累計打卡滿 10 次，額外獲得 50 XP！', '成就達成', { type: 'success' });
             }
+
+            if (data.show_monthly_bonus) {
+                await ElMessageBox.alert(
+                    '🏆 太強了！本月全勤達成，額外獎勵 100 XP！', 
+                    '月全勤大師', 
+                    { confirmButtonText: '領取獎勵', type: 'success' }
+                );
+            }
+
             await fetchMyCheckinStatus(); 
         }
     } catch (err) {
-        ElMessage.error(err.response?.data?.detail || "簽到失敗");
+        const errorMsg = err.response?.data?.detail || "簽到失敗";
+        ElMessage.error(errorMsg);
     }
 };
 
+
+// 簽到卡片介面設定
 const checkInDays = computed(() => {
-    const rewards = checkinStatus.value.weeklyRewards;
-    const currentDay = checkinStatus.value.currentCycleDay === 0 ? 1 : checkinStatus.value.currentCycleDay;
+    const rewards = checkinStatus.value.weeklyRewards || [10, 10, 20, 20, 20, 20, 50];
+
+    // 💡 關鍵：如果 cycle_day 是 0，代表是新的一輪，要把目標對準第 1 天
+    // 注意：這裡要確認你的變數名是 currentCycleDay 還是 current_cycle_day (根據 API 欄位)
+    const currentDay = (checkinStatus.value.currentCycleDay === 0)
+                    ? 1
+                    : checkinStatus.value.currentCycleDay;
+
     const isTodayClaimed = checkinStatus.value.hasCheckedIn;
 
     return rewards.map((xp, index) => {
         const dayNum = index + 1;
         let status = 'locked';
-        if (dayNum < currentDay) status = 'claimed';
-        else if (dayNum === currentDay) status = isTodayClaimed ? 'claimed' : 'ready';
-        return { day: dayNum, xp: xp, status: status, big: xp >= 50 };
+
+        if (dayNum < currentDay) {
+            status = 'claimed'; // 過去的進度
+        } else if (dayNum === currentDay) {
+            // 今天的進度：沒領過就是 ready (會亮起來)，領過就是 claimed
+            status = isTodayClaimed ? 'claimed' : 'ready';
+        } else {
+            status = 'locked'; // 未來的進度
+        }
+
+        return {
+            day: dayNum,
+            xp: xp,
+            status: status,
+            big: xp >= 50
+        };
     });
 });
 
@@ -135,20 +166,22 @@ onMounted(() => {
             <section class="board-card">
                 <div class="card-header">
                     <h2>💰 連續簽到獎勵</h2>
-                    <button class="btn-primary-large" :disabled="checkinStatus.hasCheckedIn" @click="handleDoCheckin">
+                    <button class="btn-primary-large" :disabled="checkinStatus.hasCheckedIn"
+                        @click="handleDoCheckin">
                         {{ checkinStatus.hasCheckedIn ? '今日已領取' : `立即領取 ${checkinStatus.todayXpReward} XP` }}
                     </button>
                 </div>
-                
+
                 <div class="checkin-flex">
                     <div v-for="d in checkInDays" :key="d.day" class="checkin-node" :class="[d.status, { 'special-card': d.big }]">
                         <span class="ci-day">DAY {{ d.day }}</span>
-                        <span class="ci-icon" style="font-size: 2rem; margin: 10px 0;">{{ d.big ? '💎' : '💰' }}</span>
-                        <span class="ci-reward" style="font-weight: 800;">+{{ d.xp }} XP</span>
+                        <span class="ci-icon">💰</span>
+                        <span class="ci-reward">+{{ d.xp }} XP</span>
                         <div v-if="d.status === 'claimed'" class="ci-completed">✔</div>
                     </div>
                 </div>
-                <p class="checkin-hint">* 連續簽到獎勵每 7 天循環一次。累積滿 10 次及月全勤另有額外驚喜！</p>
+                <p style="margin: 25px 0 0 8px; font-size: 12px; color: #888;">* 連續簽到獎勵每 7 天循環一次，若簽到中斷，則從 DAY 1 重新累計。</p>
+                <p style="margin: 0px 0 0 8px; font-size: 12px; color: #888;">* 累積滿 10 次及月全勤另有額外驚喜！</p>
             </section>
 
             <div class="interactive-split-grid">
