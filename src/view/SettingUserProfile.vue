@@ -172,7 +172,33 @@ const saveProfile = async () => {
             }
         }
 
-        // --- 3. 全部成功後的狀態同步 ---
+        // --- 3. 全部成功後，同步更新 Pinia 與 LocalStorage ---
+
+        // A. 更新 Pinia (讓左邊 Nav 即時變動)
+        if (userStore.users) {
+            // 找目前的這筆資料 (比對 username 或 email)
+            const index = userStore.users.findIndex(u => u.username === username.value);
+            if (index !== -1) {
+                userStore.users[index] = {
+                    ...userStore.users[index],
+                    name: profile.value.name,
+                    email: profile.value.email,
+                    avatar_url: avatarUrl.value // 確保圖片路徑也更新
+                };
+            }
+        }
+
+        // B. 更新 LocalStorage (防止重新整理後抓到舊資料)
+        const localUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const updatedLocalUser = { 
+            ...localUser, 
+            name: profile.value.name, 
+            email: profile.value.email,
+            avatar_url: avatarUrl.value 
+        };
+        localStorage.setItem('currentUser', JSON.stringify(updatedLocalUser));
+
+
         alert("個人資料已更新！");
         originalProfile.value = { ...profile.value }; // 讓按鈕熄滅
 
