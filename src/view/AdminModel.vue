@@ -8,7 +8,7 @@ const selectedAiModel = ref('ollama')
 const isEditMode = ref(false)
 const isSaving = ref(false)
 
-// 🎯 1. Gemini 模型清單
+// 🎯 Gemini 模型清單
 const geminiModels = [
     { label: 'Gemini 1.5 Flash (測試首選/額度高)', value: 'gemini-1.5-flash' },
     { label: 'Gemini 1.5 Pro (聰明/額度中)', value: 'gemini-1.5-pro' },
@@ -17,7 +17,7 @@ const geminiModels = [
     { label: 'Gemini Pro Latest (最新 Pro)', value: 'gemini-pro-latest' }
 ]
 
-// 🎯 2. 定義各模型的限制資訊
+// 🎯 定義各模型的限制資訊
 const modelLimitsInfo = {
     'gemini-1.5-flash': { rpm: '15 RPM', rpd: '1,500 RPD', desc: '✅ 額度最高，適合瘋狂測試與一般對話。' },
     'gemini-1.5-pro': { rpm: '2 RPM', rpd: '50 RPD', desc: '⚠️ 每日僅 50 次，適合處理複雜邏輯，省著用。' },
@@ -26,7 +26,6 @@ const modelLimitsInfo = {
     'default': { rpm: '-', rpd: '-', desc: '請選擇一個模型以查看限制資訊' }
 }
 
-// 計算當前選中 Gemini 模型的限制資訊
 const currentGeminiLimit = computed(() => {
     const ver = localSettings.value.geminiVersion;
     if (!ver) return modelLimitsInfo['default'];
@@ -39,7 +38,6 @@ const ollamaModels = [
     { label: 'DeepSeek R1 (Win10 推薦)', value: 'deepseek-r1:7b', locked: true }
 ]
 
-// 😺 更新：精簡版喵喵性格
 const DEFAULT_PROMPT = '你是理財助手喵喵。個性惜字如金，言簡意賅，善用成語。嚴禁冗詞贅字、表格與公式。回答限制 30 字內，直指核心，句尾務必帶喵~';
 const BACKEND_DEFAULT_PROMPT = "你是一個親切的理財助手喵喵，說話結尾要帶喵~";
 
@@ -55,8 +53,9 @@ const localSettings = ref({
 const switchAndSync = async (provider) => {
     selectedAiModel.value = provider;
     isEditMode.value = false;
-    await aiStore.fetchConfig(provider); // 確保 Store 資料是最新的
-
+    
+    // 確保 Store 資料最新
+    await aiStore.fetchConfig(provider); 
     const cached = aiStore.configs[provider];
 
     // 1. 同步 Prompt
@@ -71,30 +70,24 @@ const switchAndSync = async (provider) => {
         const dbValue = cached.version;
         const isValid = geminiModels.some(m => m.value === dbValue);
         localSettings.value.geminiVersion = isValid ? dbValue : '';
-        console.log(`[Admin] Gemini Sync: DB=${dbValue}, UI=${localSettings.value.geminiVersion}`);
     }
 
     if (provider === 'ollama') {
         let dbValue = cached.version;
-
-        // ⚡️ 自動修正：如果後端存的是舊格式 'gemma-3-1b-it' (有dash)，自動轉成新格式 'gemma3:1b'
         if (dbValue === 'gemma-3-1b-it') dbValue = 'gemma3:1b';
-
-        // 檢查 DB 的值是否有效
         const isValid = ollamaModels.some(m => m.value === dbValue);
-
-        // 如果無效或為空，設為空字串 -> 觸發 "請選擇模型"
         localSettings.value.ollamaModel = isValid ? dbValue : '';
-
-        console.log(`[Admin] Ollama Sync: DB=${dbValue}, Valid=${isValid}, UI=${localSettings.value.ollamaModel}`);
     }
 }
 
 onMounted(async () => {
+    // 初始載入時，直接從 Store 拿取當前生效的 Provider
     const res = await getAiRobotConfig();
     const d = res?.data || res;
-    // 如果系統完全沒設定過(provider為空)，預設顯示 ollama 分頁
     const targetProvider = d?.provider || 'ollama';
+    
+    // 更新 Store 狀態，確保頂部狀態欄正確
+    aiStore.currentActiveProvider = targetProvider; 
     await switchAndSync(targetProvider);
 })
 
@@ -103,7 +96,7 @@ const handleSave = async () => {
     try {
         const provider = selectedAiModel.value;
 
-        // 防呆：沒選模型不能存
+        // 防呆
         if (provider === 'gemini' && !localSettings.value.geminiVersion) {
             alert("請選擇一個 Gemini 運作模型版本喵！");
             isSaving.value = false;
@@ -123,6 +116,7 @@ const handleSave = async () => {
                 provider === 'anythingllm' ? 'gemma3:1b' : localSettings.value.geminiVersion,
         };
 
+        // 處理 API Key 邏輯
         const inputKey = provider === 'gemini' ? localSettings.value.geminiKey :
             provider === 'anythingllm' ? localSettings.value.anythingKey : null;
 
@@ -135,15 +129,22 @@ const handleSave = async () => {
         }
 
         const response = await saveAiRobotConfig(payload);
-        console.log("🚀 API 回傳結果:", response.data || response);
+        
+        // ✨ 重點修正：儲存成功後的操作
+        if (response.success || response.data?.success || response.status === 200) {
+            // 1. 更新 Store 內的當前生效 Provider (讓頂部狀態欄立即改變)
+            aiStore.currentActiveProvider = provider;
+            
+            // 2. 重新拉取該 Provider 的最新配置 (同步 hasKey 等狀態)
+            await aiStore.fetchConfig(provider);
 
-        await aiStore.fetchConfig(provider);
+            // 3. 清空輸入欄位並關閉編輯模式
+            localSettings.value.geminiKey = '';
+            localSettings.value.anythingKey = '';
+            isEditMode.value = false;
 
-        localSettings.value.geminiKey = '';
-        localSettings.value.anythingKey = '';
-        isEditMode.value = false;
-
-        alert("💾 設定已更新！喵喵記住新設定了喵~");
+            alert("💾 設定已更新！目前生效模型已切換為 " + provider.toUpperCase() + " 喵~");
+        }
     } catch (error) {
         console.error("❌ 儲存錯誤:", error);
         alert("❌ 儲存失敗！請檢查網路或後端記錄。");
@@ -161,19 +162,15 @@ const handleSave = async () => {
                 <span class="sub-title">配置喵喵的回話風格與串接金鑰</span>
             </div>
             <div class="active-status" :class="aiStore.currentActiveProvider">
-                ● 目前生效：<strong>{{ aiStore.currentActiveProvider ? aiStore.currentActiveProvider.toUpperCase() : '尚未設定'
-                    }}</strong>
+                ● 目前生效：<strong>{{ aiStore.currentActiveProvider ? aiStore.currentActiveProvider.toUpperCase() : '尚未設定' }}</strong>
             </div>
         </div>
 
         <div class="layout-body">
             <div class="nav-sidebar">
-                <div class="nav-item" :class="{ active: selectedAiModel === 'gemini' }"
-                    @click="switchAndSync('gemini')">✨ Gemini</div>
-                <div class="nav-item" :class="{ active: selectedAiModel === 'ollama' }"
-                    @click="switchAndSync('ollama')">🦙 Ollama</div>
-                <div class="nav-item" :class="{ active: selectedAiModel === 'anythingllm' }"
-                    @click="switchAndSync('anythingllm')">🦾 AnythingLLM</div>
+                <div class="nav-item" :class="{ active: selectedAiModel === 'gemini' }" @click="switchAndSync('gemini')">✨ Gemini</div>
+                <div class="nav-item" :class="{ active: selectedAiModel === 'ollama' }" @click="switchAndSync('ollama')">🦙 Ollama</div>
+                <div class="nav-item" :class="{ active: selectedAiModel === 'anythingllm' }" @click="switchAndSync('anythingllm')">🦾 AnythingLLM</div>
             </div>
 
             <div class="config-pane">
@@ -187,50 +184,41 @@ const handleSave = async () => {
 
                     <div v-if="selectedAiModel === 'gemini'" class="form-group">
                         <label>GEMINI API KEY</label>
-                        <form class="key-control" @submit.prevent>
-                            <input type="text" name="username" autocomplete="username" style="display:none" />
+                        <div class="key-control">
                             <div v-if="aiStore.configs.gemini.hasKey && !isEditMode" class="key-locked-display">
                                 🔒 系統已安全載入並加密儲存金鑰
                             </div>
-                            <input v-else type="password" v-model="localSettings.geminiKey" class="form-input"
-                                placeholder="請貼上 API Key" autocomplete="new-password" />
+                            <input v-else type="password" v-model="localSettings.geminiKey" class="form-input" placeholder="請貼上 API Key" />
 
-                            <button v-if="aiStore.configs.gemini.hasKey" @click="isEditMode = !isEditMode"
-                                class="btn-edit">
+                            <button v-if="aiStore.configs.gemini.hasKey" @click="isEditMode = !isEditMode" class="btn-edit">
                                 {{ isEditMode ? '取消' : '修改' }}
                             </button>
-                        </form>
+                        </div>
                     </div>
 
                     <div v-if="selectedAiModel === 'anythingllm'" class="form-group">
                         <label>ANYTHINGLLM KEY</label>
-                        <form class="key-control" @submit.prevent>
-                            <input type="text" name="username" autocomplete="username" style="display:none" />
+                        <div class="key-control">
                             <div v-if="aiStore.configs.anythingllm.hasKey && !isEditMode" class="key-locked-display">
                                 🔒 系統已安全載入並加密儲存金鑰
                             </div>
-                            <input v-else type="password" v-model="localSettings.anythingKey" class="form-input"
-                                placeholder="請貼上 Key" autocomplete="new-password" />
+                            <input v-else type="password" v-model="localSettings.anythingKey" class="form-input" placeholder="請貼上 Key" />
 
-                            <button v-if="aiStore.configs.anythingllm.hasKey" @click="isEditMode = !isEditMode"
-                                class="btn-edit">
+                            <button v-if="aiStore.configs.anythingllm.hasKey" @click="isEditMode = !isEditMode" class="btn-edit">
                                 {{ isEditMode ? '取消' : '修改' }}
                             </button>
-                        </form>
+                        </div>
                     </div>
 
                     <div class="form-group">
                         <label>運作模型版本</label>
-                        <select v-if="selectedAiModel === 'gemini'" v-model="localSettings.geminiVersion"
-                            class="form-select">
+                        <select v-if="selectedAiModel === 'gemini'" v-model="localSettings.geminiVersion" class="form-select">
                             <option value="" disabled hidden>請選擇模型</option>
                             <option v-for="m in geminiModels" :key="m.value" :value="m.value">{{ m.label }}</option>
                         </select>
-                        <select v-if="selectedAiModel === 'ollama'" v-model="localSettings.ollamaModel"
-                            class="form-select">
+                        <select v-if="selectedAiModel === 'ollama'" v-model="localSettings.ollamaModel" class="form-select">
                             <option value="" disabled hidden>請選擇模型</option>
-                            <option v-for="m in ollamaModels" :key="m.value" :value="m.value" :disabled="m.locked">{{
-                                m.label }}</option>
+                            <option v-for="m in ollamaModels" :key="m.value" :value="m.value" :disabled="m.locked">{{ m.label }}</option>
                         </select>
                         <div v-if="selectedAiModel === 'anythingllm'" class="form-input readonly">預設使用 gemma3:1b</div>
                     </div>
@@ -245,13 +233,11 @@ const handleSave = async () => {
                             <span class="limit-val">{{ currentGeminiLimit.rpd }}</span>
                         </div>
                         <div class="limit-desc">{{ currentGeminiLimit.desc }}</div>
-                        <div class="limit-note">* 數值為官方免費版預設上限，無法即時抓取剩餘次數。</div>
                     </div>
-
                 </div>
 
                 <button @click="handleSave" class="btn-save-master" :disabled="isSaving">
-                    💾 儲存變更
+                    {{ isSaving ? '⏳ 儲存中...' : '💾 儲存變更' }}
                 </button>
             </div>
         </div>
