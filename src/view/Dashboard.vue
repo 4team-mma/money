@@ -3,6 +3,23 @@ import { ref, onMounted, computed } from 'vue'
 import Nav from '@/components/Nav.vue';
 import api from '@/api'
 import { accountApi } from '@/api/account';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+
+/**
+ * 跳轉至預算設定頁面
+ * @param {string} categoryName - 類別名稱
+ */
+const goToSettings = (categoryName) => {
+  router.push({
+    name: 'BudgetManager', // 👈 請確認您 router/index.js 中設定頁面的 name
+    query: { 
+      tab: 'category',       // 預設切換到類別預算標籤
+      focus: categoryName   // 帶入類別名稱，方便設定頁面自動定位
+    }
+  });
+};
 
 // 💡 存放從 API 抓回來的「活資料」
 const transactions = ref([])
@@ -30,12 +47,47 @@ const monthlyStats = ref({
   savingsRate: 0
 })
 
-// --- [隊友新增] 靜態預算資料 (若未來有 API 可替換) ---
-const budgets = ref([
-  { category: '飲食', spent: 8500, limit: 12000, color: 'color-1' },
-  { category: '交通', spent: 3200, limit: 5000, color: 'color-2' },
-  { category: '娛樂', spent: 6800, limit: 8000, color: 'color-3' }
-])
+// --- [隊友新增] 預算資料 ---
+const budgets = ref([])
+
+const fetchBudgetData = async () => {
+  try {
+    isLoading.value = true;
+    
+    // 平行發送請求：取得預算設定與實際支出
+    const [resBudgets, resStats] = await Promise.all([
+      api.get('/planning/budgets/all'),
+      api.get('/planning/budgets/stats')
+    ]);
+
+    const budgetSettings = resBudgets || [];
+    const actualStats = resStats.categories || [];
+
+    // 將資料合併為 UI 需要的格式
+    budgets.value = budgetSettings
+      .filter(b => b.category !== null) // 只顯示類別預算
+      .map(b => {
+        // 從實際支出中尋找匹配的類別
+        const stat = actualStats.find(s => s.name === b.category);
+        const spent = stat ? stat.spent : 0;
+        const limit = parseFloat(b.amount);
+        const ratio = limit > 0 ? (spent / limit) : 0;
+
+        return {
+          category: b.category,
+          icon: b.category_icon || '💰',
+          limit: limit,
+          spent: spent,
+          // 根據比例動態決定顏色 class
+          color: ratio >= 1 ? 'progress-danger' : (ratio >= 0.8 ? 'progress-warning' : 'progress-primary')
+        };
+      });
+  } catch (error) {
+    console.error("載入預算追蹤失敗", error);
+  } finally {
+    isLoading.value = false;
+  }
+};
 
 // ==========================================
 // 🚀 核心邏輯區 (整合隊友的 API 呼叫)
@@ -207,6 +259,7 @@ onMounted(async () => {
   fetchMonthlyStats();
   await fetchDashboardData();
   fetchTransactions();
+  fetchBudgetData();
 })
 </script>
 
@@ -338,28 +391,63 @@ onMounted(async () => {
           <div class="card">
             <div class="card-inner-header">
               <h3 class="card-inner-title">預算追蹤</h3>
-              <p class="card-description">本月預算使用狀況</p>
+              <p class="card-description">本月預算使用狀況 (依類別)</p>
             </div>
-            <div class="card-body">
+            
+            <div class="card-body" v-if="!isLoading">
               <div class="budgets-list">
                 <div v-for="budget in budgets" :key="budget.category" class="budget-item">
                   <div class="budget-header">
-                    <span class="budget-category">{{ budget.category }}</span>
+                    <span class="budget-category">
+                      <span class="cat-icon">{{ budget.icon }}</span> {{ budget.category }}
+                    </span>
                     <span class="budget-amounts">
                       NT$ {{ formatNumber(budget.spent) }} / {{ formatNumber(budget.limit) }}
                     </span>
                   </div>
+                  
                   <div class="progress-bar">
-                    <div class="progress-fill" :class="budget.color"
-                      :style="{ width: (budget.spent / budget.limit * 100) + '%' }"></div>
+                    <div 
+                      class="progress-fill" 
+                      :class="budget.limit > 0 ? budget.color : 'bg-gray'"
+                      :style="{ width: (budget.limit > 0 ? Math.min((budget.spent / budget.limit * 100), 100) : 0) + '%' }"
+                    ></div>
                   </div>
+                  
                   <div class="budget-footer">
-                    <span>{{ ((budget.spent / budget.limit) * 100).toFixed(0) }}% 已使用</span>
-                    <span>剩餘 NT$ {{ formatNumber(budget.limit - budget.spent) }}</span>
+                    <!-- 情況 A: 有設定預算 (limit > 0) -->
+                    <template v-if="budget.limit && budget.limit > 0">
+                      <span>
+                        {{ ((budget.spent / budget.limit) * 100).toFixed(0) }}% 已使用
+                      </span>
+                      
+                      <span v-if="(budget.limit - budget.spent) >= 0">
+                        剩餘 NT$ {{ formatNumber(budget.limit - budget.spent) }}
+                      </span>
+                      <span v-else class="text-danger">
+                        超支 NT$ {{ formatNumber(budget.spent - budget.limit) }}
+                      </span>
+                    </template>
+
+                    <!-- 情況 B: 未設定預算 (limit 為 0 或未定義) -->
+                    <template v-else>
+                      <!-- 加入點擊事件，並傳入該類別名稱 -->
+                      <span 
+                        class="text-link" 
+                        @click="goToSettings(budget.category)"
+                        title="點擊前往設定預算"
+                      >
+                        ⚠️ 未設定預算 (點擊設定)
+                      </span>
+                      <span class="text-muted">目前支出 NT$ {{ formatNumber(budget.spent) }}</span>
+                    </template>
                   </div>
                 </div>
               </div>
             </div>
+            
+            <!-- 載入中狀態 -->
+            <div v-else class="loading-placeholder">讀取預算數據中...</div>
           </div>
         </div>
 

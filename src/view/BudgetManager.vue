@@ -7,6 +7,8 @@ import { storeToRefs } from 'pinia';
 import { useCategoryStore } from "@/stores/useCategoryStore";
 import { useAccountStore } from '@/stores/useAccountStore';
 import { triggerMissionAction } from '@/api/gamification';
+import { useRoute } from 'vue-router';
+const route = useRoute();
 
 const categoryStore = useCategoryStore();
 const accountStore = useAccountStore();
@@ -361,6 +363,14 @@ onMounted(async () => {
     await accountStore.loadAccounts(); 
     await fetchAllData();
     triggerMissionAction('view_targets');
+
+    // 檢查是否有帶入 focus 參數
+    if (route.query.focus) {
+      activeTab.value = route.query.tab || 'monthly';
+      
+      // 選項：您可以滾動到該位置或讓該輸入框閃爍提示
+      ElMessage.info(`請為「${route.query.focus}」設定預算`);
+    }
   } catch (error) {
     console.error("初始化資料失敗:", error);
   }
@@ -1142,12 +1152,7 @@ h1 {
 
 .sync-icon {
   margin-left: 8px;
-  font-.goal-account-select-zone {
-    margin-bottom: 15px;
-    padding: 10px;
-    background: var(--bg-hover);
-    border-radius: 12px;
-  }size: 14px;
+  font-size: 14px;
   color: var(--color-primary);
   animation: spin 4s linear infinite;
 }
