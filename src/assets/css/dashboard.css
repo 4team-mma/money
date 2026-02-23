@@ -321,49 +321,110 @@ span.type-badge.recent{
 }
 
 .budget-item {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    margin-bottom: 20px;
 }
 
 .budget-header {
     display: flex;
     justify-content: space-between;
-    font-size: 13px;
+    align-items: center;
+    margin-bottom: 8px;
 }
 
 .budget-category {
-    font-weight: 500;
+    font-weight: 600;
     color: var(--text-primary); /* 原本 #1e293b */
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .budget-amounts {
+    font-size: 13px;
     color: var(--text-secondary); /* 原本 #64748b */
 }
 
 .progress-bar {
-    height: 8px;
+    width: 100%;
+    height: 10px;
     background: var(--bg-hover); /* 原本 #f1f5f9 */
-    border-radius: 999px;
+    border-radius: 5px;
     overflow: hidden;
 }
 
 .progress-fill {
     height: 100%;
-    border-radius: 999px;
-    transition: width 0.3s ease;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 預算條顏色維持漸層 */
-.progress-fill.color-1 { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
-.progress-fill.color-2 { background: linear-gradient(90deg, #ef4444, #f87171); }
-.progress-fill.color-3 { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+.progress-primary { 
+    background: var(--color-primary);
+}
+.progress-warning { 
+    background: var(--color-warning);
+}
+.progress-danger { 
+    background: var(--color-danger);
+}
 
 .budget-footer {
     display: flex;
     justify-content: space-between;
     font-size: 12px;
+    margin-top: 8px;
     color: var(--text-secondary); /* 原本 #94a3b8 */
+    opacity: 1;
+}
+
+.budget-footer span {
+    /* 預設讓所有 span 都繼承父層顏色 */
+    color: inherit;
+}
+
+.text-danger {
+    color: var(--color-danger) !important;
+    font-weight: bold;
+}
+
+.text-link {
+  color: var(--color-primary); 
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-style: normal;
+}
+
+.text-link:hover {
+  filter: brightness(1.2);
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.text-muted {
+    /* 1. 改用 Primary 文字色，確保亮度足夠 */
+    color: var(--text-primary) !important;
+    
+    /* 2. 移除任何透明度設定，防止背景色透上來 */
+    opacity: 1 !important; 
+    
+    /* 3. 使用斜體與稍微加粗，維持「這是一條提示」的語義 */
+    font-style: italic;
+    font-weight: 500;
+    
+    /* 4. 微弱的亮度調降，模擬 muted 感但保持對比 */
+    filter: brightness(0.9);
+}
+
+[data-theme="dark"] .text-muted {
+    color: var(--text-primary);
+    filter: brightness(0.8); /* 稍微調暗 primary，使其維持 'muted' 感但保持高對比 */
+}
+
+/* --- 進度條底色 (預算為 0 或未填寫時) --- */
+.bg-gray {
+    background-color: var(--bg-progress-empty);
+    transition: background-color 0.3s ease;
 }
 
 /* 8. 交易紀錄列表 (Transactions) */
