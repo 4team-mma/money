@@ -26,6 +26,16 @@ const displayAvatarUrl = computed(() => {
     return `http://localhost:8000${avatarUrl.value}?t=${timestamp}`;
 });
 
+// 圖面大小設定
+const handleFileChange = (e) => {
+  const file = e.target.files[0];
+  if (file && file.size > 2 * 1024 * 1024) {
+    alert("照片不能超過 2MB 喔！");
+    e.target.value = ""; // 清空選擇
+    return;
+  }
+  }; 
+
 // =========================
 // 文字欄位設定
 // =========================
