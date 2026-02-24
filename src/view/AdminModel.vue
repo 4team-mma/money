@@ -246,22 +246,42 @@ const handleSave = async () => {
 
 <style scoped>
 .model-management-container {
-    max-width: 900px;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+
+    /* 解放寬度，解決左右太空的問題 */
+    max-width: 1200px; 
+    width: 100%;
     margin: 0 auto;
-    color: #1e293b;
+    color: var(--admin-text);
+}
+h3{
+    color: var(--admin-text);
 }
 
+span{
+    color: var(--admin-text);
+}
+
+
+.card.personality {
+    background: var(--admin-card-bg); /* 建議用 card-bg 變數，而不是 gradient */
+    color: var(--admin-text);
+}
+/* 2. 玻璃擬態標題 */
 .glass-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(255, 255, 255, 0.8);
+    background: var(--admin-border1);
     backdrop-filter: blur(10px);
-    padding: 25px;
+    padding: 30px; /* 稍微增加內距 */
     border-radius: 20px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-    margin-bottom: 30px;
+    border: 1px solid var(--admin-border);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    margin-bottom: 35px;
 }
 
 .active-status {
@@ -269,14 +289,15 @@ const handleSave = async () => {
     border-radius: 50px;
     font-size: 0.85rem;
     font-weight: bold;
-    background: white;
+    background:var(--admin-border1);
     border: 1px solid #e2e8f0;
 }
 
 .layout-body {
     display: grid;
-    grid-template-columns: 200px 1fr;
-    gap: 30px;
+    /* 側邊欄固定，主面板自動撐開 */
+    grid-template-columns: 220px 1fr;
+    gap: 40px; /* 增加左右間距 */
 }
 
 .nav-sidebar {
@@ -286,22 +307,44 @@ const handleSave = async () => {
 }
 
 .nav-item {
-    padding: 15px;
-    background: white;
-    border-radius: 15px;
-    border: 1px solid #e2e8f0;
+    padding: 18px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 18px;
+    border: 1px solid var(--admin-border);
     cursor: pointer;
     transition: all 0.3s;
-    font-weight: 600;
+    font-weight: 700;
     text-align: center;
+    margin-bottom: 15px;
 }
 
 .nav-item.active {
-    background: #3b82f6;
-    color: white;
-    border-color: #2563eb;
-    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+    background: var(--admin-primary);
+    color: #fff;
+    border-color: var(--admin-primary);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
+
+.nav-item.active[data-v-ae806f5c] {
+    background: var(--admin-primary);
+    color: var(--admin-text);
+    border-color: var(--admin-primary);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* 7. 表單群組間距 */
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 12px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
 
 .config-pane {
     display: flex;
@@ -310,42 +353,100 @@ const handleSave = async () => {
 }
 
 .card {
-    background: white;
-    border-radius: 20px;
-    padding: 25px;
-    border: 1px solid #f1f5f9;
+    background: var(--admin-card-bg);
+    border-radius: 24px;
+    padding: 15px 30px !important; /* 上下改為 15px，左右維持 30px */
+    border: 1px solid var(--admin-border);
+    color: var(--admin-text);
+    margin-bottom: 20px; /* 稍微縮小卡片之間的垂直距離 */
 }
 
 .personality-card {
     border-top: 6px solid #3b82f6;
 }
 
+/* 針對卡片標題也需要修正顏色，否則深色模式下會變黑 */
 .card-title {
-    font-size: 1rem;
+    color: var(--admin-text);
+    font-size: 1.1rem;
     font-weight: 800;
-    margin-bottom: 20px;
-    color: #334155;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+
+.prompt-area, 
+.form-input, 
+.form-select {
+    width: 100% !important;
+    /* 背景稍微深一點點，增加對比 */
+    background: rgba(0, 0, 0, 0.03) !important; 
+    color: var(--admin-text) !important;
+    
+    /* 增加邊框寬度，並確保使用變數 */
+    border: 1.5px solid var(--admin-border) !important; 
+    
+    border-radius: 14px;
+    padding: 18px;
+    font-size: 1rem;
+    line-height: 1.6;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+/* 🎯 這裡是你要求的：多加一個下拉符號 */
+.form-select {
+    appearance: none !important; /* 隱藏原生箭頭 */
+    -webkit-appearance: none;
+    cursor: pointer;
+    /* 加入自定義箭頭圖標 */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 15px center !important; 
+    background-size: 18px !important;
+    padding-right: 45px !important; /* 留位置給箭頭 */
+}
+
+/* 聚焦時讓邊框亮起來，這樣使用者才知道選中哪裡 */
+.prompt-area:focus, 
+.form-input:focus, 
+.form-select:focus {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: var(--admin-primary) !important;
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(var(--admin-primary-rgb), 0.1);
+
 }
 
 .prompt-area {
-    width: 100%;
-    border-radius: 12px;
-    border: 1px solid #cbd5e1;
-    padding: 15px;
-    font-size: 0.95rem;
-    line-height: 1.6;
-    background: #f8fafc;
-    outline: none;
+    min-height: 120px;
+    resize: vertical;
+}
+
+.form-select option {
+    background-color: #ffffff; /* 選項彈出時用白底 */
+    color: #1e293b;            /* 文字用深色 */
+}
+
+/* 5. API Key 控制區塊佈局修正 */
+.key-control {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 10px;
 }
 
 .key-locked-display {
     flex: 1;
-    padding: 12px;
-    background: #f1f5f9;
-    border-radius: 10px;
-    color: #94a3b8;
-    font-size: 0.85rem;
-    border: 1px dashed #cbd5e1;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    color: var(--admin-text);
+    opacity: 0.7;
+    font-size: 0.9rem;
+    border: 1px dashed var(--admin-border);
     display: flex;
     align-items: center;
 }
@@ -362,7 +463,7 @@ const handleSave = async () => {
 .btn-save-master {
     width: 100%;
     padding: 18px;
-    background: #3b82f6;
+    background: #0f71b3;
     color: white;
     border: none;
     border-radius: 15px;
