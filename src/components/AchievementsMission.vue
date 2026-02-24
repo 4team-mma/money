@@ -241,7 +241,7 @@ onMounted(() => {
 
 /* 增加 CSS Layer，減少 Painting 壓力 */
 .m-card-elite {
-    will-change: transform;
-    backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased; /* 或 subpixel-antialiased */
+    transform: translateZ(0);
 }
 </style>
