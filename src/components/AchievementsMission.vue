@@ -243,5 +243,8 @@ onMounted(() => {
 .m-card-elite {
     -webkit-font-smoothing: antialiased; /* 或 subpixel-antialiased */
     transform: translateZ(0);
+
+    /* 👇 新增以下這段來禁止文字被選取 👇 */
+        /* 已經在achievements.css的.mms-full-layout寫了 */
 }
 </style>
