@@ -124,7 +124,7 @@ const normalUsersFiltered = computed(() => {
                 <div class="stat-glass-card">
                     <div class="stat-info">
                         <span class="stat-label">總用戶消費總額</span>
-                        <div class="stat-value" :style="{ color: currentStyle.primary }">
+                        <div class="stat-value" >
                             {{ formatCurrency(totalTransactionAmount) }}
                         </div>
                     </div>

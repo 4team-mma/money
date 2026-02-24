@@ -20,15 +20,15 @@ const tabs = [
 ]
 
 /* ========================
-   Theme System (完全還原隊友的半透明設計)
+   Theme System (保留完整屬性，避免子組件崩潰)
    ======================== */
 const themes = {
     mma_light: { 
         name: 'MMA 經典', 
         primary: '#3b82f6', 
         bgGradient: 'linear-gradient(135deg, #EBF4FF 0%, #F0F9FF 100%)', 
-        cardBg: 'rgba(255, 255, 255, 0.6)', /* 半透明 */
-        sidebarBg: 'rgba(255, 255, 255, 0.4)', /* 更透明 */
+        cardBg: 'rgba(255, 255, 255, 0.6)', 
+        sidebarBg: 'rgba(255, 255, 255, 0.4)', 
         text: '#1e293b', 
         border: 'rgba(255, 255, 255, 0.5)' 
     },
@@ -58,12 +58,48 @@ const themes = {
         sidebarBg: 'rgba(255, 255, 255, 0.4)', 
         text: '#78350f', 
         border: 'rgba(245, 158, 11, 0.2)' 
+    },
+    // ✨ 新增主題開始 ✨
+    ocean: { 
+        name: '深海湛藍', 
+        primary: '#0ea5e9', 
+        bgGradient: 'linear-gradient(135deg, #082f49 0%, #0f172a 100%)', 
+        cardBg: 'rgba(12, 74, 110, 0.6)', 
+        sidebarBg: 'rgba(8, 47, 73, 0.6)', 
+        text: '#e0f2fe', 
+        border: 'rgba(14, 165, 233, 0.2)' 
+    },
+    sakura: { 
+        name: '櫻花粉雪', 
+        primary: '#ec4899', 
+        bgGradient: 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%)', 
+        cardBg: 'rgba(255, 255, 255, 0.7)', 
+        sidebarBg: 'rgba(255, 255, 255, 0.5)', 
+        text: '#831843', 
+        border: 'rgba(244, 114, 182, 0.3)' 
+    },
+    obsidian: { 
+        name: '曜石黑金', 
+        primary: '#fbbf24', 
+        bgGradient: 'linear-gradient(135deg, #18181b 0%, #27272a 100%)', 
+        cardBg: 'rgba(24, 24, 27, 0.8)', 
+        sidebarBg: 'rgba(9, 9, 11, 0.8)', 
+        text: '#fef3c7', 
+        border: 'rgba(251, 191, 36, 0.2)' 
     }
 }
 
 const currentTheme = ref(localStorage.getItem('adminTheme') || 'mma_light')
 const currentStyle = computed(() => themes[currentTheme.value] || themes.mma_light)
-const setTheme = (id) => { currentTheme.value = id; localStorage.setItem('adminTheme', id); }
+
+// 這裡就是你問的！
+// 它的意思是：在網頁最外層 (html 標籤) 貼上一張標籤 data-theme="dark"
+// 這樣你的 admin.css 就能用 [data-theme="dark"] 來控制顏色！
+const setTheme = (id) => { 
+    currentTheme.value = id; 
+    localStorage.setItem('adminTheme', id); 
+    document.documentElement.setAttribute('data-theme', id === 'mma_light' ? '' : id);
+}
 
 /* ========================
    管理員驗證
@@ -71,22 +107,15 @@ const setTheme = (id) => { currentTheme.value = id; localStorage.setItem('adminT
 const currentLoginAdmin = ref(JSON.parse(localStorage.getItem('currentUser') || '{}'))
 const handleLogout = () => {
   if (confirm('確定斷開連線並登出系統？')) {
-    // 1. 🛑 清除身份驗證與 Token
     localStorage.removeItem('user_token');
     localStorage.removeItem('currentUser');
-
-    // 2. 🍍 清除 Pinia 持久化快取 (對應您的 store id)
     localStorage.removeItem('category');
     localStorage.removeItem('categoryStats');
     localStorage.removeItem('account');
 
-    // 3. 🔗 斷開 API 連線 (清除 Axios 全域 Header)
     if (api.defaults.headers.common['Authorization']) {
       delete api.defaults.headers.common['Authorization'];
     }
-
-    // 4. 🔄 終極清除：使用原生跳轉並重新整理
-    // 這比 router.push('/') 更安全，因為它會徹底銷毀記憶體中所有的 Store 變數
     window.location.href = '/'; 
   }
 }
@@ -114,7 +143,10 @@ const saveAdmin = async () => {
 }
 
 onMounted(async () => {
-    // 1. 權限防護：優先檢查角色
+    // 確保一進來就套用 CSS data-theme 標籤
+    const savedTheme = localStorage.getItem('adminTheme') || 'mma_light';
+    setTheme(savedTheme);
+
     const user = currentLoginAdmin.value
     if (!user || user.role !== 'admin') { 
         console.warn('權限不足，導回一般頁面');
@@ -122,9 +154,6 @@ onMounted(async () => {
         return; 
     }
 
-    // 2. 觸發初始化：
-    // 如果 LoadingView 已經跑過，這裡的呼叫會因為 isLoaded = true 而秒回傳
-    // 如果使用者是「重新整理」直接進到這一頁，這裡則會補抓資料
     try {
         await Promise.all([
             userStore.loadUsers(),
@@ -134,7 +163,6 @@ onMounted(async () => {
         console.error("後台資料同步失敗:", err);
     }
 })
-
 </script>
 
 <template>
