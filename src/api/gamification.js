@@ -4,19 +4,13 @@ import api from '@/api'; // 引用統一的 axios 實例
 // ==================== 每日簽到 (Checkin) ====================
 
 /**
- * 執行每日簽到
- * @returns {Promise} 回傳簽到結果與獎勵
- */
-export const checkinAction = () => {
-  return api.post('/game/checkin/action');
-};
-
-/**
- * 查詢簽到狀態 (是否已簽、連續天數)
- * @returns {Promise}
- */
-export const getCheckinStatus = () => {
-  return api.get('/game/checkin/status');
+ * 執行每日簽到*/
+export const checkinApi = {
+    // 取得當前狀態
+    getStatus: () => api.get('/game/checkin/status'),
+    
+    // 執行打卡動作
+    performAction: () => api.post('/game/checkin/action')
 };
 
 // ==================== 每日任務 (Missions) ====================
