@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import Nav from '@/components/Nav.vue';
 import api from '@/api'
-import { accountApi } from '@/api/account';
+import { accountApi } from '@/api/account';import { useNotificationStore } from '@/stores/notification'
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
@@ -20,6 +20,13 @@ const goToSettings = (categoryName) => {
     }
   });
 };
+
+const noticeStore = useNotificationStore()
+
+// 💡 取得最近的 3 則通知顯示在儀表板
+const recentNotifications = computed(() => {
+  return noticeStore.list.slice(0, 3) 
+})
 
 // 💡 存放從 API 抓回來的「活資料」
 const transactions = ref([])
@@ -260,6 +267,7 @@ onMounted(async () => {
   await fetchDashboardData();
   fetchTransactions();
   fetchBudgetData();
+  noticeStore.fetchAll()
 })
 </script>
 
@@ -514,18 +522,35 @@ onMounted(async () => {
 
           <div class="card">
             <div class="card-inner-header">
-              <h3 class="card-inner-title">重要通知</h3>
-              <p class="card-description">系統提醒與建議</p>
+              <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div>
+                  <h3 class="card-inner-title">重要通知</h3>
+                  <p class="card-description">系統提醒與建議</p>
+                </div>
+                <!-- 跳轉按鈕 -->
+                <RouterLink to="/Notifications" style="font-size: 0.8rem; color: var(--color-primary); text-decoration: none;">
+                  查看全部 ›
+                </RouterLink>
+              </div>
             </div>
+            
             <div class="card-body">
               <div class="notifications-list">
-                <div class="notification-item warning">
-                  <div class="notification-title">預算提醒</div>
-                  <p class="notification-text">娛樂預算已使用 85%，建議控制支出</p>
+                <!-- 動態渲染列表 -->
+                <div 
+                  v-for="item in recentNotifications" 
+                  :key="item.reminder_id" 
+                  :class="['notification-item', item.category === 'budget' ? 'warning' : 'success']"
+                >
+                  <div class="notification-title">
+                    {{ item.category === 'budget' ? '預算提醒' : '儲蓄目標' }}
+                  </div>
+                  <p class="notification-text">{{ item.reminder_title }}</p>
                 </div>
-                <div class="notification-item success">
-                  <div class="notification-title">儲蓄目標</div>
-                  <p class="notification-text">本月已達成儲蓄目標 76%，繼續加油！</p>
+
+                <!-- 空狀態處理 -->
+                <div v-if="recentNotifications.length === 0" class="empty-notifications">
+                  <p>🎉 目前沒有待處理的通知</p>
                 </div>
               </div>
             </div>

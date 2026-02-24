@@ -556,6 +556,13 @@ span.type-badge.recent{
     margin: 0;
 }
 
+.empty-notifications {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
 /* 10. 分頁按鈕 */
 .pagination-container {
     display: flex;

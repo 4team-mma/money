@@ -9,10 +9,11 @@ import 'element-plus/dist/index.css'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import 'bootstrap-icons/font/bootstrap-icons.css';
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 
 const pinia = createPinia();
 
-
+pinia.use(piniaPluginPersistedstate) // 啟用持久化插件
 
 //createApp(App).mount('#app')
 createApp(App)

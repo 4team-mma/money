@@ -2,9 +2,9 @@
 import { useRouter,useRoute } from 'vue-router'
 import { ref, onMounted, computed, onUnmounted } from 'vue'
 import MoneyAIBot from '../components/MoneyAIBot.vue'
-
-// 引入 Pinia Stores
+import api from "@/api";
 import { useUserStore } from '@/stores/user'
+import { useNotificationStore } from '@/stores/notification'
 
 const sidebarOpen = ref(false)
 
@@ -13,6 +13,7 @@ const sidebarOpen = ref(false)
 const router = useRouter() //執行動作。用來指令電腦「去哪裡」。
 const route = useRoute() // 讀取狀態。用來查看「目前在哪」
 const userStore = useUserStore()
+const noticeStore = useNotificationStore()
 
 // 判斷是否要顯示機器人 (例如：不希望在登入頁 Login.vue 看到它)
 
@@ -73,14 +74,26 @@ const handleSaveProfile = async () => {
 };
 
 // === 2. 跑馬燈通知 ===
-const notifications = ref([
-  '📢 系統提醒：本月預算已達 76%，請注意支出控管，避免超支。',
-  '💡 理財小撇步：採用 50/30/20 法則分配薪資，能讓您的儲蓄目標更早達成。',
-  '🎯 目標進度：您的「日本旅遊基金」達成率已過半，繼續加油！',
-  '🚀 Money MMA 提示：點擊「記一筆」快速紀錄今日開銷，養成好習慣。'
-]);
+const notifications = ref([]);// 存放從後端抓回來的原始物件
 
-const marqueeText = computed(() => notifications.value.join('　　 | 　　'));
+// 格式化顯示在跑馬燈的文字
+const marqueeText = computed(() => {
+  const tips = ['💡 儲蓄是為了給未來的自己一份禮物。', '🚀 養成記帳習慣，財富自由不遙遠。', '💡 理財小撇步：採用 50/30/20 法則分配薪資，能讓您的儲蓄目標更早達成。', '🚀 Money MMA 提示：點擊「記一筆」快速紀錄今日開銷，養成好習慣。']
+  
+  // 用 activeList，這樣未來的提醒就不會出現在跑馬燈
+  const notes = noticeStore.activeList
+    .filter(n => !n.is_read)
+    .map(n => n.reminder_title)
+  
+  // 合併：重要通知在前，溫馨語錄在後
+  // 如果完全沒有未讀通知，就只顯示 tips
+  const combined = notes.length > 0 ? [...notes, ...tips] : tips
+  
+  // 使用全形空格或特殊符號區隔，視覺上更舒適
+  return combined.join('　　 | 　　')
+})
+
+const unreadCount = ref(0)
 
 // === 3. 選單配置 ===
 const navigation = [
@@ -95,8 +108,14 @@ const navigation = [
   // { name: '舊款成就', to: '/Achievements', icon: '🏆' },
   { name: '成就系統', to: '/Achievements_new', icon: '🏆' },
   { name: '問題回饋', to: '/Feedback', icon: '❓' },
+  { name: '通知中心', to: '/Notifications', icon: '🔔', hasBadge: true },
   { name: '設定', to: '/Settings', icon: '⚙️' }
 ]
+
+const handleTickerClick = () => {
+  // 跳轉到通知管理頁面
+  router.push('/Notifications')
+}
 
 // === 4. 功能函式 (權限檢查與登出) ===
 const checkAuth = () => {
@@ -141,6 +160,20 @@ const handleThemeChange = (e) => {
 }
 
 onMounted(() => {
+  // 1. 進頁面立刻抓一次最新的通知清單
+  noticeStore.fetchAll();
+
+  // 2. 設定一個每分鐘執行的計時器
+  // 雖然 store 裡有 setInterval 更新 now，但主動 fetchAll 
+  // 可以抓到其他裝置新增的通知，或後端剛產生的預算警告
+  const timer = setInterval(() => {
+    noticeStore.fetchAll();
+  }, 60000); // 60秒檢查一次
+
+  // 3. 卸載組件時清除計時器，避免記憶體洩漏
+  onUnmounted(() => {
+    clearInterval(timer);
+  });
   checkAuth() // 檢查是否有 Token
   initTheme() // 初始化主題
 
@@ -176,9 +209,20 @@ onUnmounted(() => {
 
         <nav class="sidebar-nav">
           <div class="nav-section">
-            <RouterLink v-for="item in navigation" :key="item.to" :to="item.to" class="nav-item"
-              active-class="nav-item-active" exact-active-class="nav-item-active" @click="sidebarOpen = false">
-              <span class="nav-icon">{{ item.icon }}</span>
+            <RouterLink 
+              v-for="item in navigation" 
+              :key="item.to" 
+              :to="item.to" 
+              class="nav-item"
+              active-class="nav-item-active" 
+              @click="sidebarOpen = false"
+            >
+              <span class="nav-icon">
+                {{ item.icon }}
+                <span v-if="item.hasBadge && noticeStore.unreadCount > 0" class="nav-badge">
+                  {{ noticeStore.unreadCount > 9 ? '9+' : noticeStore.unreadCount }}
+                </span>
+              </span>
               <span class="nav-text">{{ item.name }}</span>
               <span class="nav-indicator">›</span>
             </RouterLink>
@@ -211,10 +255,18 @@ onUnmounted(() => {
         <div class="news-ticker-container">
           <div class="ticker-label">重要通知</div>
           <div class="ticker-wrapper">
-            <div class="ticker-content">
+            <div class="ticker-content" @click="handleTickerClick">
               {{ marqueeText }} 　　 | 　　 {{ marqueeText }}
             </div>
           </div>
+        </div>
+        <div class="top-bar-actions">
+          <RouterLink to="/Notifications" class="notification-trigger">
+            <span class="bell-icon">🔔</span>
+            <span v-if="noticeStore.unreadCount > 0" class="top-badge">
+              {{ noticeStore.unreadCount > 9 ? '9+' : noticeStore.unreadCount }}
+            </span>
+          </RouterLink>
         </div>
       
       </header>
@@ -507,7 +559,8 @@ onUnmounted(() => {
     font-size: 0.875rem;
     color: var(--text-secondary);
     font-weight: 500;
-    animation: marquee 40s linear infinite;
+    animation: marquee 50s linear infinite;
+    letter-spacing: 1px;
 }
 
 .ticker-content:hover {
@@ -529,5 +582,82 @@ onUnmounted(() => {
         padding: 2px 10px;
         font-size: 0.7rem;
     }
+}
+
+/* 導覽列紅點樣式 */
+.nav-icon {
+  position: relative; /* 讓紅點相對於圖示定位 */
+  font-size: 1.2rem;
+}
+
+.nav-badge {
+  position: absolute;
+  top: -5px;
+  right: -8px;
+  background-color: #ef4444; /* 鮮艷的紅色 */
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 10px;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg-sidebar); /* 用側邊欄背景色做描邊，更有層次感 */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* 當導覽項被選中 (Active) 時，調整描邊顏色 */
+.nav-item-active .nav-badge {
+  border-color: var(--color-primary);
+}
+
+.notification-trigger {
+  position: relative; /* 必備：讓數字相對於鈴鐺定位 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background 0.2s;
+  text-decoration: none;
+}
+
+.notification-trigger:hover {
+  background: var(--bg-hover);
+}
+
+.bell-icon {
+  font-size: 1.25rem;
+}
+
+/* 頂部列專屬數字紅點樣式 */
+.top-badge {
+  position: absolute;
+  top: 2px;     /* 調整位置，讓它靠右上角 */
+  right: 2px;
+  background-color: #ef4444; /* 鮮紅色 */
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  
+  /* 讓圓圈隨字數伸縮 */
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  /* 增加白色描邊，在深色/淺色背景下都清晰 */
+  border: 2px solid var(--bg-card); 
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  
+  /* 確保文字不會換行 */
+  white-space: nowrap;
 }
 </style>

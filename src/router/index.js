@@ -30,6 +30,7 @@ import BudgetManager from "@/view/BudgetManager.vue";
 import Achievements_new from "@/view/Achievements_new.vue";
 import AdminModel from "@/view/AdminModel.vue";
 import LoadingView from "@/view/LoadingView.vue";
+import Notifications from "@/view/Notifications.vue";
 
 
 
@@ -97,6 +98,11 @@ const routes = [
     path: "/Settings",
     component: Settings,
     name: "Settings",
+  },
+  {
+    path: "/Notifications",
+    component: Notifications,
+    name: "Notifications",
   },
   {
     path: "/Admins",

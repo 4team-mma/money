@@ -6,6 +6,7 @@ import { createRecord, updateRecord } from '@/api/record'
 import { createTransfer, updateTransfer } from '@/api/transfer'
 // 2. 補上 Store 的引用
 import { useAccountStore } from '@/stores/useAccountStore'
+import { useNotificationStore } from '@/stores/notification'
 
 export function useAddRecord(initialType = false) {
     const router = useRouter()
@@ -196,12 +197,15 @@ export function useAddRecord(initialType = false) {
         return true
     }
 
+    const noticeStore = useNotificationStore()
+
     const handleSave = async () => {
         if (isSubmitting.value) return
         isSubmitting.value = true
         try {
             if (await submitData()) {
                 ElMessage.success(form.add_id ? '修改成功！' : '儲存成功！')
+                await noticeStore.fetchAll(true)
                 router.push('/book')
                 return { 'success': true }
             }
