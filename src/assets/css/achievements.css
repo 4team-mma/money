@@ -6,6 +6,13 @@
     width: 100%; 
     margin: 0; 
     box-sizing: border-box;
+
+    /* 👇 讓整個成就系統的畫面都不會被意外反白選取 👇 */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+
 }
 
 /* 英雄卡片 Banner：使用主題主色調建立漸層 */

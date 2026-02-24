@@ -212,6 +212,6 @@ onMounted(() => {
     transform: scale(0.95);
     color: #999;
     filter: grayscale(1);
-    backdrop-filter: blur(2px);
+    
 }
 </style>

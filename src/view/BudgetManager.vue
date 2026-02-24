@@ -348,7 +348,13 @@ const saveAllPlanning = async () => {
     ]);
 
     ElMessage.success('同步成功！已儲存所有規劃');
+
+    
+    // 2. 完成「設定目標」(NF 任務 - 包含新增動作)
+    triggerMissionAction('save_goal');
+
     await fetchAllData(); // 重新整理資料
+
 
   } catch (error) {
     ElMessage.error('儲存失敗，請檢查網路');
