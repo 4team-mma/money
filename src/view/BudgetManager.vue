@@ -7,6 +7,8 @@ import { storeToRefs } from 'pinia';
 import { useCategoryStore } from "@/stores/useCategoryStore";
 import { useAccountStore } from '@/stores/useAccountStore';
 import { triggerMissionAction } from '@/api/gamification';
+import { useNotificationStore } from '@/stores/notification';
+import { getLocalDate } from '@/utils/dateHelper';
 import { useRoute } from 'vue-router';
 const route = useRoute();
 
@@ -234,7 +236,7 @@ const addGoal = () => {
     goal_name: '新儲蓄目標',
     target_amount: 10000,
     current_amount: 0,
-    target_date: new Date().toISOString().split('T')[0],
+    target_date: getLocalDate(),
     status: 'active'
   });
 };
@@ -354,7 +356,8 @@ const saveAllPlanning = async () => {
     triggerMissionAction('save_goal');
 
     await fetchAllData(); // 重新整理資料
-
+    const noticeStore = useNotificationStore();
+    await noticeStore.fetchAll(true);
 
   } catch (error) {
     ElMessage.error('儲存失敗，請檢查網路');

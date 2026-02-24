@@ -10,6 +10,7 @@ import { useAccountStore } from '@/stores/useAccountStore'
 import { useRecordStore } from '@/stores/useRecordStore'
 import { useAiAdminStore } from '@/stores/useAiAdminStore'
 import { useCategoryStore as useCategoryStatsStore } from '@/stores/categoryStats'
+import { useNotificationStore } from '@/stores/notification'
 
 const router = useRouter()
 const statusMessage = ref('驗證身份中...')
@@ -37,19 +38,21 @@ onMounted(async () => {
     const recordStore = useRecordStore()
     const aiStore = useAiAdminStore()
     const statsStore = useCategoryStatsStore()
+    const noticeStore = useNotificationStore()
 
     const isAdmin = currentUser.role === 'admin'
 
     // 2. 執行基礎資料載入 (所有人)
     progress.value = 20
-    statusMessage.value = '載入個人帳戶與分類...'
+    statusMessage.value = '載入個人帳戶與通知...'
     
     // 使用 Promise.all 平行載入，加速啟動
     await Promise.all([
       userStore.loadUsers(),          // 內含角色判斷邏輯
       categoryStore.initializeStore(), // 基礎分類 (Persist)
       accountStore.loadAccounts(),    // 帳戶清單與餘額
-      recordStore.fetchAllRecords()   // 收支紀錄
+      recordStore.fetchAllRecords(),   // 收支紀錄
+      noticeStore.fetchAll() // 提醒
     ])
 
     // 3. 執行特定資料載入 (僅限管理員)
