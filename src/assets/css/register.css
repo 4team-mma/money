@@ -16,6 +16,26 @@
     overflow: hidden;
 }
 
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+.feature-card {
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.8);
+    /* 讓右側卡片也稍微透明 */
+    backdrop-filter: blur(10px);
+    border: 2px solid #E2E8F0;
+    border-radius: 12px;
+    transition: all 0.2s;
+}
+
+.feature-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
 .effect-circle {
     position: absolute;
     border-radius: 50%;

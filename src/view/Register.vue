@@ -176,11 +176,17 @@ const goToLogin = () => router.push('/')
                             <p>體驗專業的財務管理工具</p>
                         </div>
                         <div class="feature-grid">
-                            <div class="feature-card"><div class="feature-icon">💰</div><h3>智能記帳</h3><p>自動分類管理收支</p></div>
-                            <div class="feature-card"><div class="feature-icon">📈</div><h3>趨勢洞察</h3><p>視覺化您的財富增長</p></div>
-                            <div class="feature-card"><div class="feature-icon">🛡️</div><h3>安全加密</h3><p>銀行級資料保護</p></div>
-                            <div class="feature-card"><div class="feature-icon">🚀</div><h3>財富自由</h3><p>邁向理想生活目標</p></div>
+                        <div v-for="(f, i) in [
+                            {icon:'📊', t:'圖表分析', d:'視覺化數據洞察'},
+                            {icon:'📆', t:'行事曆', d:'時間軸收支管理'},
+                            {icon:'⛺', t:'記帳功能', d:'管理所有資產'},
+                            {icon:'📈', t:'趨勢預測', d:'AI智能財務建議'}
+                        ]" :key="i" class="feature-card">
+                            <div class="feature-icon">{{f.icon}}</div>
+                            <h3>{{f.t}}</h3>
+                            <p>{{f.d}}</p>
                         </div>
+                    </div>
                     </div>
                 </div>
             </div>
