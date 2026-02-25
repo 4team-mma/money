@@ -80,7 +80,21 @@ const now_money = computed(() => {
 const in_money = computed(()=>{
     return accountStore.formatAccountBalance(form.account)
 })
+// 定義不能互相轉帳的負債類型
+const debtTypeValues = ['credit', 'loan', 'installment', 'debt_other'];
 
+// 轉出 (From) 帳戶：過濾掉負債項
+const allFromAccounts = computed(() => {
+    return accountStore.accounts.filter(acc => !debtTypeValues.includes(acc.account_type))
+})
+
+// 到 (To) 帳戶：過濾掉負債項，且排除目前選擇的轉出帳戶
+const filteredToAccounts = computed(() => {
+    return accountStore.accounts.filter(acc => 
+        !debtTypeValues.includes(acc.account_type) && 
+        acc.account_id !== form.source_account?.account_id
+    )
+})
 
 </script>
 
@@ -109,12 +123,12 @@ const in_money = computed(()=>{
         <div v-if="form.add_id || props.initialData" class="form-grid">
             <div class="form-item">
                 <label>從 (轉出帳戶)</label>
-                <Add_account :account="form.source_account" @update:account="handleSourceUpdate" />
+                <Add_account :accounts-data="allFromAccounts" :account="form.source_account" @update:account="handleSourceUpdate" />
                 <div class="change-text">餘額 : {{ now_money }}</div>
             </div>
             <div class="form-item">
                 <label>到 (轉入帳戶)</label>
-                <Add_account :account="form.account" @update:account="handleAccountUpdate" />
+                <Add_account :accounts-data="filteredToAccounts" :account="form.account" @update:account="handleAccountUpdate" />
                 <div class="change-text">餘額 : {{ in_money }}</div>
             </div>
         </div>

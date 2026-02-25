@@ -199,18 +199,25 @@ const fetchTransactions = async (page = 1) => {
     }
 
     // 格式化一般收支
-    const recordList = recData.map(item => ({
-      id: `r-${item.add_id}`,
-      display_title: item.add_class,
-      display_note: item.add_note || '',
-      display_date: item.add_date,
-      display_amount: Number(item.add_amount) || 0,
-      display_icon: item.add_class_icon || '📝',
-      display_type: item.add_type ? 'income' : 'expense',
-      display_member: item.add_member,
-      display_tag: item.add_tag, // 補上 tag
-      is_transfer: false
-    }));
+    const recordList = recData.map(item => {
+      // 🌟 新增邏輯：如果後端沒給 account_name，我們用 account_id 去 accounts 陣列反查對應的帳戶名稱
+      const matchedAccount = accounts.value.find(a => a.id === item.account_id);
+      
+      return {
+        id: `r-${item.add_id}`,
+        display_title: item.add_class,
+        display_note: item.add_note || '',
+        display_date: item.add_date,
+        display_amount: Number(item.add_amount) || 0,
+        display_icon: item.add_class_icon || '📝',
+        display_type: item.add_type ? 'income' : 'expense',
+        display_member: item.add_member,
+        display_tag: item.add_tag,
+        // 🌟 這裡改成優先用 item.account_name，如果沒有就用剛才反查到的名稱
+        display_account: item.account_name || (matchedAccount ? matchedAccount.name : '未知帳戶'),
+        is_transfer: false
+      };
+    });
 
     // 格式化轉帳紀錄
     const transferList = filteredTransfers.map(item => ({
@@ -506,7 +513,12 @@ onMounted(async () => {
                       NT$ {{ formatNumber(t.display_amount) }}
                     </div>
                     <div class="transaction-date">{{ t.display_date }}</div>
+                    
+                    <div v-if="!t.is_transfer && t.display_account" style="font-size: 0.75rem; color: #64748b; text-align: right; margin-top: 4px;">
+                      {{ t.display_account }}
+                    </div>
                   </div>
+
                 </div>
               </div>
 
