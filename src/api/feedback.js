@@ -19,6 +19,6 @@ export const updateFeedbackStatusApi = (feedbackId, updateData) => {
 };
 
 // 4. [一般用戶] 取得個人提交歷史
-export const getMyFeedbacksApi = () => {
+export const getFeedbackHistoryApi = () => {
     return api.get('/feedback/my');
 };

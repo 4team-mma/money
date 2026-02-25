@@ -63,21 +63,23 @@ const updateStatus = async (item) => {
     }
 }
 
-// 💡 點擊回覆：開啟信箱並將狀態暫時設為「處理中」
-const handleReply = async (item) => {
-    const email = item.user?.email;
-    const subject = `關於您的問題回饋：${item.feedback_name}`;
-    
-    if (email) {
-        window.location.href = `mailto:${email}?subject=Re: ${encodeURIComponent(subject)}`;
-        
-        // 如果原本是待處理，自動轉為「處理中」並同步到後端
-        if (item.is_replied === 0) {
-            item.is_replied = 1;
-            await updateStatus(item);
-        }
-    } else {
-        alert('找不到該使用者的電子信箱');
+// 💡 ：直接提交回覆並標記為「已解決」或「處理中」
+const submitReply = async (item) => {
+    if (!item.admin_answer || item.admin_answer.trim() === "") {
+        alert("請輸入回覆內容");
+        return;
+    }
+
+    try {
+        // 送出回覆時，自動將狀態改為 2 (已解決)
+        item.is_replied = 2; 
+        await updateFeedbackStatusApi(item.feedback_id, { 
+            is_replied: item.is_replied,
+            admin_answer: item.admin_answer
+        });
+        alert("回覆已成功傳送到使用者前端！");
+    } catch (error) {
+        alert("傳送失敗");
     }
 };
 
@@ -133,30 +135,35 @@ const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', { style: 'currenc
                 </div>
 
                 <div class="comment-body">
-                    <div class="type-tag"># {{ item.question_type }}</div>
+                    <div class="meta-tags">
+                        <span class="type-tag"># {{ item.question_type }}</span>
+                        <span class="type-tag"># {{ item.use_page }}</span>
+                    </div>
+                    
                     <p class="content">{{ item.content }}</p>
                     
                     <div class="admin-reply-area">
+                        <div class="reply-label">官方回覆：</div>
                         <textarea 
                             v-model="item.admin_answer" 
-                            placeholder="輸入官方回覆內容記錄..."
-                            @blur="updateStatus(item)"
+                            placeholder="在此輸入回覆內容，使用者將會在回饋區看到..."
                         ></textarea>
                     </div>
                 </div>
 
                 <div class="comment-foot">
-                    <span class="date">{{ item.created_at }}</span>
+                    <span class="date">提交時間：{{ item.created_at }}</span>
                     <div class="action-group">
-                        <button class="action-btn reply" @click="handleReply(item)">
-                            📧 郵件聯絡
+                        <button class="action-btn send-reply" @click="submitReply(item)">
+                            🚀 傳送回覆並結案
                         </button>
+                        
                         <button 
                             class="action-btn resolve" 
                             v-if="item.is_replied !== 2"
                             @click="item.is_replied = 2; updateStatus(item)"
                         >
-                            ✅ 標記完成
+                            ✅ 僅標記完成
                         </button>
                     </div>
                 </div>
@@ -170,6 +177,39 @@ const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', { style: 'currenc
 </template>
 
 <style scoped>
+.meta-tags {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.type-tag {
+    font-size: 12px;
+    color: #3b82f6; /* 藍色 */
+    background: rgba(59, 130, 246, 0.1);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 700;
+}
+
+
+.page-tag {
+    font-size: 12px;
+    color: #64748b; /* 灰色 */
+    background: rgba(100, 116, 139, 0.1);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+/* 確保內容文字有適當間距 */
+.content {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #334155;
+    margin-top: 5px;
+}
+
 .section-header {
     display: flex;            
     justify-content: space-between; 
@@ -278,6 +318,26 @@ const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', { style: 'currenc
 
 .comments-container {
     animation: fadeIn 0.5s ease;
+}
+
+.reply-label {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--text);
+    margin-bottom: 5px;
+}
+
+.action-btn.send-reply {
+    background: var(--border);
+    color:var(--text);
+    border: 0.5px solid;
+    border-color: var(--border);
+    padding: 6px 15px;
+}
+
+.action-btn.send-reply:hover {
+    background:var(--border);
+    transform: scale(1.05);
 }
 
 .feedback-filter {
