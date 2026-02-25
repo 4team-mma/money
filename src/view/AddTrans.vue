@@ -38,13 +38,21 @@ const money_in = computed(()=>{
     return accountStore.formatAccountBalance(form.account)
 })
 
-// 
-// 轉出 (From) 帳戶：列出「全部」帳戶
-const allFromAccounts = computed(() => accountStore.accounts)
 
-// 到 (To) 帳戶：排除掉「轉出帳戶」選中的項目
+// 定義不能互相轉帳的負債類型 (跟 Account.vue 一樣)
+const debtTypeValues = ['credit', 'loan', 'installment', 'debt_other'];
+// 
+// 轉出 (From) 帳戶：過濾掉負債項，只留下資產、儲蓄等可以轉出的帳戶
+const allFromAccounts = computed(() => {
+    return accountStore.accounts.filter(acc => !debtTypeValues.includes(acc.account_type))
+})
+
+// 到 (To) 帳戶：過濾掉負債項，並且排除掉「目前已經選為轉出帳戶」的項目
 const filteredToAccounts = computed(() => {
-    return accountStore.accounts.filter(acc => acc.account_id !== form.source_account?.account_id)
+    return accountStore.accounts.filter(acc => 
+        !debtTypeValues.includes(acc.account_type) && 
+        acc.account_id !== form.source_account?.account_id
+    )
 })
 </script>
 
