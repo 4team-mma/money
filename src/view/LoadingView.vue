@@ -31,53 +31,41 @@ onMounted(async () => {
     // 確保 Axios Header 已同步
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`
 
-    // 實例化所有 Store
-    const userStore = useUserStore()
-    const categoryStore = useCategoryStore()
-    const accountStore = useAccountStore()
-    const recordStore = useRecordStore()
-    const aiStore = useAiAdminStore()
-    const statsStore = useCategoryStatsStore()
-    const noticeStore = useNotificationStore()
-
     const isAdmin = currentUser.role === 'admin'
 
-    // 2. 執行基礎資料載入 (所有人)
+    // 1. 執行基礎資料載入 (所有人)
     progress.value = 20
-    statusMessage.value = '載入個人帳戶與通知...'
+    statusMessage.value = '載入帳戶數據...'
     
-    // 使用 Promise.all 平行載入，加速啟動
+    // 這裡只放「所有角色」都需要用到的 Store
     await Promise.all([
-      userStore.loadUsers(),          // 內含角色判斷邏輯
-      categoryStore.initializeStore(), // 基礎分類 (Persist)
-      accountStore.loadAccounts(),    // 帳戶清單與餘額
-      recordStore.fetchAllRecords(),   // 收支紀錄
-      noticeStore.fetchAll() // 提醒
+      useCategoryStore().initializeStore(),
+      useAccountStore().loadAccounts(),
+      useRecordStore().fetchAllRecords(),
+      useNotificationStore().fetchAll()
     ])
 
-    // 3. 執行特定資料載入 (僅限管理員)
+    // 2. 執行管理員專屬載入
     if (isAdmin) {
       progress.value = 60
-      statusMessage.value = '正在分析管理員數據圖表...'
+      statusMessage.value = '管理員權限驗證與數據分析...'
       
+      // 在此才實例化 userStore 並載入管理數據
+      const userStore = useUserStore()
+      const aiStore = useAiAdminStore()
+      const statsStore = useCategoryStatsStore()
+
       await Promise.all([
-        aiStore.initAllAiConfigs(),    // AI 機器人設定
-        statsStore.fetchAllRankings()  // 管理員排行榜 (Stats)
+        userStore.loadUsers(),         // 只有 Admin 需要載入使用者清單
+        aiStore.initAllAiConfigs(),
+        statsStore.fetchAllRankings()
       ])
     }
 
-    // 4. 完成準備
+    // 3. 完成
     progress.value = 100
-    statusMessage.value = '初始化完成！即將進入系統'
-
-    // 延遲跳轉提供更好的視覺反饋
-    setTimeout(() => {
-      if (isAdmin) {
-        router.push('/admins')
-      } else {
-        router.push('/book')
-      }
-    }, 800)
+    statusMessage.value = '初始化完成！'
+    setTimeout(() => router.push(isAdmin ? '/admins' : '/book'), 800)
 
   } catch (error) {
     console.error('🍍 初始化流程中斷:', error)
