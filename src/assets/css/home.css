@@ -332,6 +332,10 @@
     align-items: center;
     justify-content: center;
     padding: 2rem;
+    /* margin-right: 10px;
+    margin-left: 10px; */
+
+
 }
 
 @media (min-width: 1024px) {
