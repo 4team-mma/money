@@ -40,7 +40,16 @@ export const settingApi = {
             },
             responseType: 'blob' //  必填，否則二進位檔案會損毀
         });
-    }
+    },
+    // 新增帳號安全相關 API
+
+    /**
+     * 獲取最近登入紀錄
+     */
+    getLoginActivities: () => {
+        return api.get('/setting/setting_account/login-activities');
+    },
+
 };
 
  // 告訴 Axios 這是要下載檔案用的

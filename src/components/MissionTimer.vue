@@ -13,7 +13,14 @@ const updateCountdown = () => {
 
     if (diff <= 0) {
         countdownText.value = '00:00:00'
-        emit('refresh') // 通知父組件時間到了，該更新任務列表了
+        
+        // 增加一個簡單的鎖，避免在一秒內重複觸發多次 refresh
+        if (!window.isRefreshing) {
+            window.isRefreshing = true
+            emit('refresh')
+            // 5秒後解鎖，給 fetchMissions 足夠時間完成
+            setTimeout(() => { window.isRefreshing = false }, 5000)
+        }
         return
     }
 

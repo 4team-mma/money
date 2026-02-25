@@ -152,6 +152,8 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    padding-bottom: 10px;
+
 }
 
 .form-group.full-width {

@@ -262,7 +262,7 @@ const passwordMismatch = computed(() => {
                                 <p>設定全新高強度密碼</p>
                             </div>
                             <div class="feature-card">
-                                <div class="feature-icon">📈</div>
+                                <div class="feature-icon">🐾</div>
                                 <h3>安全找回</h3>
                                 <p>恢復所有管理功能</p>
                             </div>

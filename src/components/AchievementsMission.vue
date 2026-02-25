@@ -26,6 +26,7 @@ const getMissionIcon = (m) => {
 const fetchMissions = async () => {
     try {
         loading.value = true
+        dailyMissions.value = []
         const res = await getDailyMissions()
         // 確保資料依據 slot_num 排序，位置才會固定
         const data = Array.isArray(res) ? res : []
@@ -94,7 +95,7 @@ onMounted(() => {
 
         <div v-else class="mission-stack">
             <div v-for="m in dailyMissions" :key="m.miss_id || m.slot_num" 
-                 class="m-card-elite" :class="[m.difficulty.toLowerCase(), { 'completed': m.miss_status === 2 }]">
+                class="m-card-elite" :class="[m.difficulty.toLowerCase(), { 'completed': m.miss_status === 2 }]">
                 
                 <template v-if="m.miss_status !== 2">
                     <div class="m-visual">{{ getMissionIcon(m) }}</div>
