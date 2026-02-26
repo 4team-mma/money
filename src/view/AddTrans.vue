@@ -3,7 +3,7 @@ import Nav from '@/components/Nav.vue'
 import Add_bar from '@/components/AddBar.vue'
 import Add_account from '@/components/AddAccount.vue'
 import { useAddRecord } from '@/composables/useAddRecord'
-import { ref,computed, onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useAccountStore } from '@/stores/useAccountStore'
 import { DatePicker } from 'v-calendar';
 import 'v-calendar/style.css';
@@ -11,7 +11,7 @@ import 'v-calendar/style.css';
 const accountStore = useAccountStore()
 const {
     form, handleSourceUpdate, handleAccountUpdate,
-    handleMemberUpdate, handleTagUpdate, handleSave,
+    handleSave,
     handleSaveNext, currentCurrency
 } = useAddRecord('transfer')
 

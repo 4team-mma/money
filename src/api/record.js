@@ -19,13 +19,10 @@ export const recordApi = {
     // 適合用在儀表板的小卡片，只回傳三個數字：收入、支出、結餘
     getCurrentStats: () => api.get('/records/stats/monthly'),
 
-    // 5. 獲取單筆詳細資料 (用於查看詳情)
-    getDetail: (recordId) => api.get(`/records/${recordId}`),
-
-    // 6. 修改記錄 (用於編輯功能)
+    // 5. 修改記錄 (用於編輯功能)
     update: (recordId, data) => api.patch(`/records/${recordId}`, data),
 
-    // 7. 刪除記錄 (用於註銷功能)
+    // 6. 刪除記錄 (用於註銷功能)
     delete: (recordId) => api.delete(`/records/${recordId}`)
 }
 
