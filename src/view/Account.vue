@@ -1,6 +1,5 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
-import api from '@/api'
 import { accountApi } from '@/api/account';
 import AccountAdd1 from '@/components/AccountAdd1.vue';
 import AccountEdit from '@/components/AccountEdit.vue';

@@ -7,7 +7,7 @@ import Add_member from '@/components/AddMember.vue'
 import Add_tag from '@/components/AddTag.vue'
 import { useAddRecord } from '@/composables/useAddRecord'
 import { useAccountStore } from '@/stores/useAccountStore'
-import { ref, onMounted, computed } from 'vue';
+import { onMounted, computed } from 'vue';
 
 // 月曆與通知套件
 import { DatePicker } from 'v-calendar';

@@ -2,7 +2,6 @@
 import { useRouter,useRoute } from 'vue-router'
 import { ref, onMounted, computed, onUnmounted } from 'vue'
 import MoneyAIBot from '../components/MoneyAIBot.vue'
-import api from "@/api";
 import { useUserStore } from '@/stores/user'
 import { useNotificationStore } from '@/stores/notification'
 
@@ -15,12 +14,6 @@ const route = useRoute() // 讀取狀態。用來查看「目前在哪」
 const userStore = useUserStore()
 const noticeStore = useNotificationStore()
 
-// 判斷是否要顯示機器人 (例如：不希望在登入頁 Login.vue 看到它)
-
-const showBot = computed(() => {
-  const hiddenRoutes = ['Home', 'Login', 'Register'] // 這些頁面不顯示
-  return !route.name || !hiddenRoutes.includes(route.name)
-})
 // === 補上主題樣式 (避免機器人讀不到顏色報錯) ===
 const currentStyle = computed(() => {
   // 這裡建議從你的主題邏輯中抓取顏色，或者先給一個預設值
@@ -43,35 +36,6 @@ const userData = computed(() => {
     avatar: localUser.avatar_url ? `http://localhost:8000${localUser.avatar_url}` : null
   }
 })
-
-// 假設這是你上傳圖片或儲存資料的 function
-const handleSaveProfile = async () => {
-  try {
-    const res = await api.updateProfile(formData); // 呼叫你的 API
-    
-    if (res.data.success) {
-      // 💡 關鍵動作：把新的資料同步到 localStorage
-      // 1. 先取出舊名片
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      
-      // 2. 把新的頭像路徑塞進去 (假設後端回傳 res.data.avatar_url)
-      currentUser.avatar_url = res.data.avatar_url; 
-      
-      // 3. 存回去
-      localStorage.setItem('currentUser', JSON.stringify(currentUser));
-      
-      // 4. (選填) 如果你有用 Pinia/Vuex，也要通知 store
-      // userStore.updateAvatar(res.data.avatar_url);
-
-      alert('資料更新成功！');
-      
-      // 💡 密技：如果想讓左下角立刻變色，可以強行重新整理或透過 EventBus 通知
-      // window.location.reload(); 
-    }
-  } catch (error) {
-    console.error(error);
-  }
-};
 
 // === 2. 跑馬燈通知 ===
 const notifications = ref([]);// 存放從後端抓回來的原始物件
@@ -105,8 +69,7 @@ const navigation = [
   { name: '圖表分析', to: '/Chart', icon: '📈' },
   { name: '消費趨勢', to: '/ConsumerAnalysis', icon: '⛽' },
   { name: '薪資趨勢', to: '/SalaryAnalysis', icon: '💵' },
-  // { name: '舊款成就', to: '/Achievements', icon: '🏆' },
-  { name: '成就系統', to: '/Achievements_new', icon: '🏆' },
+  { name: '成就系統', to: '/Achievements', icon: '🏆' },
   { name: '問題回饋', to: '/Feedback', icon: '❓' },
   { name: '通知中心', to: '/Notifications', icon: '🔔', hasBadge: true },
   { name: '設定', to: '/Settings', icon: '⚙️' }
@@ -278,7 +241,7 @@ onUnmounted(() => {
     </div>
   </div>
   <footer>
-    <MoneyAIBot v-if="showBot" :currentStyle="currentStyle" />
+    <MoneyAIBot :currentStyle="currentStyle" />
   </footer>
 </template>
 
@@ -307,7 +270,8 @@ onUnmounted(() => {
 /* 側邊欄樣式 */
 .sidebar {
     position: fixed;
-    inset-y: 0;
+    top: 0;
+    bottom: 0;
     left: 0;
     z-index: 50;
     width: 288px;

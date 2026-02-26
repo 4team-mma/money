@@ -1,5 +1,5 @@
 
-import { createApp, getCurrentInstance } from 'vue'
+import { createApp } from 'vue'
 import { setupCalendar } from 'v-calendar';
 import {createPinia} from 'pinia';
 import App from './App.vue'

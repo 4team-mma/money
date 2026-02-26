@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue' // 🌟 修正：補上缺失的引入
+import { computed, onMounted } from 'vue'
 import { useRecordStore } from '@/stores/useRecordStore'
 import { useAccountStore } from '@/stores/useAccountStore'
 

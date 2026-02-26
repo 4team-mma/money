@@ -27,7 +27,6 @@ import SettingAlert from "@/view/SettingAlert.vue";
 import SettingBudgetConfig from "@/view/SettingBudgetConfig.vue";
 import SettingUserProfile from "@/view/SettingUserProfile.vue";
 import BudgetManager from "@/view/BudgetManager.vue";
-import Achievements_new from "@/view/Achievements_new.vue";
 import AdminModel from "@/view/AdminModel.vue";
 import LoadingView from "@/view/LoadingView.vue";
 import Notifications from "@/view/Notifications.vue";
@@ -191,13 +190,6 @@ const routes = [
     name: "BudgetManager",
   } 
   ,
-    {
-    path: "/Achievements_new",
-    component: Achievements_new,
-    name: "Achievements_new",
-  }
-  ,
-
     {
     path: "/AdminModel",
     component: AdminModel,

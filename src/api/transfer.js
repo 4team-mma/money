@@ -17,13 +17,7 @@ export const deleteTransfer = (id) => {
     return api.delete(`/transfers/${id}`); 
 }
 
-//4.讀取單筆
-export const getTransfer = (id) => {
-    
-    return api.get(`/transfers/${id}`); 
-}
-
-// 5. 獲取轉帳清單 (用於查詢歷史紀錄)
+// 4. 獲取轉帳清單 (用於查詢歷史紀錄)
 export const getTransferList = (params) => {
     // params 可能包含日期區間、搜尋關鍵字等
     // params 會變成網址後的 ?key=value
