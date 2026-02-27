@@ -30,7 +30,7 @@ import BudgetManager from "@/view/BudgetManager.vue";
 import AdminModel from "@/view/AdminModel.vue";
 import LoadingView from "@/view/LoadingView.vue";
 import Notifications from "@/view/Notifications.vue";
-
+import AdminData from "@/view/AdminData.vue";
 
 
 const routes = [
@@ -194,7 +194,12 @@ const routes = [
     path: "/AdminModel",
     component: AdminModel,
     name: "AdminModel",
-  }
+  },
+    {
+    path: "/AdminData",
+    component: AdminData,
+    name: "AdminData",
+  } 
 
 
 

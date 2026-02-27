@@ -91,7 +91,7 @@ onMounted(() => {
             <MissionTimer class="countdown" @refresh="fetchMissions" />
         </div>
         
-        <div v-if="loading" class="placeholder-box">修行載入中...</div>
+        <div v-if="loading" class="placeholder-box">任務載入中...</div>
 
         <div v-else class="mission-stack">
             <div v-for="m in dailyMissions" :key="m.miss_id || m.slot_num" 
@@ -113,7 +113,7 @@ onMounted(() => {
                             <div class="m-bar-bg">
                                 <div class="m-bar-fill" :style="{ width: (m.target_val > 0 ? (m.current_val/m.target_val*100) : 0) + '%' }"></div>
                             </div>
-                            <span class="m-count-label">修煉進度：<strong>{{ m.current_val }}</strong> / {{ m.target_val }}</span>
+                            <span class="m-count-label">任務進度：<strong>{{ m.current_val }}</strong> / {{ m.target_val }}</span>
                         </div>
                     </div>
 
@@ -121,7 +121,7 @@ onMounted(() => {
                         <button v-if="m.miss_status === 0" class="btn-action start" @click="handleAccept(m)">接取任務</button>
                         
                         <div v-else-if="m.miss_status === 1 && m.current_val < m.target_val" class="status-running-group">
-                            <div class="status-running"><span class="dot-blink"></span> 修煉中...</div>
+                            <div class="status-running"><span class="dot-blink"></span> 任務中...</div>
                             <button class="btn-abandon" @click="handleAbandon(m)">放棄任務</button>
                         </div>
                         
@@ -132,7 +132,7 @@ onMounted(() => {
                 <div v-else class="mission-done-placeholder">
                     <div class="done-check">✅</div>
                     <div class="done-info">
-                        <h4>此修煉已達成</h4>
+                        <h4>此任務已達成</h4>
                         <p>獎勵已發放。新任務請等待倒數刷新。</p>
                     </div>
                 </div>
@@ -140,7 +140,7 @@ onMounted(() => {
 
             <div v-if="dailyMissions.length === 0" class="all-missions-complete">
                 <h3>✨ 登峰造極 ✨</h3>
-                <p>所有修煉任務已完成！新挑戰將在午夜重新發布。</p>
+                <p>所有任務已完成！新挑戰將在午夜重新發布。</p>
             </div>
         </div>
     </section>
