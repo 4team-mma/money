@@ -140,17 +140,35 @@ const refreshCardsAndLevel = async () => {
 };
 
 const checkInDays = computed(() => {
-    const rewards = checkinStatus.value.weeklyRewards;
-    const currentDay = checkinStatus.value.currentCycleDay === 0 ? 1 : checkinStatus.value.currentCycleDay;
+    const rewards = checkinStatus.value.weeklyRewards || [10, 10, 20, 20, 20, 20, 50];
+
+    // 💡 關鍵：如果 cycle_day 是 0，代表是新的一輪，要把目標對準第 1 天
+    // 注意：這裡要確認你的變數名是 currentCycleDay 還是 current_cycle_day (根據 API 欄位)
+    const currentDay = (checkinStatus.value.currentCycleDay === 0)
+                    ? 1
+                    : checkinStatus.value.currentCycleDay;
+
     const isTodayClaimed = checkinStatus.value.hasCheckedIn;
 
     return rewards.map((xp, index) => {
         const dayNum = index + 1;
         let status = 'locked';
-        // 邏輯：比今天小的都是 claimed，今天則看 hasCheckedIn
-        if (dayNum < currentDay) status = 'claimed';
-        else if (dayNum === currentDay) status = isTodayClaimed ? 'claimed' : 'ready';
-        return { day: dayNum, xp: xp, status: status, big: xp >= 50 };
+
+        if (dayNum < currentDay) {
+            status = 'claimed'; // 過去的進度
+        } else if (dayNum === currentDay) {
+            // 今天的進度：沒領過就是 ready (會亮起來)，領過就是 claimed
+            status = isTodayClaimed ? 'claimed' : 'ready';
+        } else {
+            status = 'locked'; // 未來的進度
+        }
+
+        return {
+            day: dayNum,
+            xp: xp,
+            status: status,
+            big: xp >= 50
+        };
     });
 });
 
@@ -246,12 +264,13 @@ onMounted(() => {
                 <div class="checkin-flex">
                     <div v-for="d in checkInDays" :key="d.day" class="checkin-node" :class="[d.status, { 'special-card': d.big }]">
                         <span class="ci-day">DAY {{ d.day }}</span>
-                        <span class="ci-icon" style="font-size: 2rem; margin: 10px 0;">{{ d.big ? '💎' : '💰' }}</span>
+                        <span class="ci-icon" style="font-size: 2rem; margin: 10px 0;">💰</span>
                         <span class="ci-reward" style="font-weight: 800;">+{{ d.xp }} XP</span>
                         <div v-if="d.status === 'claimed'" class="ci-completed">✔</div>
                     </div>
                 </div>
-                <p class="checkin-hint">* 連續簽到獎勵每 7 天循環一次。累積滿 10 次及月全勤另有額外驚喜！</p>
+                <p style="margin: 25px 0 0 8px; font-size: 12px; color: #888;">* 連續簽到獎勵每 7 天循環一次，若簽到中斷，則從 DAY 1 重新累計。</p>
+                <p style="margin: 0px 0 0 8px; font-size: 12px; color: #888;">* 累積滿 10 次及月全勤另有額外驚喜！</p>
             </section>
 
             <div class="interactive-split-grid">
