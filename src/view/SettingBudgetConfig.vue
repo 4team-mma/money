@@ -23,7 +23,7 @@ const preferences = ref({
    ======================== */
 const levelUnlocks = {
     light: 1, nordic: 1, sunset: 1, forest: 1, lavender: 1, dark: 1,
-    oasis: 5, cyber: 10
+    oasis: 50, cyber: 100
 };
 
 const cardUnlocks = ref({
