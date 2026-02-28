@@ -1,12 +1,10 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { useCategoryStore } from '@/stores/categoryStats'
 import AdminsComments from './AdminsComments.vue'
 import AdminModel from './AdminModel.vue'
 import AdminData from './AdminData.vue'
 
-// 接收父組件狀態
 const props = defineProps({
     activeTab: String,
     tabs: Array,
@@ -16,38 +14,18 @@ const props = defineProps({
     currentTheme: String
 })
 
-// 通知父組件動作
 const emit = defineEmits(['open-edit', 'set-theme'])
-
 const userStore = useUserStore()
-const categoryStore = useCategoryStore()
 const searchQuery = ref('')
-
-/* ========================
-   分頁邏輯
-   ======================== */
 const currentPage = ref(1)
 const perPage = 20
 
 const changePage = async (page) => {
     currentPage.value = page
-    const skipVal = (page - 1) * perPage
-    await userStore.fetchUsers(skipVal, perPage)
+    await userStore.fetchUsers((page - 1) * perPage, perPage)
 }
 
-/* ========================
-   初始載入
-   ======================== */
-onMounted(async () => {
-    await userStore.fetchUsers(0, perPage)
-})
-
-/* ========================
-   數據計算與過濾
-   ======================== */
-const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', { 
-    style: 'currency', currency: 'TWD', minimumFractionDigits: 0 
-}).format(val || 0)
+const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(val || 0)
 
 const isUserActive = (status) => {
     if (!status) return false;
@@ -66,20 +44,32 @@ const normalUsersFiltered = computed(() => userStore.formattedNormalUsers.filter
 }))
 const testUsersFiltered = computed(() => userStore.formattedTestUsers.filter(u => u.username?.toLowerCase().includes(searchQuery.value.toLowerCase())))
 
-// 格式化最後登入時間
 const formatLastLogin = (dateStr) => {
     if (!dateStr || dateStr === '從未登入') return '從未登入';
-    const now = new Date();
     const loginDate = new Date(dateStr);
-    const diff = Math.floor((now - loginDate) / 1000);
-    if (diff < 3600) return `${Math.floor(diff / 60)} 分鐘前`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)} 小時前`;
-    return loginDate.toLocaleDateString(); 
+    return isNaN(loginDate) ? '從未登入' : loginDate.toLocaleDateString();
 };
 
-// 彈窗狀態...
+/* ========================
+   🛠️ 聰明建立邏輯：自動遞增帳號
+   ======================== */
 const showCreateModal = ref(false);
-const testForm = ref({ username: 'test', email: 'test@mail.com', password: 'password123' });
+const testForm = ref({ username: '', email: '', password: '123' });
+
+// 監聽彈窗打開動作，自動算號
+watch(showCreateModal, (val) => {
+    if (val) {
+        const usernames = userStore.users.map(u => u.username.toLowerCase());
+        if (!usernames.includes('test')) {
+            testForm.value = { username: 'test', email: 'test@gmail.com', password: '123' };
+        } else {
+            let i = 1;
+            while (usernames.includes(`test${i}`)) { i++; }
+            testForm.value = { username: `test${i}`, email: `test${i}@gmail.com`, password: '123' };
+        }
+    }
+});
+
 const handleCreateTest = async () => {
     const success = await userStore.createTestAccount(testForm.value);
     if (success) showCreateModal.value = false;
@@ -91,6 +81,8 @@ const handleCreateAdmin = async () => {
     const success = await userStore.createAdmin(adminForm.value);
     if (success) showAdminModal.value = false;
 };
+
+onMounted(() => userStore.fetchUsers(0, perPage));
 </script>
 
 <template>
@@ -122,19 +114,23 @@ const handleCreateAdmin = async () => {
                     <AdminData :currentStyle="currentStyle" />
                 </section>
 
+                <section v-if="activeTab === 'api'" class="tab-content animate-fade-in">
+                    <AdminModel :currentStyle="currentStyle" />
+                </section>
+
                 <section v-if="activeTab === 'users'" class="tab-content">
                     <div class="search-box"><input v-model="searchQuery" placeholder="🔍 搜尋帳號、姓名或 Email..." class="mma-input" /></div>
 
                     <div class="user-group-div admin-section">
-                        <div class="group-title flex-header">🛡️ 管理權限組 ({{ adminFiltered.length }}) <button class="btn-mma-action" @click="showAdminModal = true">+ 新增管理員</button></div>
+                        <div class="group-title flex-header">🛡️ 管理權限組 <button class="btn-mma-action" @click="showAdminModal = true">+ 新增管理員</button></div>
                         <div class="table-wrapper">
                             <table class="mma-table">
-                                <thead><tr><th>編號</th><th>帳號</th><th>姓名</th><th>職位</th><th class="text-center">操作</th></tr></thead>
+                                <thead><tr><th>編號</th><th>帳號</th><th>姓名</th><th>職位</th><th>操作</th></tr></thead>
                                 <tbody>
                                     <tr v-for="u in adminFiltered" :key="u.uid">
                                         <td><span class="uid-tag admin-uid">{{ u.displayUid }}</span></td>
                                         <td class="font-bold">{{ u.username }}</td><td>{{ u.name }}</td><td><span class="job-badge">{{ u.job || '管理者' }}</span></td>
-                                        <td class="action-btns"><button class="btn-mma-action" :disabled="u.username !== currentLoginAdmin.username" :class="{ 'is-disabled': u.username !== currentLoginAdmin.username }" @click="emit('open-edit', u)">修改資訊</button></td>
+                                        <td class="action-btns"><button class="btn-mma-action" :disabled="u.username !== currentLoginAdmin.username" @click="emit('open-edit', u)">修改資訊</button></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -143,16 +139,16 @@ const handleCreateAdmin = async () => {
 
                     <div class="user-group-div test-section" style="margin-top: 50px;">
                         <div class="group-title flex-header">
-                            🧪 測試模擬組 ({{ testUsersFiltered.length }})
+                            <span>🧪 測試模擬組 ({{ testUsersFiltered.length }})</span>
                             <div class="header-btns">
-                                <button class="btn-mma-action" @click="showCreateModal = true">+ 建立帳號</button>
+                                <button class="btn-mma-action" @click="showCreateModal = true">+ 建立測試帳號</button>
                                 <button class="btn-mma-action" @click="userStore.generateTestData()">🎲 注入數據</button>
                                 <button class="btn-mma-action" @click="userStore.resetTestAccounts()">♻️ 一鍵重置</button>
                             </div>
                         </div>
                         <div class="table-wrapper">
                             <table class="mma-table">
-                                <thead><tr><th>編號</th><th>帳號</th><th>姓名</th><th>帳號狀態</th><th>最後登入</th><th class="text-center">操作</th></tr></thead>
+                                <thead><tr><th>編號</th><th>帳號</th><th>姓名</th><th>帳號狀態</th><th>最後登入</th><th>操作</th></tr></thead>
                                 <tbody>
                                     <tr v-for="u in testUsersFiltered" :key="u.uid">
                                         <td><span class="uid-tag test-uid">{{ u.displayUid }}</span></td>
@@ -173,7 +169,7 @@ const handleCreateAdmin = async () => {
                         <div class="group-title">👤 一般用戶組 ({{ normalUsersFiltered.length }})</div>
                         <div class="table-wrapper">
                             <table class="mma-table">
-                                <thead><tr><th>編號</th><th>帳號</th><th>姓名</th><th>電子郵件</th><th>帳號狀態</th><th>最後登入</th><th class="text-center">操作</th></tr></thead>
+                                <thead><tr><th>編號</th><th>帳號</th><th>姓名</th><th>電子郵件</th><th>帳號狀態</th><th>最後登入</th><th>操作</th></tr></thead>
                                 <tbody>
                                     <tr v-for="u in normalUsersFiltered" :key="u.uid">
                                         <td><span class="uid-tag user-uid">{{ u.displayUid }}</span></td>
@@ -182,7 +178,9 @@ const handleCreateAdmin = async () => {
                                         <td>{{ formatLastLogin(u.lastLogin) }}</td>
                                         <td class="action-btns">
                                             <button class="btn-mma-action" @click="userStore.showUserDetails(u.uid)">詳情</button>
-                                            <button class="btn-mma-action" :class="isUserActive(u.status) ? 'btn-warn' : 'btn-success'" @click="userStore.toggleUserStatus(u.uid)">{{ isUserActive(u.status) ? '停用' : '恢復' }}</button>
+                                            <button class="btn-mma-action" :class="isUserActive(u.status) ? 'btn-warn' : 'btn-success'" @click="userStore.toggleUserStatus(u.uid)">
+                                                {{ isUserActive(u.status) ? '停用' : '恢復' }}
+                                            </button>
                                             <button class="btn-mma-action delete" @click="userStore.deleteUser(u.uid)">註銷</button>
                                         </td>
                                     </tr>
@@ -197,8 +195,48 @@ const handleCreateAdmin = async () => {
                     </div>
                 </section>
 
-                <section v-if="activeTab === 'api'" class="tab-content animate-fade-in"><AdminModel :currentStyle="currentStyle" /></section>
                 <section v-if="activeTab === 'feedback'" class="tab-content"><AdminsComments /></section>
+
+                <section v-if="activeTab === 'system'" class="tab-content">
+                    <div class="section-header"><h3>🎨 視覺主題設定</h3></div>
+                    <div class="theme-picker">
+                        <div v-for="(style, id) in themes" :key="id" class="theme-item"
+                            :class="{ 'is-selected': currentTheme === id }" @click="emit('set-theme', id)">
+                            <div class="theme-preview" :style="{ background: style.bgGradient }">
+                                <div class="preview-sidebar" :style="{ background: style.sidebarBg }"></div>
+                                <div class="preview-accent" :style="{ background: style.primary }"></div>
+                            </div>
+                            <span>{{ style.name }}</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <div v-if="showAdminModal" class="modal-overlay" @click.self="showAdminModal = false">
+            <div class="modal-glass-card">
+                <div class="modal-header"><h3>🛡️ 建立管理帳限</h3></div>
+                <div class="m-field"><label>姓名</label><input v-model="adminForm.name" class="m-input" /></div>
+                <div class="m-field"><label>帳號</label><input v-model="adminForm.username" class="m-input" /></div>
+                <div class="m-field"><label>Email</label><input v-model="adminForm.email" class="m-input" /></div>
+                <div class="m-field"><label>初始密碼</label><input type="password" v-model="adminForm.password" class="m-input" /></div>
+                <div class="modal-foot-btns">
+                    <button class="btn-cancel" @click="showAdminModal = false">取消</button>
+                    <button class="btn-save" :style="{ background: currentStyle.primary }" @click="handleCreateAdmin">建立</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
+            <div class="modal-glass-card">
+                <div class="modal-header"><h3>🧪 建立測試帳號</h3></div>
+                <div class="m-field"><label>帳號</label><input v-model="testForm.username" class="m-input" /></div>
+                <div class="m-field"><label>Email</label><input v-model="testForm.email" class="m-input" /></div>
+                <div class="m-field"><label>密碼</label><input type="password" v-model="testForm.password" class="m-input" /></div>
+                <div class="modal-foot-btns">
+                    <button class="btn-cancel" @click="showCreateModal = false">取消</button>
+                    <button class="btn-save" :style="{ background: currentStyle.primary }" @click="handleCreateTest">建立</button>
+                </div>
             </div>
         </div>
     </main>
@@ -206,15 +244,25 @@ const handleCreateAdmin = async () => {
 
 <style scoped>
 @import "../assets/css/admin.css";
-td { text-align: center !important; }
-th { text-align: center !important; }
-.action-btns { display: flex !important; justify-content: center !important; align-items: center !important; gap: 6px !important; padding: 5px !important; }
-.group-title.flex-header { display: flex; align-items: center; justify-content: flex-start; }
-.header-btns { display: flex; gap: 12px; padding: 10px; }
-.pagination-footer { margin-top: 40px; display: flex; justify-content: center; align-items: center; gap: 30px; }
+td, th { text-align: center !important; }
+.action-btns { display: flex !important; justify-content: center !important; align-items: center !important; gap: 12px !important; padding: 10px !important; }
+.group-title.flex-header { display: flex; align-items: center; gap: 20px; }
+.header-btns { display: flex; gap: 12px; }
+.pagination-footer { margin-top: 40px; display: flex; justify-content: center; align-items: center; gap: 30px; padding: 20px; }
 .pag-btn { min-width: 90px; }
 
-.btn-mma-action{
-    margin: 10px;
+/* 🛠️ 彈窗 UI 修復：解決 image_7fbafc 按鈕太開問題 */
+.modal-glass-card {
+    background: white; padding: 35px; border-radius: 28px; width: 440px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
+.modal-header h3 { margin: 0 0 25px 0; font-size: 1.5rem; color: #1e293b; }
+.m-field { margin-bottom: 20px; text-align: left; }
+.m-field label { display: block; font-size: 13px; font-weight: 800; color: #64748b; margin-bottom: 6px; }
+.m-input { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; outline: none; }
+.modal-foot-btns { display: flex; justify-content: flex-end; gap: 12px; margin-top: 30px; }
+.btn-save, .btn-cancel { padding: 10px 22px; border-radius: 10px; font-weight: 700; cursor: pointer; border: none; }
+.btn-cancel { background: #f1f5f9; color: #64748b; }
+.btn-save { color: white; }
+.mma-input { width: 100%; margin-bottom: 25px; padding: 12px 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
 </style>
