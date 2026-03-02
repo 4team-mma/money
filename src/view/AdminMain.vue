@@ -2,9 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { useCategoryStore } from '@/stores/categoryStats'
-import AdminsComments from './AdminsComments.vue'
-import AdminModel from './AdminModel.vue'
-import AdminData from './AdminData.vue'
+
 
 // 接收父組件狀態
 const props = defineProps({
@@ -12,7 +10,7 @@ const props = defineProps({
     tabs: Array,
     currentStyle: Object,
     currentLoginAdmin: Object,
-    themes: Object,
+ 
     currentTheme: String
 })
 
@@ -35,17 +33,7 @@ const changePage = async (page) => {
     await userStore.fetchUsers(skipVal, perPage)
 }
 
-/* ========================
-   數據分析：子分頁切換
-   ======================== */
-const subActiveTab = ref('topSpenders')
-const subTabs = [
-    { id: 'topSpenders', label: '消費支出排行', icon: '🏆' },
-    { id: 'categories', label: '類別支出統計', icon: '💰' },
-    { id: 'activeBees', label: '記帳排名', icon: '🐝' },
-    { id: 'wealth', label: '儲蓄排行', icon: '🛡️' },
-    { id: 'xp', label: 'XP等級榜', icon: '✨' }
-]
+
 
 /* ========================
    初始載入
@@ -196,7 +184,21 @@ const confirmXP = async () => {
     await userStore.adjustXP(userStore.selectedUser.uid, xpAmount.value);
     alert("✨ 經驗值發放成功！");
 };
-
+// === 5. 個人資料修改 (移回主頁面統一管理) ===
+const isEditModalOpen = ref(false)
+const editForm = ref({ uid: '', username: '', name: '', email: '', job: '' })
+const openEditModal = (u) => {
+    editForm.value = { ...u }
+    isEditModalOpen.value = true
+}
+const saveAdmin = async () => {
+    try {
+        await api.put(`/users/${editForm.value.uid}`, editForm.value)
+        await userStore.loadUsers()
+        isEditModalOpen.value = false
+        alert('個人資料已更新！')
+    } catch (err) { alert('更新失敗') }
+}
 const msgTitle = ref('📢 系統重要通知');
 const msgDesc = ref('');
 const isSending = ref(false);
@@ -216,52 +218,14 @@ const handleSend = async () => {
 </script>
 <template>
     <main class="main-content">
-        <header class="main-header">
-            <div class="breadcrumb">控制中心 / <span :style="{ color: currentStyle.primary }">{{ tabs.find(t => t.id === activeTab)?.label }}</span></div>
-            <div class="user-status"><span class="dot-online"></span> 登入者：<strong>{{ currentLoginAdmin.username }}</strong></div>
-        </header>
-
         <div class="scroll-view">
-            <div class="stats-grid">
-                <div class="stat-glass-card">
-                    <div class="stat-info"><span class="stat-label">總註冊用戶</span><div class="stat-value">{{ userStore.users ? userStore.users.length : 0 }}</div></div>
-                    <div class="stat-icon-circle" style="background: #3b82f620; color: #3b82f6;">👥</div>
-                </div>
-                <div class="stat-glass-card">
-                    <div class="stat-info"><span class="stat-label">總用戶消費總額</span><div class="stat-value">{{ formatCurrency(totalTransactionAmount) }}</div></div>
-                    <div class="stat-icon-circle" style="background: #10b98120; color: #10b981;">💰</div>
-                </div>
-                <div class="stat-glass-card">
-                    <div class="stat-info"><span class="stat-label">系統反應</span><div class="stat-value">28ms</div></div>
-                    <div class="stat-icon-circle" style="background: #f59e0b20; color: #f59e0b;">⚡</div>
-                </div>
-            </div>
+
 
             <div class="content-glass-card" :style="{ backgroundColor: currentStyle.cardBg, borderColor: currentStyle.border }">
                 
-                <section v-if="activeTab === 'analytics'" class="tab-content">
-                    <div class="sub-tab-nav">
-                        <button v-for="sub in subTabs" :key="sub.id" class="sub-tab-item" :class="{ active: subActiveTab === sub.id }" @click="subActiveTab = sub.id">
-                            <span class="sub-tab-icon">{{ sub.icon }}</span>{{ sub.label }}
-                        </button>
-                    </div>
-                    <div v-if="subActiveTab === 'topSpenders'" class="animate-fade-in">
-                        <div class="section-header"><h3>🏆 財富英雄榜</h3></div>
-                        <div class="table-wrapper mma-main-table">
-                            <table class="mma-table">
-                                <thead><tr><th>排名</th><th>帳號</th><th>暱稱</th><th>累積金額</th><th>次數</th></tr></thead>
-                                <tbody>
-                                    <tr v-for="(u, i) in rankingsFilter(userStore.topUsers)" :key="u.uid">
-                                        <td><span class="rank-badge" :class="'rank-' + (i + 1)">{{ i + 1 }}</span></td>
-                                        <td class="font-bold">{{ u.username }}</td><td>{{ u.name }}</td><td>{{ formatCurrency(u.totalSpent) }}</td><td>{{ u.transactions }}次</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </section>
 
-                <section v-if="activeTab === 'users'" class="tab-content">
+
+                <section  class="tab-content">
                     <div class="search-box"><input v-model="searchQuery" placeholder="🔍 搜尋帳號、姓名或 Email..." class="mma-input" /></div>
 
                     <div class="user-group-div admin-section">
@@ -286,7 +250,7 @@ const handleSend = async () => {
                             <div class="header-btns">
                                 <button class="btn-mma-action" @click="showCreateModal = true">+ 建立測試帳號</button>
                                 <button class="btn-mma-action" @click="userStore.generateTestData()">🎲 注入數據</button>
-                                <button class="btn-mma-action" @click="userStore.resetTestAccounts()">♻️ 一鍵重置</button>
+                                <button class="btn-mma-action" @click="userStore.resetTestAccounts()">♻️ 數據一鍵重置</button>
                             </div>
                         </div>
                         <div class="table-wrapper">
@@ -336,8 +300,6 @@ const handleSend = async () => {
                     </div>
                 </section>
 
-                <section v-if="activeTab === 'api'" class="tab-content animate-fade-in"><AdminModel :currentStyle="currentStyle" /></section>
-                <section v-if="activeTab === 'feedback'" class="tab-content"><AdminsComments /></section>
             </div>
         </div>
 
@@ -409,11 +371,11 @@ const handleSend = async () => {
 
         <div v-if="showAdminModal" class="modal-overlay" @click.self="showAdminModal = false">
             <div class="modal-glass-card">
-                <div class="modal-header"><h3>🛡️ 建立管理帳限</h3></div>
-                <div class="m-field"><label>姓名</label><input v-model="adminForm.name" class="m-input" /></div>
-                <div class="m-field"><label>帳號</label><input v-model="adminForm.username" class="m-input" /></div>
-                <div class="m-field"><label>Email</label><input v-model="adminForm.email" class="m-input" /></div>
-                <div class="m-field"><label>初始密碼</label><input type="password" v-model="adminForm.password" class="m-input" /></div>
+                <div class="modal-header"><h3>🛡️建立管理者帳戶(欄位為必填!)</h3></div>
+                <div class="m-field"><label>姓名</label><input v-model="adminForm.name" class="m-input" placeholder="請輸入姓名"  /></div>
+                <div class="m-field"><label>帳號</label><input v-model="adminForm.username" class="m-input" placeholder="admin_test" /></div>
+                <div class="m-field"><label>Email</label><input v-model="adminForm.email" class="m-input" placeholder="admin_test@example.com" /></div>
+                <div class="m-field"><label>初始密碼</label><input type="password" v-model="adminForm.password" class="m-input" placeholder="至少3位數" /></div>
                 <div class="modal-foot-btns">
                     <button class="btn-cancel" @click="showAdminModal = false">取消</button>
                     <button class="btn-save" :style="{ background: currentStyle.primary }" @click="handleCreateAdmin">建立</button>
@@ -434,6 +396,27 @@ const handleSend = async () => {
             </div>
         </div>
     </main>
+     <Transition name="fade">
+        <div v-if="isEditModalOpen" class="modal-overlay" @click.self="isEditModalOpen = false">
+            <div class="modal-card">
+                <div class="modal-head">
+                    <h3>修改個人資訊</h3>
+                    <p>UID: A-{{ editForm.uid }}</p>
+                </div>
+                <div class="modal-body">
+                    <div class="m-field"><label>帳號名稱</label><input v-model="editForm.username" /></div>
+                    <div class="m-field"><label>暱稱</label><input v-model="editForm.name" /></div>
+                    <div class="m-field"><label>電子郵件</label><input v-model="editForm.email" /></div>
+                    <div class="m-field"><label>職位名稱</label><input v-model="editForm.job" /></div>
+                </div>
+                <div class="modal-foot">
+                    <button class="btn-cancel" @click="isEditModalOpen = false">取消</button>
+                    <button class="btn-save" @click="saveAdmin"
+                        :style="{ background: currentStyle.primary }">確認更新</button>
+                </div>
+            </div>
+        </div>
+    </Transition>
 </template>
 
 
@@ -522,4 +505,24 @@ td, th { text-align: center !important; }
     color: #94a3b8 !important; 
     border-color: #cbd5e1 !important; 
 }
+
+.pagination-controls {
+    display: flex;          /* 使用 Flexbox 佈局 */
+    justify-content: center; /* 水平居中 */
+    align-items: center;     /* 垂直居中（確保按鈕與文字高度對齊） */
+    gap: 20px;               /* 控制按鈕與文字之間的間距 */
+    margin-top: 30px;        /* 與上方表格保持距離 */
+    padding: 20px 0;         /* 增加上下內距，讓視覺不擁擠 */
+    width: 100%;             /* 確保佔滿容器寬度以利置中 */
+}
+
+/* 針對分頁文字的微調 */
+.page-info {
+    font-weight: 600;
+    color: inherit;         /* 跟隨主題文字顏色 */
+    min-width: 80px;        /* 給予最小寬度，避免頁碼跳動時影響兩側按鈕位置 */
+    text-align: center;
+}
+
+
 </style>
