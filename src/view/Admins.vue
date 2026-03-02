@@ -125,22 +125,7 @@ onMounted(async () => {
             </div>
         </main>
 
-        <Transition name="fade">
-            <div v-if="isEditModalOpen" class="modal-overlay" @click.self="isEditModalOpen = false">
-                <div class="modal-card">
-                    <div class="modal-head"><h3>修改個人資訊</h3></div>
-                    <div class="modal-body">
-                        <div class="m-field"><label>帳號名稱</label><input v-model="editForm.username" /></div>
-                        <div class="m-field"><label>暱稱</label><input v-model="editForm.name" /></div>
-                        <div class="m-field"><label>電子郵件</label><input v-model="editForm.email" /></div>
-                    </div>
-                    <div class="modal-foot">
-                        <button class="btn-cancel" @click="isEditModalOpen = false">取消</button>
-                        <button class="btn-save" @click="saveAdmin" :style="{ background: currentStyle.primary }">更新</button>
-                    </div>
-                </div>
-            </div>
-        </Transition>
+
     </div>
 </template>
 
