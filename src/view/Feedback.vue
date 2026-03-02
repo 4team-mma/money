@@ -32,7 +32,8 @@ const fetchUserData = async () => {
 const fetchHistory = async () => {
     try {
         const response = await getFeedbackHistoryApi();
-        history.value = response.data || response || [];
+        const data = response.data || response || [];
+        history.value = [...data].reverse();
     } catch (error) {
         console.error("獲取歷史紀錄失敗：", error);
     }
@@ -42,6 +43,16 @@ onMounted(() => {
     fetchUserData();
     fetchHistory();
 });
+
+// 💡 進階建議：自動捲動到底部(當新的訊息排到最下面時，如果紀錄很多，讓頁面在更新後自動捲動)
+const scrollToBottom = () => {
+    nextTick(() => {
+        window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: 'smooth'
+        });
+    });
+};
 
 const handleFormSubmit = async () => {
     success.value = false;
@@ -60,6 +71,7 @@ const handleFormSubmit = async () => {
         form.page = '';
         form.message = '';
         fetchHistory(); // 重新整理歷史紀錄
+        scrollToBottom();
     } catch (error) {
         errorMessage.value = error.response?.data?.detail || "送出失敗，請稍後再試";
     }

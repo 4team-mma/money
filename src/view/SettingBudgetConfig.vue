@@ -200,7 +200,7 @@ onMounted(() => {
             </div>
         </div>
 
-        <div class="settings-section">
+        <!-- <div class="settings-section">
             <h2>預算設定</h2>
             <div class="preference-item">
                 <div class="preference-info">
@@ -235,7 +235,7 @@ onMounted(() => {
                     <option value="1">星期一</option>
                 </select>
             </div>
-        </div>
+        </div> -->
 
         <div class="form-actions">
             <button class="btn-secondary" @click="fetchUserData">重新整理</button>
