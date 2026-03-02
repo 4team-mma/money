@@ -90,10 +90,10 @@
     left: 0;
     font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
     /* 🚫 讓整個後台文字預設無法被選取 */
-    user-select: none;
+    /* user-select: none;
     -webkit-user-select: none;
     -moz-user-select: none;
-    -ms-user-select: none;
+    -ms-user-select: none; */
 }
 
 /* 🎯 允許選取的白名單：輸入框、文字區域、下拉選單 */
