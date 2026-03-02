@@ -214,7 +214,7 @@ onMounted(() => {
                                 </span>                            
                             </div>
                         </div>
-                        <p class="combo-badge">🔥 連續修煉 {{ userLevel.streak || 0}} 天</p>
+                        <p class="combo-badge">🔥 連續簽到 {{ userLevel.streak || 0}} 天</p>
                     </div>
                 </div>
                 <div class="banner-right">
