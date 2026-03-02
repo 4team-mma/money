@@ -87,7 +87,7 @@ onMounted(() => {
 <template>
     <section class="mission-container">
         <div class="card-header">
-            <h2>⚡ 隨機修煉任務</h2>
+            <h2>⚡ 隨機任務</h2>
             <MissionTimer class="countdown" @refresh="fetchMissions" />
         </div>
         

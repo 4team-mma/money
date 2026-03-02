@@ -1,5 +1,5 @@
 <script setup>
-import { ref, nextTick, watch, onMounted } from 'vue'
+import { ref, nextTick, watch, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 // ⚡️ 修改點 1：改用具名匯入，直接引入需要的函式
@@ -7,6 +7,61 @@ import { postAiRobotChat } from '@/api/robot';
 
 const route = useRoute()
 const messagesContainer = ref(null)
+
+// === 🚀 拖拽功能邏輯 ===
+const position = ref({ x: window.innerWidth - 120, y: window.innerHeight - 120 })
+const isDragging = ref(false)
+const dragOffset = ref({ x: 0, y: 0 })
+const startPos = ref({ x: 0, y: 0 })
+// 開始拖拽
+const startDrag = (e) => {
+  isDragging.value = true
+  // 記錄點擊時的原始座標
+  startPos.value = { x: e.clientX, y: e.clientY }
+  
+  dragOffset.value = {
+    x: e.clientX - position.value.x,
+    y: e.clientY - position.value.y
+  }
+  window.addEventListener('mousemove', onDragging)
+  window.addEventListener('mouseup', stopDrag)
+}
+
+const onDragging = (e) => {
+  if (!isDragging.value) return
+  
+  // 計算新座標並加上簡易邊界檢查（預留 10px 邊距）
+  let newX = e.clientX - dragOffset.value.x
+  let newY = e.clientY - dragOffset.value.y
+  
+  const maxX = window.innerWidth - 100
+  const maxY = window.innerHeight - 100
+  
+  position.value.x = Math.max(10, Math.min(newX, maxX))
+  position.value.y = Math.max(10, Math.min(newY, maxY))
+}
+
+const stopDrag = (e) => {
+  if (!isDragging.value) return;
+
+  // 1. 停止拖拽狀態
+  isDragging.value = false;
+  
+  // 2. 移除全域監聽
+  window.removeEventListener('mousemove', onDragging);
+  window.removeEventListener('mouseup', stopDrag);
+
+  // 3. 關鍵判定：如果滑鼠放開時，位移極小，代表使用者只是想「點一下」
+  const moveDistance = Math.sqrt(
+    Math.pow(e.clientX - startPos.value.x, 2) + 
+    Math.pow(e.clientY - startPos.value.y, 2)
+  );
+
+  if (moveDistance < 5) {
+    // 只有位移小於 5px 才觸發開啟視窗
+    isOpen.value = true;
+  }
+}
 
 // 讀取狀態與紀錄：localStorage 確保換頁不消失
 const isOpen = ref(localStorage.getItem('isMeowChatOpen') === 'true')
@@ -185,24 +240,93 @@ const handleSend = async () => {
   }
 }
 
-onMounted(() => { if (isOpen.value) checkAndGreet() })
+// ⚡️ 修正視窗位置：確保對話窗展開時位置正確
+const chatWindowStyle = computed(() => {
+  // 檢查貓咪是否在螢幕上半部或下半部
+  const isInBottomHalf = position.value.y > window.innerHeight / 2;
+  const isInRightHalf = position.value.x > window.innerWidth / 2;
+
+  const winW = 360;
+  const winH = 520;
+  const padding = 20;
+
+
+  let style = {
+    position: 'absolute',
+    zIndex: 10000,
+  };
+  if (isInBottomHalf) {
+    // 預計向上彈出
+    style.bottom = '100px';
+    // 檢查視窗頂部是否會超出螢幕
+    if (position.value.y - winH < padding) {
+      // 如果會超出頂部，改為貼著螢幕頂部
+      style.bottom = 'auto';
+      style.top = `-${position.value.y - padding}px`;
+    }
+  } else {
+    // 預計向下彈出
+    style.top = '100px';
+    // 檢查視窗底部是否會超過螢幕
+    if (position.value.y + winH + 100 > window.innerHeight - padding) {
+      style.top = 'auto';
+      style.bottom = `-${window.innerHeight - position.value.y - padding}px`;
+    }
+  }
+
+  // 3. 水平位置修正
+  if (isInRightHalf) {
+    // 預計向左彈出 (右對齊)
+    style.right = '0px';
+    // 檢查左側是否會超出螢幕 (貓咪 x 座標小於視窗寬度)
+    if (position.value.x < winW + padding) {
+      // 強制往右偏移，讓視窗左側剛好留在螢幕內
+      style.right = 'auto';
+      style.left = `-${position.value.x - padding}px`;
+    }
+  } else {
+    // 預計向右彈出 (左對齊)
+    style.left = '0px';
+    // 檢查右側是否會超出螢幕
+    const spaceRight = window.innerWidth - position.value.x;
+    if (spaceRight < winW + padding) {
+      style.left = 'auto';
+      style.right = `-${spaceRight - padding}px`;
+    }
+  }
+
+// 4. 設定動畫起點 (讓縮放從貓咪中心開始)
+  style.transformOrigin = `${isInRightHalf ? 'right' : 'left'} ${isInBottomHalf ? 'bottom' : 'top'}`;
+
+  return style;
+});
+
+onMounted(() => { 
+  if (isOpen.value) checkAndGreet() 
+  // 視窗縮放時重新計算邊界（選配）
+  window.addEventListener('resize', () => {
+    position.value.x = Math.min(position.value.x, window.innerWidth - 100)
+    position.value.y = Math.min(position.value.y, window.innerHeight - 100)
+  })
+})
 </script>
 
 <template>
-  <div class="money-ai-bot">
-    <button v-if="!isOpen" class="bot-toggle-transparent" @click="isOpen = true">
-      <img :src="catImg" class="floating-cat" alt="cat" />
+  <div class="money-ai-bot"
+  :style="{ left: position.x + 'px', top: position.y + 'px' }">
+    <button v-if="!isOpen" class="bot-toggle-transparent" @mousedown="startDrag">
+      <img :src="catImg" class="floating-cat" alt="cat" draggable="false"/>
       <div class="stars-container">
         <span class="star s1">✦</span>
         <span class="star s3">✨</span>
       </div>
     </button>
-
-    <div v-if="isOpen" class="chat-window-custom">
-      <div class="chat-header-custom">
+  <Transition>
+    <div v-if="isOpen" class="chat-window-custom" @mousedown.stop :style="chatWindowStyle">
+      <div class="chat-header-custom"@mousedown="startDrag" style="cursor: move;">
         <div class="header-left">
           <div class="avatar-container-header">
-            <img :src="catImg" class="header-icon" />
+            <img :src="catImg" class="header-icon" draggable="false"/>
           </div>
           <div class="bot-status">
             <span class="name">Money 喵喵小助手</span>
@@ -246,6 +370,7 @@ onMounted(() => { if (isOpen.value) checkAndGreet() })
         <button class="send-btn" @click="handleSend" :disabled="isTyping">🐾</button>
       </div>
     </div>
+  </Transition>
   </div>
 </template>
 
@@ -253,22 +378,21 @@ onMounted(() => { if (isOpen.value) checkAndGreet() })
 /* 🎯 恢復您最愛的 Win11 原始樣式 */
 .money-ai-bot {
   position: fixed;
-  bottom: 30px;
-  right: 30px;
   z-index: 9999;
+  /* 禁止選取文字，避免拖曳時選到一堆藍字 */
+  user-select: none; 
+  overflow: visible !important;
 }
 
 .bot-toggle-transparent {
   background: transparent !important;
   border: none !important;
-  cursor: pointer;
+  cursor: grab; /* 抓取手勢 */
   padding: 0;
   position: relative;
   width: 90px;
   height: 90px;
   display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .floating-cat {
@@ -276,6 +400,10 @@ onMounted(() => { if (isOpen.value) checkAndGreet() })
   height: 100%;
   object-fit: contain;
   transition: transform 0.3s;
+}
+
+.bot-toggle-transparent:active {
+  cursor: grabbing;
 }
 
 .bot-toggle-transparent:hover .floating-cat {
@@ -323,8 +451,20 @@ onMounted(() => { if (isOpen.value) checkAndGreet() })
   }
 }
 
+/* 視窗彈出動畫 */
+.v-enter-active, .v-leave-active {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); /* 帶點 Q 彈感 */
+}
+
+.v-enter-from, .v-leave-to {
+  opacity: 0;
+  transform: scale(0.5); /* 從一半大小開始彈出 */
+}
+
 /* 對話窗與頭像防變形處理 */
 .chat-window-custom {
+  position: absolute; /* 相對於 .money-ai-bot 定位 */
+  max-width: 90vw;
   width: 360px;
   height: 520px;
   background: white;
@@ -334,6 +474,7 @@ onMounted(() => { if (isOpen.value) checkAndGreet() })
   flex-direction: column;
   overflow: hidden;
   border: 1px solid #f0f0f0;
+  z-index: 10000;
 }
 
 .chat-header-custom {
