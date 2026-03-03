@@ -38,13 +38,14 @@ const routes = [
     path: "/",
     component: Home,
     name: "Home",
-    meta: { requiresAuth: true, hideNav: true }
+    meta: { requiresAuth: false, hideNav: true }
   },
   {
     path: '/loading',
     component: LoadingView,
     name: 'Loading',
     meta: { requiresAuth: true, hideNav: true }
+
   }, 
   {
     path: "/dashboard",
@@ -126,7 +127,7 @@ const routes = [
     path: "/Register",
     component: Register,
     name: "Register",
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: false, hideNav: true }
   },
     {
     path: "/ChartSecondBalance",
@@ -150,7 +151,7 @@ const routes = [
     path: "/ForgetPassword",
     component: ForgetPassword,
     name: "ForgetPassword",
-    meta: { requiresAuth: true, hideNav: true }
+    meta: { requiresAuth: false, hideNav: true }
   }
   ,
     {

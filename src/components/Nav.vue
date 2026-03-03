@@ -85,7 +85,7 @@ const checkAuth = () => {
   const token = localStorage.getItem('user_token')
   if (!token) {
     console.warn('🍍 [Layout] 未偵測到登入狀態，導回登入頁')
-    window.location.href = '/'
+    router.push('/');
   }
 }
 
@@ -123,15 +123,16 @@ const handleThemeChange = (e) => {
 }
 
 onMounted(() => {
-  // 1. 進頁面立刻抓一次最新的通知清單
-  noticeStore.fetchAll();
-
-  // 2. 設定一個每分鐘執行的計時器
-  // 雖然 store 裡有 setInterval 更新 now，但主動 fetchAll 
-  // 可以抓到其他裝置新增的通知，或後端剛產生的預算警告
-  const timer = setInterval(() => {
+  // ✅ 必須先獲取 token，才能在後續判斷中使用
+  const token = localStorage.getItem('user_token');
+  
+  if (token) {
+    // ✅ 只有有 Token 才抓通知，避免 401 錯誤
     noticeStore.fetchAll();
-  }, 60000); // 60秒檢查一次
+
+    const timer = setInterval(() => {
+      noticeStore.fetchAll();
+    }, 60000);
 
   // 3. 卸載組件時清除計時器，避免記憶體洩漏
   onUnmounted(() => {
@@ -146,6 +147,7 @@ onMounted(() => {
   }
 
   window.addEventListener('theme-changed', handleThemeChange)
+  }
 })
 
 onUnmounted(() => {
