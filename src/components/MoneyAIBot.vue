@@ -8,6 +8,9 @@ import { postAiRobotChat } from '@/api/robot';
 const route = useRoute()
 const messagesContainer = ref(null)
 
+
+
+
 // === 🚀 拖拽功能邏輯 ===
 const position = ref({ x: window.innerWidth - 120, y: window.innerHeight - 120 })
 const isDragging = ref(false)
@@ -78,7 +81,6 @@ const isTyping = ref(false)
 // 新增：隨機等待語錄變數
 const loadingText = ref('思考中喵...');
 let loadingInterval = null;
-
 const catImg = new URL('@/assets/AI_cat.png', import.meta.url).href
 
 // 換頁自動問候語地圖
@@ -107,6 +109,60 @@ const waitingJokes = [
   "喵喵正在跟財神爺連線... ☎️",
   "正在偷看你的錢包... 啊不是，是幫你分析... 🫣"
 ];
+
+
+// === 🎨 噴漆與畫圖發洩小遊戲邏輯 ===
+const paintDrops = ref([]);
+const isDrawing = ref(false); // 判斷是否正在按住滑鼠
+
+// 滑鼠按下去：開始畫圖，並先噴一發大圈圈
+const startDrawing = (e) => {
+  isDrawing.value = true;
+  sprayPaint(e, false); 
+};
+
+// 滑鼠移動：如果是按住的狀態，就連續畫出小圈圈（畫筆效果）
+const draw = (e) => {
+  if (!isDrawing.value) return;
+  sprayPaint(e, true); 
+};
+
+// 滑鼠放開或離開畫面：停止畫圖
+const stopDrawing = () => {
+  isDrawing.value = false;
+};
+
+// 核心噴漆/畫圖功能
+const sprayPaint = (e, isDragging) => {
+  // 🛡️ 防當機機制：畫面上最多保留 300 個圈圈，超過就從最舊的開始刪除
+  // 避免使用者瘋狂畫圖導致 Vue 渲染太多 DOM 而卡死
+  if (paintDrops.value.length > 300) {
+    paintDrops.value.shift(); 
+  }
+
+  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FDCB6E', '#6C5CE7', '#FF8ED4', '#A8E6CF', '#FF9F43'];
+  const randomColor = colors[Math.floor(Math.random() * colors.length)];
+  
+  // 💡 如果是拖曳中，筆刷小一點 (10px~25px)；如果是單點噴漆，筆刷大一點 (30px~80px)
+  const size = isDragging ? (Math.random() * 15 + 10) : (Math.random() * 50 + 30);
+  const borderRadius = `${Math.random() * 30 + 35}% ${Math.random() * 30 + 35}% ${Math.random() * 30 + 35}% ${Math.random() * 30 + 35}%`;
+
+  paintDrops.value.push({
+    id: Date.now() + Math.random(),
+    style: {
+      left: `${e.clientX - size / 2}px`,
+      top: `${e.clientY - size / 2}px`,
+      width: `${size}px`,
+      height: `${size}px`,
+      backgroundColor: randomColor,
+      borderRadius: borderRadius,
+      transform: `rotate(${Math.random() * 360}deg) scale(${Math.random() * 0.5 + 0.8})`
+    }
+  });
+};
+// === 🎨 噴漆發洩小遊戲尾巴 ===
+
+
 
 // 監聽狀態變化並儲存
 watch(isOpen, (newVal) => localStorage.setItem('isMeowChatOpen', newVal))
@@ -177,7 +233,7 @@ const formatDuration = (seconds) => {
   }
 }
 
-// 🚀 核心發送邏輯
+// 🚀 發送邏輯
 const handleSend = async () => {
   if (!input.value.trim() || isTyping.value) return
 
@@ -186,6 +242,9 @@ const handleSend = async () => {
 
   // ✅ 1. 馬上清空輸入框
   input.value = ''
+  // 🎨 清空畫布與狀態
+  paintDrops.value = [] 
+  isDrawing.value = false // 確保每次發問都是重置狀態
 
   isTyping.value = true
   loadingText.value = "思考中喵..."
@@ -198,20 +257,11 @@ const handleSend = async () => {
   }, 1500);
 
   try {
-    let smartInstruction = "";
-    if (query.includes("分析")) {
-      smartInstruction = "請進行詳細財務分析，可使用數據說明。";
-    } else {
-      smartInstruction = "嚴禁廢話與表格，限制在 2-20 中文字內。若問吃什麼，請優先從飲食類別的 add_note 找具體食物(如：包子、拉麵)，直接回答如：小主人，你吃了包子喵！";
-    }
-
-    // ✅ 3. Console Log 回歸
     console.log(`🚀 [Chat] 發送請求: "${query}"`);
 
-    // ⚡️ 修改點 2：直接呼叫 postAiRobotChat 函式，而不是透過物件
+    // 🌟 只需要傳送 message，其他花式指令都交給後端處理
     const response = await postAiRobotChat({
-      message: query,
-      instruction_override: smartInstruction
+      message: query
     });
 
     const replyText = response.reply;
@@ -226,7 +276,8 @@ const handleSend = async () => {
       text: replyText,
       sender: 'bot',
       timestamp: new Date().toISOString(),
-      duration: duration
+      duration: duration,
+      provider: provider
     })
   } catch (error) {
     console.error("❌ [Chat] 錯誤:", error);
@@ -321,6 +372,18 @@ onMounted(() => {
         <span class="star s3">✨</span>
       </div>
     </button>
+    <Teleport to="body">
+      <div v-if="isTyping" class="spray-canvas" 
+      @mousedown="startDrawing"
+      @mousemove="draw"
+      @mouseup="stopDrawing"
+      @mouseleave="stopDrawing"
+      >
+        <div v-for="drop in paintDrops" :key="drop.id" class="paint-drop" :style="drop.style"></div>
+        <div class="spray-hint">AI 思考中... 點擊畫面亂噴發或按住滑鼠畫圖，發洩一下吧喵！🎨</div>
+      </div>
+    </Teleport>
+
   <Transition>
     <div v-if="isOpen" class="chat-window-custom" @mousedown.stop :style="chatWindowStyle">
       <div class="chat-header-custom"@mousedown="startDrag" style="cursor: move;">
@@ -375,6 +438,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
+@import "../assets/css/ai_painting.css";
 /* 🎯 恢復您最愛的 Win11 原始樣式 */
 .money-ai-bot {
   position: fixed;

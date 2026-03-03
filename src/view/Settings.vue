@@ -7,13 +7,14 @@ import SettingUserProfile from './SettingUserProfile.vue';
 import SettingAlert from './SettingAlert.vue';
 import SettingBudgetConfig from './SettingBudgetConfig.vue';
 
+
 // 標籤頁
 const activeTab = ref('profile')
 const tabs = [
     { id: 'profile', label: '個人資料', icon: '👤' },
     { id: 'budgetconfig', label: '偏好設定', icon: '⚙️' },
     { id: 'security', label: '帳號設置', icon: '🔒' },
-    { id: 'notifications', label: '通知', icon: '🔔' },
+    
     { id: 'output', label: '輸出', icon: '📂' },
 ]
 
@@ -44,8 +45,6 @@ const tabs = [
             <SettingBudgetConfig v-if="activeTab === 'budgetconfig'" />
             <!-- 帳號設置 -->
             <SettingAccount v-if="activeTab === 'security'" />
-            <!-- 通知 -->
-            <SettingAlert v-if="activeTab === 'notifications'" />
             <!-- 輸出 -->
             <SettingOutput v-if="activeTab === 'output'" />
 
