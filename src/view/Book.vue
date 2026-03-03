@@ -157,7 +157,6 @@
 </script>
 
 <template>
-    <Nav>
         <h1 class="page-title">行事曆</h1>
         <div class="view-mode-selector">
             <button class="word" :class="{ active: displayMode === 'day' }" @click="displayMode = 'day'">按日顯示</button>
@@ -190,7 +189,6 @@
                 :monthlyBalance="monthlyBalance"
             />
         </div>
-    </Nav>
 </template>
 
 <style scoped>

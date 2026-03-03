@@ -1,5 +1,5 @@
 <script setup>
-import Nav from '@/components/Nav.vue';
+
 import { reactive, ref, onMounted } from 'vue';
 import { submitFeedbackApi, getFeedbackHistoryApi } from '@/api/feedback';
 import { getProfile } from '@/api/user';
@@ -79,7 +79,7 @@ const handleFormSubmit = async () => {
 </script>
 
 <template>
-    <Nav>
+    
         <div class="card">
             <h1 class="page-title">問題回饋</h1>
 
@@ -165,7 +165,7 @@ const handleFormSubmit = async () => {
                 </div>
             </div>
         </div>
-    </Nav>
+    
 </template>
 
 <style scoped>

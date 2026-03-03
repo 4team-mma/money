@@ -226,7 +226,6 @@ onMounted(async () => {
 </script>
 
 <template>
-    <Nav>
         <Chart_Preface />
         <div class="dashboard-container_1">
             <h3 >淨資產趨勢</h3>
@@ -276,7 +275,6 @@ onMounted(async () => {
                 </tbody>
             </table>
         </div>
-    </Nav>
 </template>
 
 <style scoped>

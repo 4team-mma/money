@@ -157,7 +157,6 @@ watch([period, startDate, endDate, groupBy], (newVal, oldVal) => {
 
 </script>
 <template>
-    <Nav>
         <Chart_Preface />
 
         <!-- overview 小卡 -->
@@ -229,10 +228,6 @@ watch([period, startDate, endDate, groupBy], (newVal, oldVal) => {
                 </table>
             </div>
         </div>
-
-
-
-    </Nav>
 </template>
 <style scoped>
 @import '../assets/css/dashboard.css';

@@ -279,7 +279,6 @@ onMounted(async () => {
 </script>
 
 <template>
-  <Nav>
     <div class="dashboard-page-layout">
       <div class="dashboard-container">
         
@@ -571,7 +570,6 @@ onMounted(async () => {
 
       </div>
     </div>
-  </Nav>
 </template>
 
 <style scoped>

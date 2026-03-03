@@ -153,7 +153,6 @@ const today = computed(() => {
 </script>
 
 <template>
-    <Nav>
         <Chart_Preface />
         <div style="display: flex; min-height: 100vh;">
             <div class="dashboard-container_1" style="flex: 1;">
@@ -212,7 +211,6 @@ const today = computed(() => {
                 </table>
             </div>
         </div>
-    </Nav>
 </template>
 
 <style scoped>

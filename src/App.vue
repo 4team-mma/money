@@ -1,10 +1,10 @@
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 // import MoneyAIBot from './components/MoneyAIBot.vue'
 import { RouterView } from 'vue-router'
+import Nav from './components/Nav.vue'
 const isLoggedIn = ref(false)
-
 
 onMounted(() => {
     isLoggedIn.value = window.location.pathname !== '/' &&
@@ -13,7 +13,10 @@ onMounted(() => {
 </script>
 <template>
     <div id="app">
-        <router-view />
+        <router-view v-if="$route.meta.hideNav" />
+        <Nav v-else>
+            <router-view />
+        </Nav>
         <!-- <MoneyAIBot v-if="isLoggedIn" /> -->
     </div>
 </template>

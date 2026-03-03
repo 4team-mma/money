@@ -38,27 +38,32 @@ const routes = [
     path: "/",
     component: Home,
     name: "Home",
+    meta: { requiresAuth: true, hideNav: true }
   },
   {
     path: '/loading',
     component: LoadingView,
-    name: 'Loading'
+    name: 'Loading',
+    meta: { requiresAuth: true, hideNav: true }
   }, 
   {
     path: "/dashboard",
     component: Dashboard,
     name: "Dashboard",
+    meta: { requiresAuth: true}
   },
 
   {
     path: "/book",
     component: Book,
     name: "Book",
+    meta: { requiresAuth: true}
   },
   {
     path: "/Account",
     component: Account,
     name: "Account",
+    meta: { requiresAuth: true}
   },
   {
     path: "/Add",
@@ -67,143 +72,170 @@ const routes = [
     //     { path:"Inn", component:Inn, name:"Inn"},
     //     { path:"Trans", component:Trans, name:"Trans"}
     //   ]
+    meta: { requiresAuth: true }
   },
   {
     path: "/chart",
     component: Chart,
     name: "Chart",
+    meta: { requiresAuth: true }
   },
   {
     path: "/Achievements",
     component: Achievements,
     name: "Achievements",
+    meta: { requiresAuth: true }
   },
   {
     path: "/AddIncome",
     component: AddIncome,
     name: "AddIncome",
+    meta: { requiresAuth: true}
   },
   {
     path: "/AddTrans",
     component: AddTrans,
     name: "AddTrans",
+    meta: { requiresAuth: true}
   },
   {
     path: "/Feedback",
     component: Feedback,
     name: "Feedback",
+    meta: { requiresAuth: true}
   },
   {
     path: "/Settings",
     component: Settings,
     name: "Settings",
+    meta: { requiresAuth: true }
   },
   {
     path: "/Notifications",
     component: Notifications,
     name: "Notifications",
+    meta: { requiresAuth: true }
   },
   {
     path: "/Admins",
     component: Admins,
     name: "Admins",
+    meta: { requiresAuth: true, hideNav: true }
   },
   {
     path: "/Register",
     component: Register,
     name: "Register",
+    meta: { requiresAuth: true }
   },
     {
     path: "/ChartSecondBalance",
     component: ChartSecondBalance,
     name: "ChartSecondBalance",
+    meta: { requiresAuth: true }
   },
     {
     path: "/ChartThirdExpense",
     component: ChartThirdExpense,
     name: "ChartThirdExpense",
+    meta: { requiresAuth: true}
   },
     {
     path: "/ChartForthIncome",
     component: ChartForthIncome,
     name: "ChartForthIncome",
+    meta: { requiresAuth: true }
   },
     {
     path: "/ForgetPassword",
     component: ForgetPassword,
     name: "ForgetPassword",
+    meta: { requiresAuth: true, hideNav: true }
   }
   ,
     {
     path: "/AdminsComments",
     component: AdminsComments,
     name: "AdminsComments",
+    meta: { requiresAuth: true, hideNav: true }
   } ,
     {
     path: "/AdminMain",
     component: AdminMain,
     name: "AdminMain",
+    meta: { requiresAuth: true, hideNav: true }
   },
     {
     path: "/ConsumerAnalysis",
     component: ConsumerAnalysis,
     name: "ConsumerAnalysis",
+    meta: { requiresAuth: true}
   },
     {
     path: "/SalaryAnalysis",
     component: SalaryAnalysis,
     name: "SalaryAnalysis",
+    meta: { requiresAuth: true }
   },
     {
     path: "/SettingAccount",
     component: SettingAccount,
     name: "SettingAccount",
+    meta: { requiresAuth: true }
   }
   ,
     {
     path: "/SettingOutput",
     component: SettingOutput,
     name: "SettingOutput",
+    meta: { requiresAuth: true }
   }
   ,
     {
     path: "/SettingAlert",
     component: SettingAlert,
     name: "SettingAlert",
+    meta: { requiresAuth: true }
   }
   ,
     {
     path: "/SettingBudgetConfig",
     component: SettingBudgetConfig,
     name: "SettingBudgetConfig",
+    meta: { requiresAuth: true }
   }
   ,
     {
     path: "/SettingUserProfile",
     component: SettingUserProfile,
     name: "SettingUserProfile",
+    meta: { requiresAuth: true }
   }
   ,
     {
     path: "/BudgetManager",
     component: BudgetManager,
     name: "BudgetManager",
+    meta: { requiresAuth: true }
   } 
   ,
     {
     path: "/AdminModel",
     component: AdminModel,
     name: "AdminModel",
+    meta: { requiresAuth: true, hideNav: true }
   },
     {
     path: "/AdminData",
     component: AdminData,
     name: "AdminData",
+    meta: { requiresAuth: true, hideNav: true }
   } ,
     {
     path: "/AdminSetting",
     component: AdminSetting,
     name: "AdminSetting",
+    meta: { requiresAuth: true, hideNav: true }
   }
 
 

@@ -164,7 +164,6 @@ onMounted(() => {
 </script>
 
 <template>
-    <Nav>
         <div class="page-container">
             <header class="header-section">
                 <div>
@@ -255,7 +254,6 @@ onMounted(() => {
                 </div>
             </div>
         </div>
-    </Nav>
 </template>
 
 <style scoped>
