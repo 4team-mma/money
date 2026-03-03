@@ -177,7 +177,7 @@ const formatDuration = (seconds) => {
   }
 }
 
-// 🚀 核心發送邏輯
+// 🚀 發送邏輯
 const handleSend = async () => {
   if (!input.value.trim() || isTyping.value) return
 
@@ -186,7 +186,6 @@ const handleSend = async () => {
 
   // ✅ 1. 馬上清空輸入框
   input.value = ''
-
   isTyping.value = true
   loadingText.value = "思考中喵..."
   scrollToBottom()
@@ -198,20 +197,11 @@ const handleSend = async () => {
   }, 1500);
 
   try {
-    let smartInstruction = "";
-    if (query.includes("分析")) {
-      smartInstruction = "請進行詳細財務分析，可使用數據說明。";
-    } else {
-      smartInstruction = "嚴禁廢話與表格，限制在 2-20 中文字內。若問吃什麼，請優先從飲食類別的 add_note 找具體食物(如：包子、拉麵)，直接回答如：小主人，你吃了包子喵！";
-    }
-
-    // ✅ 3. Console Log 回歸
     console.log(`🚀 [Chat] 發送請求: "${query}"`);
 
-    // ⚡️ 修改點 2：直接呼叫 postAiRobotChat 函式，而不是透過物件
+    // 🌟 只需要傳送 message，其他花式指令都交給後端處理
     const response = await postAiRobotChat({
-      message: query,
-      instruction_override: smartInstruction
+      message: query
     });
 
     const replyText = response.reply;
@@ -226,7 +216,8 @@ const handleSend = async () => {
       text: replyText,
       sender: 'bot',
       timestamp: new Date().toISOString(),
-      duration: duration
+      duration: duration,
+      provider: provider
     })
   } catch (error) {
     console.error("❌ [Chat] 錯誤:", error);

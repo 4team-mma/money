@@ -10,19 +10,18 @@ const isSaving = ref(false)
 
 // 🎯 Gemini 模型清單
 const geminiModels = [
-    { label: 'Gemini 1.5 Flash (測試首選/額度高)', value: 'gemini-1.5-flash' },
-    { label: 'Gemini 1.5 Pro (聰明/額度中)', value: 'gemini-1.5-pro' },
-    { label: 'Gemini 2.0 Flash (目前最穩/額度低)', value: 'gemini-2.0-flash' },
-    { label: 'Gemini 2.0 Flash Lite (極速/預覽版)', value: 'gemini-2.0-flash-lite-preview-02-05' },
-    { label: 'Gemini Pro Latest (最新 Pro)', value: 'gemini-pro-latest' }
+    { label: 'Gemini 2.5 Flash (目前主力/穩定)', value: 'gemini-2.5-flash' },
+    { label: 'Gemini 3 Flash (最新高速版)', value: 'gemini-3-flash' },
+    { label: 'Gemini 2.5 Pro (進階邏輯/需確認配額)', value: 'gemini-2.5-pro' },
+    { label: 'Gemini 2.5 Flash Lite (輕量極速)', value: 'gemini-2.5-flash-lite' }
 ]
 
 // 🎯 定義各模型的限制資訊
 const modelLimitsInfo = {
-    'gemini-1.5-flash': { rpm: '15 RPM', rpd: '1,500 RPD', desc: '✅ 額度最高，適合瘋狂測試與一般對話。' },
-    'gemini-1.5-pro': { rpm: '2 RPM', rpd: '50 RPD', desc: '⚠️ 每日僅 50 次，適合處理複雜邏輯，省著用。' },
-    'gemini-2.0-flash': { rpm: '10 RPM', rpd: '1,500 RPD', desc: '⚡ 速度快且穩，額度尚可 (依官方浮動)。' },
-    'gemini-2.0-flash-lite-preview-02-05': { rpm: '30 RPM', rpd: '1,500+ RPD', desc: '🚀 極速預覽版，通常額度給很寬。' },
+    'gemini-2.5-flash': { rpm: '5 RPM', rpd: '20 RPD', desc: '✅ 基礎版，適合一般對話與測試。' },
+    'gemini-3-flash': { rpm: '5 RPM', rpd: '20 RPD', desc: '⚡ 新一代極速模型，效能更好。' },
+    'gemini-2.5-pro': { rpm: '依官方', rpd: '依官方', desc: '⚠️ 你的帳號目前此模型無配額 (顯示 0/0)，可能需綁定信用卡。' },
+    'gemini-2.5-flash-lite': { rpm: '依官方', rpd: '依官方', desc: '🚀 輕量版，你的帳號目前此模型無配額。' },
     'default': { rpm: '-', rpd: '-', desc: '請選擇一個模型以查看限制資訊' }
 }
 
