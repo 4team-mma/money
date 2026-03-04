@@ -31,13 +31,13 @@ const navigation = [
 // === 3. 主題管理 (移動到此處以便全域套用) ===
 const currentTheme = ref(localStorage.getItem('adminTheme') || 'mma_light')
 const themes = {
-    mma_light: { name: 'MMA 經典', primary: '#3b82f6', bgGradient: 'linear-gradient(135deg, #EBF4FF 0%, #F0F9FF 100%)', cardBg: 'rgba(255, 255, 255, 0.6)', sidebarBg: 'rgba(255, 255, 255, 0.4)', text: '#1e293b', border: 'rgba(255, 255, 255, 0.5)' },
-    dark: { name: '極客深邃', primary: '#60a5fa', bgGradient: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', cardBg: 'rgba(30, 41, 59, 0.6)', sidebarBg: 'rgba(15, 23, 42, 0.6)', text: '#f1f5f9', border: 'rgba(255, 255, 255, 0.1)' },
-    forest: { name: '森林晨曦', primary: '#10b981', bgGradient: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)', cardBg: 'rgba(255, 255, 255, 0.6)', sidebarBg: 'rgba(255, 255, 255, 0.4)', text: '#064e3b', border: 'rgba(16, 185, 129, 0.2)' },
-    sunset: { name: '微醺夕陽', primary: '#f59e0b', bgGradient: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)', cardBg: 'rgba(255, 255, 255, 0.6)', sidebarBg: 'rgba(255, 255, 255, 0.4)', text: '#78350f', border: 'rgba(245, 158, 11, 0.2)' },
-    ocean: { name: '深海湛藍', primary: '#0ea5e9', bgGradient: 'linear-gradient(135deg, #082f49 0%, #0f172a 100%)', cardBg: 'rgba(12, 74, 110, 0.6)', sidebarBg: 'rgba(8, 47, 73, 0.6)', text: '#e0f2fe', border: 'rgba(14, 165, 233, 0.2)' },
-    sakura: { name: '櫻花粉雪', primary: '#ec4899', bgGradient: 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%)', cardBg: 'rgba(255, 255, 255, 0.7)', sidebarBg: 'rgba(255, 255, 255, 0.5)', text: '#831843', border: 'rgba(244, 114, 182, 0.3)' },
-    obsidian: { name: '曜石黑金', primary: '#fbbf24', bgGradient: 'linear-gradient(135deg, #18181b 0%, #27272a 100%)', cardBg: 'rgba(24, 24, 27, 0.8)', sidebarBg: 'rgba(9, 9, 11, 0.8)', text: '#fef3c7', border: 'rgba(251, 191, 36, 0.2)' }
+    mma_light: { name: 'MMA 經典', primary: '#3b82f6', bgGradient: 'linear-gradient(135deg, #EBF4FF 0%, #F0F9FF 100%)', cardBg: 'rgba(255, 255, 255, 0.6)', sidebarBg: 'rgba(255, 255, 255, 0.4)', text: '#1e293b', border: 'rgba(255, 255, 255, 0.5)',color: 'black' },
+    forest: { name: '森林晨曦', primary: '#10b981', bgGradient: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)', cardBg: 'rgba(255, 255, 255, 0.6)', sidebarBg: 'rgba(255, 255, 255, 0.4)', text: '#064e3b', border: 'rgba(16, 185, 129, 0.2)' ,color: 'black'},
+    sunset: { name: '微醺夕陽', primary: '#f59e0b', bgGradient: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)', cardBg: 'rgba(255, 255, 255, 0.6)', sidebarBg: 'rgba(255, 255, 255, 0.4)', text: '#78350f', border: 'rgba(245, 158, 11, 0.2)' ,color: 'black'},
+    sakura: { name: '櫻花粉雪', primary: '#ec4899', bgGradient: 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%)', cardBg: 'rgba(255, 255, 255, 0.7)', sidebarBg: 'rgba(255, 255, 255, 0.5)', text: '#831843', border: 'rgba(244, 114, 182, 0.3)' ,color: 'black'},
+    dark: { name: '極客深邃', primary: '#60a5fa', bgGradient: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', cardBg: 'rgba(30, 41, 59, 0.6)', sidebarBg: 'rgba(15, 23, 42, 0.6)', text: '#f1f5f9', border: 'rgba(255, 255, 255, 0.1)', color: 'white'},
+    ocean: { name: '深海湛藍', primary: '#0ea5e9', bgGradient: 'linear-gradient(135deg, #082f49 0%, #0f172a 100%)', cardBg: 'rgba(12, 74, 110, 0.6)', sidebarBg: 'rgba(8, 47, 73, 0.6)', text: '#e0f2fe', border: 'rgba(14, 165, 233, 0.2)' ,color: 'white'},
+    obsidian: { name: '曜石黑金', primary: '#fbbf24', bgGradient: 'linear-gradient(135deg, #18181b 0%, #27272a 100%)', cardBg: 'rgba(24, 24, 27, 0.8)', sidebarBg: 'rgba(9, 9, 11, 0.8)', text: '#fef3c7', border: 'rgba(251, 191, 36, 0.2)' ,color: 'white'}
 }
 
 const currentStyle = computed(() => themes[currentTheme.value] || themes.mma_light)

@@ -90,7 +90,7 @@ const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', { style: 'currenc
     <div class="comments-container">
         <div class="section-header">
             <h3>💬 使用者問題回饋 <small>User Feedback</small></h3>
-            <hr>
+            
             <button class="refresh-btn" @click="fetchFeedbacks" :disabled="loading">
                 {{ loading ? '讀取中...' : '🔄 重新整理' }}
             </button>
@@ -211,10 +211,9 @@ const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', { style: 'currenc
 }
 
 .section-header {
-    display: flex;            
-    justify-content: space-between; 
-    align-items: center;       
-    margin-bottom: 15px;      
+    display: flex;
+    align-items: center;
+    gap: 30px;      
 }
 
 /* 確保 h3 不會擠壓到按鈕 */
@@ -258,15 +257,12 @@ const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', { style: 'currenc
 
 .refresh-btn {
     padding: 8px 16px;
-    border-radius: 15px;
-    background: var(--primary); /* 淡淡的藍色背景 */
-    border: 0.5px solid ;
-    border-color: var(--text);
-    color: var(--text);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.3);
     cursor: pointer;
     font-size: 14px;
-    transition: all 0.3s ease;
-    white-space: nowrap; /* 避免文字換行 */
+    transition: 0.3s;
 }
 
 .refresh-btn:hover:not(:disabled) {
