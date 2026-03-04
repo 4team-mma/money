@@ -1,5 +1,4 @@
 <script setup>
-import Nav from '@/components/Nav.vue'
 import Add_bar from '@/components/AddBar.vue'
 import Add_cato_inn from '@/components/AddCatoInn.vue'
 import Add_account from '@/components/AddAccount.vue'

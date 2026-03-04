@@ -1,6 +1,5 @@
 <script setup>
 import { onMounted, computed, ref } from 'vue';
-import Nav from "@/components/Nav.vue";
 import { useNotificationStore } from '@/stores/notification';
 import { getLocalDate } from '@/utils/dateHelper'
 

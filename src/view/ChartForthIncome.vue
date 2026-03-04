@@ -1,5 +1,4 @@
 <script setup>
-import Nav from '@/components/Nav.vue';
 import Chart_Preface from '@/components/ChartPreface.vue';
 import { ref, computed, onMounted, watch } from 'vue';
 import { statsApi } from '@/api/stats';

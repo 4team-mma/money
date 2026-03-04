@@ -1,5 +1,4 @@
 <script setup>
-import Nav from '@/components/Nav.vue';
 import { ref, onMounted, computed, nextTick } from 'vue';
 import Chart from 'chart.js/auto';
 import { getCpiComparison } from '@/api/analysis';

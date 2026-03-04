@@ -1,5 +1,4 @@
 <script setup>
-import Nav from '@/components/Nav.vue'
 import { ref, computed, onMounted, watch } from 'vue';
 import api from "@/api";
 import { ElMessage } from 'element-plus';

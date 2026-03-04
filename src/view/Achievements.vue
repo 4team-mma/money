@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import Nav from '@/components/Nav.vue'
 import AchievementsMission from '@/components/AchievementsMission.vue'
 import AchievementsCards from '@/components/AchievementsCards.vue'
 import AchievementsReward from '@/components/AchievementsReward.vue'

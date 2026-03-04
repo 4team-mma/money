@@ -1,6 +1,5 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import Nav from '@/components/Nav.vue';
 import api from '@/api'
 import { accountApi } from '@/api/account';import { useNotificationStore } from '@/stores/notification'
 import { useRouter } from 'vue-router';
