@@ -1,6 +1,5 @@
 <script setup>
 import { ref } from 'vue'
-import Nav from '@/components/Nav.vue';
 import SettingAccount from './SettingAccount.vue';
 import SettingOutput from './SettingOutput.vue';
 import SettingUserProfile from './SettingUserProfile.vue';

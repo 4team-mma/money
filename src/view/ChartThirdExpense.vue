@@ -4,7 +4,6 @@ import { statsApi } from '@/api/stats' // 🌟 具名引入，符合你 accountA
 import { calculatePeriodDays } from '@/utils/financeHelper'
 import { getLocalDate, getLocalDateString } from '@/utils/dateHelper'
 import Chart from 'chart.js/auto'
-import Nav from '@/components/Nav.vue'
 import Chart_Preface from '@/components/ChartPreface.vue'
 import { triggerMissionAction } from '@/api/gamification';
 const dailyChartRef = ref(null)

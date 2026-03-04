@@ -2,7 +2,6 @@
 import { ref, computed, onMounted, watch, shallowRef, nextTick } from 'vue'
 import { statsApi } from '@/api/stats'
 import Chart from 'chart.js/auto'
-import Nav from '@/components/Nav.vue'
 import Chart_Preface from '@/components/ChartPreface.vue'
 import { getLocalDate, getLocalDateString } from '@/utils/dateHelper'
 import { triggerMissionAction } from '@/api/gamification';

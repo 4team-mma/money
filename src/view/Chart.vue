@@ -1,6 +1,5 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
-import Nav from '@/components/Nav.vue'
 import Chart_Preface from '@/components/ChartPreface.vue'
 import { statsApi } from '@/api/stats'
 import { Chart, registerables } from 'chart.js'

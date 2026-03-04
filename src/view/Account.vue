@@ -3,7 +3,6 @@ import { ref, onMounted, computed } from 'vue';
 import { accountApi } from '@/api/account';
 import AccountAdd1 from '@/components/AccountAdd1.vue';
 import AccountEdit from '@/components/AccountEdit.vue';
-import Nav from '@/components/Nav.vue';
 import { ElMessage } from 'element-plus';
 import { triggerMissionAction } from '@/api/gamification';
 const accounts = ref([])
