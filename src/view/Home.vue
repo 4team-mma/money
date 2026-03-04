@@ -188,7 +188,6 @@ const handleRegister = () => router.push('/Register')
             </div>
         </div>
     </div>
-    <router-view />
 </template>
 
 <style scoped>

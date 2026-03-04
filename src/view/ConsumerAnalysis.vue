@@ -112,7 +112,6 @@ onMounted(fetchDataAndRender);
 </script>
 
 <template>
-    <Nav>
         <div class="page-container">
             <header class="header-section">
                 <div>
@@ -171,7 +170,6 @@ onMounted(fetchDataAndRender);
                 </div>
             </div>
         </div>
-    </Nav>
 </template>
 
 <style scoped>

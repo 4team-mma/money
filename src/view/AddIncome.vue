@@ -38,7 +38,6 @@ const now_money = computed(()=>{
 </script>
 
 <template>
-    <Nav>
         <div class="page">
             <Add_bar />
 
@@ -98,7 +97,6 @@ const now_money = computed(()=>{
                 </div>
             </div>
         </div>
-    </Nav>
 </template>
 
 <style scoped>

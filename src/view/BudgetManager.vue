@@ -430,7 +430,6 @@ const getSavingsColor = (current, target) => {
 </script>
 
 <template>
-  <Nav>
     <div class="budget-app-container">
       <header class="page-header">
         <div class="title-group">
@@ -787,7 +786,6 @@ const getSavingsColor = (current, target) => {
         </button>
       </footer>
     </div>
-  </Nav>
 </template>
 
 <style scoped>

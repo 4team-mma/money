@@ -248,7 +248,6 @@ const today = computed(() => {
 </script>
 
 <template>
-    <Nav>
         <Chart_Preface />
         <div class="dashboard-container_1">
             <h3 style="color: var(--text-primary);">收支趨勢</h3>
@@ -296,7 +295,6 @@ const today = computed(() => {
                 </tbody>
             </table>
         </div>
-    </Nav>
 </template>
 <style scoped>
 @import '../assets/css/dashboard.css';

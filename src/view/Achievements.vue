@@ -179,7 +179,6 @@ onMounted(() => {
 </script>
 
 <template>
-    <Nav>
         <div class="mms-full-layout">
             <header class="hero-identity-banner" :class="identity.theme">
                 <div class="banner-left">
@@ -279,7 +278,6 @@ onMounted(() => {
             </div>
             <AchievementsReward />
         </div>
-    </Nav>
 </template>
 
 <style scoped>
