@@ -260,7 +260,7 @@ router.beforeEach((to, from, next) => {
   const isPublicPage = publicPages.includes(to.path);
 
   // 2. 定義管理員專屬頁面 (路徑包含 Admin 或 Admins)
-  const adminPages = ['/Admins', '/AdminMain', '/AdminModel', '/AdminsComments','/AdminSetting'];
+  const adminPages = ['/Admins', '/AdminMain', '/AdminModel', '/AdminsComments', '/AdminData', '/AdminSetting'];
   const isAdminPage = adminPages.some(path => to.path.startsWith(path));
 
   // 🛡️ 防護 A：未登入者存取私有頁面
