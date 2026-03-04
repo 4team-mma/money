@@ -57,7 +57,6 @@ const filteredToAccounts = computed(() => {
 </script>
 
 <template>
-    <Nav>
         <div class="page">
             <Add_bar />
 
@@ -112,7 +111,6 @@ const filteredToAccounts = computed(() => {
                 </div>
             </div>
         </div>
-    </Nav>
 </template>
 <style scoped>
 /* 引用共用 CSS */

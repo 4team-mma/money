@@ -159,7 +159,6 @@ const handleSaveSuccess = () => {
 </script>
 
 <template>
-    <Nav>
         <div class="page-container">
             <div class="acc_head0">
                 <h1 class="page-title">帳戶管理</h1>
@@ -293,7 +292,6 @@ const handleSaveSuccess = () => {
                 <AccountEdit v-if="selectedTransaction" :initial-data="selectedTransaction" @save-success="handleSaveSuccess" />
             </div>
         </div>
-    </Nav>
 </template>
 
 <style scoped>

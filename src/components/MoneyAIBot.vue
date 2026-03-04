@@ -308,7 +308,7 @@ const chatWindowStyle = computed(() => {
   };
   if (isInBottomHalf) {
     // 預計向上彈出
-    style.bottom = '100px';
+    style.bottom = '10px';
     // 檢查視窗頂部是否會超出螢幕
     if (position.value.y - winH < padding) {
       // 如果會超出頂部，改為貼著螢幕頂部
@@ -317,7 +317,7 @@ const chatWindowStyle = computed(() => {
     }
   } else {
     // 預計向下彈出
-    style.top = '100px';
+    style.top = '10px';
     // 檢查視窗底部是否會超過螢幕
     if (position.value.y + winH + 100 > window.innerHeight - padding) {
       style.top = 'auto';

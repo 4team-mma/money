@@ -83,7 +83,6 @@ const submitAdd = async () => {
 </script>
 
 <template>
-  <Nav>
     <div class="notifications-container">
       <header class="page-header">
         <div class="header-title">
@@ -187,7 +186,6 @@ const submitAdd = async () => {
         </div>
       </div>
     </div>
-  </Nav>
 </template>
 
 <style scoped>
