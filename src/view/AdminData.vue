@@ -1065,6 +1065,9 @@ const sortedAccounts = computed(() => {
     /* 您原本的卡片樣式保持不變 */
 }
 
-
+.stat-icon-bg{
+    transform: scale(2.1);
+    padding-right: 20%;
+}
 
 </style>
