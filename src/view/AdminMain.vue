@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { useCategoryStore } from '@/stores/categoryStats'
-
+import api from "@/api";
 
 // 接收父組件狀態
 const props = defineProps({
@@ -10,7 +10,7 @@ const props = defineProps({
     tabs: Array,
     currentStyle: Object,
     currentLoginAdmin: Object,
- 
+
     currentTheme: String
 })
 
@@ -46,10 +46,10 @@ onMounted(async () => {
 /* ========================
    數據計算與過濾
    ======================== */
-const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', { 
-    style: 'currency', 
-    currency: 'TWD', 
-    minimumFractionDigits: 0 
+const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', {
+    style: 'currency',
+    currency: 'TWD',
+    minimumFractionDigits: 0
 }).format(val || 0)
 
 const rankingsFilter = (list) => {
@@ -100,7 +100,7 @@ const nextLevelXP = ref(100);
 const xpPercentage = computed(() => {
     const current = userStore.selectedUser?.xp || 0;
     const level = userStore.selectedUser?.level || 1;
-    let required = 100; 
+    let required = 100;
     if (level < 10) required = 100 + (level * 20);
     else if (level < 20) required = 300 + (level * 30);
     nextLevelXP.value = required;
@@ -110,7 +110,7 @@ const xpPercentage = computed(() => {
 // 🕒 【一字不漏】隊友要求的最後登入格式化邏輯
 const formatLastLogin = (dateStr) => {
     if (!dateStr || dateStr === '從未登入') return '從未登入';
-    
+
     const now = new Date();
     const loginDate = new Date(dateStr);
     const diffInSeconds = Math.floor((now - loginDate) / 1000);
@@ -119,8 +119,8 @@ const formatLastLogin = (dateStr) => {
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} 分鐘前`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} 小時前`;
     if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} 天前`;
-    
-    return loginDate.toLocaleDateString(); 
+
+    return loginDate.toLocaleDateString();
 };
 
 /* ========================
@@ -221,23 +221,44 @@ const handleSend = async () => {
         <div class="scroll-view">
 
 
-            <div class="content-glass-card" :style="{ backgroundColor: currentStyle.cardBg, borderColor: currentStyle.border }">
-                
+            <div class="content-glass-card"
+                :style="{ backgroundColor: currentStyle.cardBg, borderColor: currentStyle.border }">
 
 
-                <section  class="tab-content">
-                    <div class="search-box"><input v-model="searchQuery" placeholder="🔍 搜尋帳號、姓名或 Email..." class="mma-input" /></div>
+
+                <section class="tab-content">
+                    <div class="search-box"><input v-model="searchQuery" placeholder="🔍 搜尋帳號、姓名或 Email..."
+                            class="mma-input" /></div>
 
                     <div class="user-group-div admin-section">
-                        <div class="group-title flex-header">🛡️ 管理權限組 ({{ adminFiltered.length }}) <button class="btn-mma-action" @click="showAdminModal = true">+ 新增管理員</button></div>
+                        <div class="group-title flex-header">🛡️ 管理權限組 ({{ adminFiltered.length }}) <button
+                                class="btn-mma-action" @click="showAdminModal = true">+ 新增管理員</button></div>
                         <div class="table-wrapper">
                             <table class="mma-table">
-                                <thead><tr><th>編號</th><th>帳號</th><th>姓名</th><th>職位</th><th>操作</th></tr></thead>
+                                <thead>
+                                    <tr>
+                                        <th>編號</th>
+                                        <th>帳號</th>
+                                        <th>姓名</th>
+                                        <th>職位</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
                                     <tr v-for="u in adminFiltered" :key="u.uid">
                                         <td><span class="uid-tag admin-uid">{{ u.displayUid }}</span></td>
-                                        <td class="font-bold">{{ u.username }}</td><td>{{ u.name }}</td><td><span class="job-badge">{{ u.job || '管理者' }}</span></td>
-                                        <td class="action-btns"><button class="btn-mma-action" :disabled="u.username !== currentLoginAdmin.username" :class="{ 'is-disabled': u.username !== currentLoginAdmin.username }" @click="emit('open-edit', u)">{{ u.username === currentLoginAdmin.username ? '修改資訊' : '不可修改' }}</button></td>
+                                        <td class="font-bold">{{ u.username }}</td>
+                                        <td>{{ u.name }}</td>
+                                        <td><span class="job-badge">{{ u.job || '管理者' }}</span></td>
+
+                                        <td class="action-btns">
+                                            <button class="btn-mma-action"
+                                                :disabled="u.username !== currentLoginAdmin.username"
+                                                :class="{ 'is-disabled': u.username !== currentLoginAdmin.username }"
+                                                @click="openEditModal(u)"> {{ u.username === currentLoginAdmin.username
+                                                ? '修改資訊' : '不可修改' }}
+                                            </button>
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -255,16 +276,28 @@ const handleSend = async () => {
                         </div>
                         <div class="table-wrapper">
                             <table class="mma-table">
-                                <thead><tr><th>編號</th><th>帳號</th><th>姓名</th><th>帳號狀態</th><th>最後登入</th><th>操作</th></tr></thead>
+                                <thead>
+                                    <tr>
+                                        <th>編號</th>
+                                        <th>帳號</th>
+                                        <th>姓名</th>
+                                        <th>帳號狀態</th>
+                                        <th>最後登入</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
                                     <tr v-for="u in testUsersFiltered" :key="u.uid">
                                         <td><span class="uid-tag test-uid">{{ u.displayUid }}</span></td>
-                                        <td class="font-bold">{{ u.username }}</td><td>{{ u.name }}</td>
+                                        <td class="font-bold">{{ u.username }}</td>
+                                        <td>{{ u.name }}</td>
                                         <td>{{ isUserActive(u.status) ? '使用中' : '已停用' }}</td>
                                         <td>{{ formatLastLogin(u.lastLogin) }}</td>
                                         <td class="action-btns">
-                                            <button class="btn-mma-action" @click="userStore.showUserDetails(u.uid)">詳情</button>
-                                            <button class="btn-mma-action delete" @click="userStore.deleteUser(u.uid)">註銷</button>
+                                            <button class="btn-mma-action"
+                                                @click="userStore.showUserDetails(u.uid)">詳情</button>
+                                            <button class="btn-mma-action delete"
+                                                @click="userStore.deleteUser(u.uid)">註銷</button>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -276,25 +309,44 @@ const handleSend = async () => {
                         <div class="group-title">👤 一般用戶組 ({{ normalUsersFiltered.length }})</div>
                         <div class="table-wrapper">
                             <table class="mma-table">
-                                <thead><tr><th>編號</th><th>帳號</th><th>姓名</th><th>Email</th><th>帳號狀態</th><th>最後登入</th><th>操作</th></tr></thead>
+                                <thead>
+                                    <tr>
+                                        <th>編號</th>
+                                        <th>帳號</th>
+                                        <th>姓名</th>
+                                        <th>Email</th>
+                                        <th>帳號狀態</th>
+                                        <th>最後登入</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
                                     <tr v-for="u in normalUsersFiltered" :key="u.uid">
                                         <td><span class="uid-tag user-uid">{{ u.displayUid }}</span></td>
-                                        <td class="font-bold">{{ u.username }}</td><td>{{ u.name }}</td><td>{{ u.email }}</td>
+                                        <td class="font-bold">{{ u.username }}</td>
+                                        <td>{{ u.name }}</td>
+                                        <td>{{ u.email }}</td>
                                         <td>{{ isUserActive(u.status) ? '使用中' : '已停用' }}</td>
                                         <td>{{ formatLastLogin(u.lastLogin) }}</td>
                                         <td class="action-btns">
-                                            <button class="btn-mma-action" @click="userStore.showUserDetails(u.uid)">詳情</button>
-                                            <button class="btn-mma-action" :class="isUserActive(u.status) ? 'btn-warn' : 'btn-success'" @click="userStore.toggleUserStatus(u.uid)">{{ isUserActive(u.status) ? '停用' : '恢復' }}</button>
-                                            <button class="btn-mma-action delete" @click="userStore.deleteUser(u.uid)">註銷</button>
+                                            <button class="btn-mma-action"
+                                                @click="userStore.showUserDetails(u.uid)">詳情</button>
+                                            <button class="btn-mma-action"
+                                                :class="isUserActive(u.status) ? 'btn-warn' : 'btn-success'"
+                                                @click="userStore.toggleUserStatus(u.uid)">{{ isUserActive(u.status) ?
+                                                '停用' : '恢復' }}</button>
+                                            <button class="btn-mma-action delete"
+                                                @click="userStore.deleteUser(u.uid)">註銷</button>
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
                             <div class="pagination-controls">
-                                <button :disabled="currentPage === 1" @click="changePage(currentPage - 1)" class="btn-mma-action"> 上一頁 </button>
+                                <button :disabled="currentPage === 1" @click="changePage(currentPage - 1)"
+                                    class="btn-mma-action"> 上一頁 </button>
                                 <span class="page-info">第 {{ currentPage }} 頁</span>
-                                <button :disabled="normalUsersFiltered.length < perPage" @click="changePage(currentPage + 1)" class="btn-mma-action"> 下一頁 </button>
+                                <button :disabled="normalUsersFiltered.length < perPage"
+                                    @click="changePage(currentPage + 1)" class="btn-mma-action"> 下一頁 </button>
                             </div>
                         </div>
                     </div>
@@ -305,39 +357,52 @@ const handleSend = async () => {
 
         <div v-if="userStore.selectedUser" class="modal-overlay" @click.self="userStore.clearSelectedUser()">
             <div class="modal-glass-card animate-zoom-in">
-                <div class="modal-header"><h3>👤 用戶詳細資訊</h3><button class="btn-close" @click="userStore.clearSelectedUser()">✕</button></div>
+                <div class="modal-header">
+                    <h3>👤 用戶詳細資訊</h3><button class="btn-close" @click="userStore.clearSelectedUser()">✕</button>
+                </div>
                 <div class="modal-body" v-if="!userStore.loadingDetail">
                     <div class="user-profile-header">
                         <div class="avatar-circle">{{ userStore.selectedUser.name?.charAt(0) }}</div>
                         <div class="header-info">
-                            <h4>{{ userStore.selectedUser.name }} <span class="status-badge" :class="'status-' + userStore.selectedUser.status">{{ isUserActive(userStore.selectedUser.status) ? '使用中' : '已停用' }}</span></h4>
+                            <h4>{{ userStore.selectedUser.name }} <span class="status-badge"
+                                    :class="'status-' + userStore.selectedUser.status">{{
+                                        isUserActive(userStore.selectedUser.status) ? '使用中' : '已停用' }}</span></h4>
                             <p class="text-secondary">{{ userStore.selectedUser.job || '未設定職業' }}</p>
                         </div>
                     </div>
-                    <hr class="modal-divider"/>
+                    <hr class="modal-divider" />
                     <div class="detail-grid">
-                        <div class="detail-item"><span class="label">帳號：</span><span class="val">{{ userStore.selectedUser.username }}</span></div>
-                        <div class="detail-item"><span class="label">Email：</span><span class="val">{{ userStore.selectedUser.email }}</span></div>
+                        <div class="detail-item"><span class="label">帳號：</span><span class="val">{{
+                                userStore.selectedUser.username }}</span></div>
+                        <div class="detail-item"><span class="label">Email：</span><span class="val">{{
+                                userStore.selectedUser.email }}</span></div>
                         <div class="detail-item">
                             <span class="label">註冊日期：</span>
                             <span class="val">
-                                {{ userStore.selectedUser.created_at ? new Date(userStore.selectedUser.created_at).toLocaleDateString() : '無資料' }}
+                                {{ userStore.selectedUser.created_at ? new
+                                    Date(userStore.selectedUser.created_at).toLocaleDateString() : '無資料' }}
                             </span>
                         </div>
                         <div class="detail-item">
                             <span class="label">最後登入：</span>
-                            <span class="val" :class="{'text-active': userStore.selectedUser.lastLogin}">{{ formatLastLogin(userStore.selectedUser.lastLogin) }}</span>
+                            <span class="val" :class="{ 'text-active': userStore.selectedUser.lastLogin }">{{
+                                formatLastLogin(userStore.selectedUser.lastLogin) }}</span>
                         </div>
                         <div class="detail-item">
                             <span class="label">等級稱號：</span>
-                            <span class="val level-tag">Lv.{{ userStore.selectedUser.level }} (XP: {{ userStore.selectedUser.xp }})</span>
+                            <span class="val level-tag">Lv.{{ userStore.selectedUser.level }} (XP: {{
+                                userStore.selectedUser.xp }})</span>
                         </div>
                     </div>
                     <div class="xp-section">
-                        <div class="xp-header"><span class="label">等級成長</span><span class="val">Lv.{{ userStore.selectedUser.level }}</span></div>
-                        <div class="xp-progress-container"><div class="xp-bar" :style="{ width: xpPercentage + '%' }"></div></div>
+                        <div class="xp-header"><span class="label">等級成長</span><span class="val">Lv.{{
+                                userStore.selectedUser.level }}</span></div>
+                        <div class="xp-progress-container">
+                            <div class="xp-bar" :style="{ width: xpPercentage + '%' }"></div>
+                        </div>
                         <div class="xp-text">{{ userStore.selectedUser.xp }} / {{ nextLevelXP }} XP</div>
-                        <div class="xp-action-row"><input type="number" v-model="xpAmount" class="mma-input-sm" placeholder="數值" />XP <button class="btn-xp-give" @click="confirmXP">發放獎勵</button></div>
+                        <div class="xp-action-row"><input type="number" v-model="xpAmount" class="mma-input-sm"
+                                placeholder="數值" />XP <button class="btn-xp-give" @click="confirmXP">發放獎勵</button></div>
                     </div>
                     <div class="detail-stats">
                         <div class="stat-box">
@@ -362,8 +427,12 @@ const handleSend = async () => {
                         </div>
                     </div>
                     <div class="modal-footer-actions">
-                        <button class="btn-action-outline" :class="isUserActive(userStore.selectedUser.status) ? 'warn' : 'success'" @click="handleToggleStatus(userStore.selectedUser.uid)">{{ isUserActive(userStore.selectedUser.status) ? '🚫 停用帳號' : '✅ 恢復帳號' }}</button>
-                        <button class="btn-action-outline delete" @click="handleDeleteUser(userStore.selectedUser.uid)">🗑️ 註銷用戶</button>
+                        <button class="btn-action-outline"
+                            :class="isUserActive(userStore.selectedUser.status) ? 'warn' : 'success'"
+                            @click="handleToggleStatus(userStore.selectedUser.uid)">{{
+                                isUserActive(userStore.selectedUser.status) ? '🚫 停用帳號' : '✅ 恢復帳號' }}</button>
+                        <button class="btn-action-outline delete"
+                            @click="handleDeleteUser(userStore.selectedUser.uid)">🗑️ 註銷用戶</button>
                     </div>
                 </div>
             </div>
@@ -371,32 +440,43 @@ const handleSend = async () => {
 
         <div v-if="showAdminModal" class="modal-overlay" @click.self="showAdminModal = false">
             <div class="modal-glass-card">
-                <div class="modal-header"><h3>🛡️建立管理者帳戶(欄位為必填!)</h3></div>
-                <div class="m-field"><label>姓名</label><input v-model="adminForm.name" class="m-input" placeholder="請輸入姓名"  /></div>
-                <div class="m-field"><label>帳號</label><input v-model="adminForm.username" class="m-input" placeholder="admin_test" /></div>
-                <div class="m-field"><label>Email</label><input v-model="adminForm.email" class="m-input" placeholder="admin_test@example.com" /></div>
-                <div class="m-field"><label>初始密碼</label><input type="password" v-model="adminForm.password" class="m-input" placeholder="至少3位數" /></div>
+                <div class="modal-header">
+                    <h3>🛡️建立管理者帳戶(欄位為必填!)</h3>
+                </div>
+                <div class="m-field"><label>姓名</label><input v-model="adminForm.name" class="m-input"
+                        placeholder="請輸入姓名" /></div>
+                <div class="m-field"><label>帳號</label><input v-model="adminForm.username" class="m-input"
+                        placeholder="admin_test" /></div>
+                <div class="m-field"><label>Email</label><input v-model="adminForm.email" class="m-input"
+                        placeholder="admin_test@example.com" /></div>
+                <div class="m-field"><label>初始密碼</label><input type="password" v-model="adminForm.password"
+                        class="m-input" placeholder="至少3位數" /></div>
                 <div class="modal-foot-btns">
                     <button class="btn-cancel" @click="showAdminModal = false">取消</button>
-                    <button class="btn-save" :style="{ background: currentStyle.primary }" @click="handleCreateAdmin">建立</button>
+                    <button class="btn-save" :style="{ background: currentStyle.primary }"
+                        @click="handleCreateAdmin">建立</button>
                 </div>
             </div>
         </div>
 
         <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
             <div class="modal-glass-card">
-                <div class="modal-header"><h3>🧪 建立測試帳號</h3></div>
+                <div class="modal-header">
+                    <h3>🧪 建立測試帳號</h3>
+                </div>
                 <div class="m-field"><label>帳號</label><input v-model="testForm.username" class="m-input" /></div>
                 <div class="m-field"><label>Email</label><input v-model="testForm.email" class="m-input" /></div>
-                <div class="m-field"><label>密碼</label><input type="password" v-model="testForm.password" class="m-input" /></div>
+                <div class="m-field"><label>密碼</label><input type="password" v-model="testForm.password"
+                        class="m-input" /></div>
                 <div class="modal-foot-btns">
                     <button class="btn-cancel" @click="showCreateModal = false">取消</button>
-                    <button class="btn-save" :style="{ background: currentStyle.primary }" @click="handleCreateTest">建立</button>
+                    <button class="btn-save" :style="{ background: currentStyle.primary }"
+                        @click="handleCreateTest">建立</button>
                 </div>
             </div>
         </div>
     </main>
-     <Transition name="fade">
+    <Transition name="fade">
         <div v-if="isEditModalOpen" class="modal-overlay" @click.self="isEditModalOpen = false">
             <div class="modal-card">
                 <div class="modal-head">
@@ -424,105 +504,145 @@ const handleSend = async () => {
 @import "../assets/css/admin.css";
 
 /* --- 表格與基礎佈局 --- */
-td, th { text-align: center !important; }
-
-.action-btns { 
-    display: flex !important; 
-    justify-content: center !important; 
-    align-items: center !important; 
-    gap: 12px !important; 
-    padding: 10px !important; 
+td,
+th {
+    text-align: center !important;
 }
 
-.group-title.flex-header { display: flex; align-items: center; gap: 20px; }
-.header-btns { display: flex; gap: 12px; }
-
-.pagination-footer { 
-    margin-top: 40px; 
-    display: flex; 
-    justify-content: center; 
-    align-items: center; 
-    gap: 30px; 
-    padding: 20px; 
+.action-btns {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 10px !important;
 }
 
-.pag-btn { min-width: 90px; }
+.group-title.flex-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.header-btns {
+    display: flex;
+    gap: 12px;
+}
+
+.pagination-footer {
+    margin-top: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    padding: 20px;
+}
+
+.pag-btn {
+    min-width: 90px;
+}
 
 /* --- 彈窗 UI 修正 (Modal) --- */
 .modal-glass-card {
-    background: white; 
-    padding: 35px; 
-    border-radius: 28px; 
+    background: white;
+    padding: 35px;
+    border-radius: 28px;
     width: 440px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 
-.modal-header h3 { margin: 0 0 25px 0; font-size: 1.5rem; color: #1e293b; }
-
-.m-field { margin-bottom: 20px; text-align: left; }
-.m-field label { 
-    display: block; 
-    font-size: 13px; 
-    font-weight: 800; 
-    color: #64748b; 
-    margin-bottom: 6px; 
+.modal-header h3 {
+    margin: 0 0 25px 0;
+    font-size: 1.5rem;
+    color: #1e293b;
 }
 
-.m-input { 
-    width: 100%; 
-    padding: 12px; 
-    border-radius: 12px; 
-    border: 1px solid #e2e8f0; 
-    outline: none; 
+.m-field {
+    margin-bottom: 20px;
+    text-align: left;
 }
 
-.modal-foot-btns { display: flex; justify-content: flex-end; gap: 12px; margin-top: 30px; }
-
-.btn-save, .btn-cancel { 
-    padding: 10px 22px; 
-    border-radius: 10px; 
-    font-weight: 700; 
-    cursor: pointer; 
-    border: none; 
+.m-field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 800;
+    color: #64748b;
+    margin-bottom: 6px;
 }
 
-.btn-cancel { background: #f1f5f9; color: #64748b; }
-.btn-save { color: white; }
+.m-input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    outline: none;
+}
 
-.mma-input { 
-    width: 100%; 
-    margin-bottom: 25px; 
-    padding: 12px 20px; 
-    border-radius: 12px; 
-    border: 1px solid #e2e8f0; 
+.modal-foot-btns {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 30px;
+}
+
+.btn-save,
+.btn-cancel {
+    padding: 10px 22px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-cancel {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.btn-save {
+    color: white;
+}
+
+.mma-input {
+    width: 100%;
+    margin-bottom: 25px;
+    padding: 12px 20px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
 }
 
 /* --- 🔒 權限限制樣式 --- */
-.is-disabled { 
-    opacity: 0.5; 
-    cursor: not-allowed !important; 
-    background: #e2e8f0 !important; 
-    color: #94a3b8 !important; 
-    border-color: #cbd5e1 !important; 
+.is-disabled {
+    opacity: 0.5;
+    cursor: not-allowed !important;
+    background: #e2e8f0 !important;
+    color: #94a3b8 !important;
+    border-color: #cbd5e1 !important;
 }
 
 .pagination-controls {
-    display: flex;          /* 使用 Flexbox 佈局 */
-    justify-content: center; /* 水平居中 */
-    align-items: center;     /* 垂直居中（確保按鈕與文字高度對齊） */
-    gap: 20px;               /* 控制按鈕與文字之間的間距 */
-    margin-top: 30px;        /* 與上方表格保持距離 */
-    padding: 20px 0;         /* 增加上下內距，讓視覺不擁擠 */
-    width: 100%;             /* 確保佔滿容器寬度以利置中 */
+    display: flex;
+    /* 使用 Flexbox 佈局 */
+    justify-content: center;
+    /* 水平居中 */
+    align-items: center;
+    /* 垂直居中（確保按鈕與文字高度對齊） */
+    gap: 20px;
+    /* 控制按鈕與文字之間的間距 */
+    margin-top: 30px;
+    /* 與上方表格保持距離 */
+    padding: 20px 0;
+    /* 增加上下內距，讓視覺不擁擠 */
+    width: 100%;
+    /* 確保佔滿容器寬度以利置中 */
 }
 
 /* 針對分頁文字的微調 */
 .page-info {
     font-weight: 600;
-    color: inherit;         /* 跟隨主題文字顏色 */
-    min-width: 80px;        /* 給予最小寬度，避免頁碼跳動時影響兩側按鈕位置 */
+    color: inherit;
+    /* 跟隨主題文字顏色 */
+    min-width: 80px;
+    /* 給予最小寬度，避免頁碼跳動時影響兩側按鈕位置 */
     text-align: center;
 }
-
-
 </style>
