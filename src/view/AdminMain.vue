@@ -100,9 +100,13 @@ const nextLevelXP = ref(100);
 const xpPercentage = computed(() => {
     const current = userStore.selectedUser?.xp || 0;
     const level = userStore.selectedUser?.level || 1;
-    let required = 100;
+    let required = 10000; // 預設為 level >= 100 的值
+
     if (level < 10) required = 100 + (level * 20);
     else if (level < 20) required = 300 + (level * 30);
+    else if (level < 50) required = 1000 + (level * 50);
+    else if (level < 100) required = 3000 + (level * 100);
+
     nextLevelXP.value = required;
     return Math.min((current / required) * 100, 100);
 });
