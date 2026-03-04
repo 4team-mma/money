@@ -286,23 +286,19 @@ h2 {
 }
 
 
-/* 1. 當前選中狀態 */
 .t-btn-group .btn.active {
-    background-color: var(--text-primary);
-    color: var(--bg-body);
-    border-color: var(--text-primary);
+    background-color: var(--color-primary) !important; /* 原本 #0d6efd */
+    color: var(--bg-body) !important; /* 原本 white */
+    border-color: var(--color-primary) !important;
 }
 
 /* 2. 滑鼠移過去 (Hover) 狀態：顯示白框 */
 .t-btn-group .btn:hover {
-    background-color: var(--bg-sidebar); /* 保持透明或原色，不要變藍 */
-    color: var(--text-primary) !important;              /* 字體保持藍色 */
-    border: 2px solid var(--text-primary) !important;      /* 關鍵：顯現白框  */
-    box-shadow: 0 0 5px rgba(255, 255, 255, 0.5); /* 選配：加一點點發光感更明顯 */
+    background-color: color-mix(in srgb, var(--color-primary), transparent 90%) !important;
+    color: var(--color-primary) !important;       
+    border: 1px solid var(--color-primary) !important; 
+    box-shadow: none !important;
 }
-
-/* 如果你的背景是深色的，白框才看得到；
-   如果背景是白色的，建議把 border 改成更深的藍色或陰影 */
 
 .income-card { border-left: 4px solid #3b82f6;}
 .expenditure-card   { border-left: 4px solid #ef4444;}
