@@ -1,12 +1,14 @@
 <script setup>
 
-import { reactive, ref, onMounted } from 'vue';
+import { reactive, ref, onMounted, nextTick } from 'vue';
 import { submitFeedbackApi, getFeedbackHistoryApi } from '@/api/feedback';
 import { getProfile } from '@/api/user';
+import { ElMessage } from 'element-plus';
 
 const success = ref(false)
 const errorMessage = ref('')
 const history = ref([]);
+const isHistoryVisible = ref(false);
 
 const form = reactive({
     name: '',
@@ -29,11 +31,19 @@ const fetchUserData = async () => {
     }
 };
 
-const fetchHistory = async () => {
+const fetchHistory = async(autoOpen = false)=> {
     try {
         const response = await getFeedbackHistoryApi();
         const data = response.data || response || [];
-        history.value = [...data].reverse();
+        const newHistory = [...data].reverse();
+
+        history.value = newHistory;
+        if (autoOpen) {
+            isHistoryVisible.value = true;
+            await nextTick();
+            scrollToBottom();
+        }
+        
     } catch (error) {
         console.error("獲取歷史紀錄失敗：", error);
     }
@@ -47,10 +57,13 @@ onMounted(() => {
 // 💡 進階建議：自動捲動到底部(當新的訊息排到最下面時，如果紀錄很多，讓頁面在更新後自動捲動)
 const scrollToBottom = () => {
     nextTick(() => {
-        window.scrollTo({
-            top: document.body.scrollHeight,
-            behavior: 'smooth'
-        });
+        // 這裡稍微延遲一下，確保 DOM 展開動畫完成
+        setTimeout(() => {
+            window.scrollTo({
+                top: document.body.scrollHeight,
+                behavior: 'smooth'
+            });
+        }, 300);
     });
 };
 
@@ -70,8 +83,7 @@ const handleFormSubmit = async () => {
         form.type = '';
         form.page = '';
         form.message = '';
-        fetchHistory(); // 重新整理歷史紀錄
-        scrollToBottom();
+        await fetchHistory(true); // 重新整理歷史紀錄
     } catch (error) {
         errorMessage.value = error.response?.data?.detail || "送出失敗，請稍後再試";
     }
@@ -136,32 +148,39 @@ const handleFormSubmit = async () => {
             <hr class="divider" />
             <br>
             <div class="history-section">
-                <p class="section-title">我的回饋紀錄</p>
+                <div class="section-header">
+                    <p class="section-title">我的回饋紀錄</p>
+                    <button class="toggle-btn" @click="isHistoryVisible = !isHistoryVisible">
+                        {{ isHistoryVisible ? '隱藏紀錄 ▲' : '展開紀錄 ▼' }}
+                    </button>
+                </div>
                 <br>
-                <div v-if="history.length === 0" class="empty-history">目前尚無回饋紀錄</div>
+                <div v-show="isHistoryVisible" class="history-content">
+                    <div v-if="history.length === 0" class="empty-history">目前尚無回饋紀錄</div>
 
-                <div v-for="item in history" :key="item.feedback_id" class="history-group">
-                    <div class="chat-row user-row">
-                        <div class="chat-bubble user-bubble">
-                            <div class="feedback-meta">
-                                <span class="meta-badge"># {{ item.question_type }}</span>
-                                <span class="meta-badge">📍 {{ item.use_page }}</span>
+                    <div v-for="item in history" :key="item.feedback_id" class="history-group">
+                        <div class="chat-row user-row">
+                            <div class="chat-bubble user-bubble">
+                                <div class="feedback-meta">
+                                    <span class="meta-badge"># {{ item.question_type }}</span>
+                                    <span class="meta-badge">📍 {{ item.use_page }}</span>
+                                </div>
+                                <p class="chat-text">{{ item.content }}</p>
+                                <small class="chat-date">{{ item.created_at }}</small>
                             </div>
-                            <p class="chat-text">{{ item.content }}</p>
-                            <small class="chat-date">{{ item.created_at }}</small>
+                            <span class="chat-tag q-tag">問</span>
                         </div>
-                        <span class="chat-tag q-tag">問</span>
-                    </div>
 
-                    <div v-if="item.admin_answer" class="chat-row admin-row">
-                        <span class="chat-tag a-tag">管</span>
-                        <div class="chat-bubble admin-bubble">
-                            <p class="chat-text">{{ item.admin_answer }}</p>
-                            <small class="chat-date">回覆時間：{{ item.replied_at || '最近' }}</small>
+                        <div v-if="item.admin_answer" class="chat-row admin-row">
+                            <span class="chat-tag a-tag">管</span>
+                            <div class="chat-bubble admin-bubble">
+                                <p class="chat-text">{{ item.admin_answer }}</p>
+                                <small class="chat-date">回覆時間：{{ item.replied_at || '最近' }}</small>
+                            </div>
                         </div>
-                    </div>
 
-                    <div v-else class="status-pending">🕒 管理員正在處理中...</div>
+                        <div v-else class="status-pending">🕒 管理員正在處理中...</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -170,6 +189,51 @@ const handleFormSubmit = async () => {
 
 <style scoped>
 /* --- 基礎卡片與佈局 --- */
+.history-section {
+    width: 100%;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.toggle-btn {
+    background: var(--bg-hover);
+    color: var(--color-primary);
+    border: 1px solid var(--border-color);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap; /* 避免文字換行 */
+}
+
+.toggle-btn:hover {
+    background: var(--color-primary);
+    color: white;
+}
+
+/* 展開內容時的微調 */
+.history-content {
+    animation: fadeInDown 0.4s ease-out;
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .card {
     background: var(--bg-card);
     border-radius: 16px;
@@ -270,7 +334,7 @@ label {
 .section-title {
     font-size: 26px;
     font-weight: 800;
-    margin-bottom: 20px;
+    margin-bottom: 0;
     color: var(--text-primary);
 }
 
@@ -376,5 +440,6 @@ label {
     text-align: center;
     color: var(--text-secondary);
     font-size: 14px;
+    padding: 30px 0; 
 }
 </style>
