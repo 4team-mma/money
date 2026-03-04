@@ -768,6 +768,12 @@ const sortedAccounts = computed(() => {
 <style scoped>
 @import "../assets/css/admin.css";
 
+
+.stat-icon-bg{
+    transform: scale(2,2);
+    padding-right: 20%;
+}
+
 .rank-badge {
     width: 28px;
     height: 28px;
