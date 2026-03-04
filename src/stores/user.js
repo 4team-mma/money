@@ -4,6 +4,7 @@ import api from "@/api";
 export const useUserStore = defineStore("user", {
   state: () => ({
     users: [],
+    userInsights: [],
     selectedUser: null, // 當前查看的用戶
     loading: false,
     loadingDetail: false,
@@ -156,6 +157,8 @@ export const useUserStore = defineStore("user", {
         this.useLocalFallback();
       }
     },
+
+    
 
     // 手動加經驗值
     async adjustXP(uid, amount) {
@@ -322,5 +325,28 @@ export const useUserStore = defineStore("user", {
         return false;
       }
     },
+    // 🌟 新增：獲取用戶行為分析與四力指標
+    async fetchUserInsights() {
+    this.loading = true;
+    try {
+        const response = await api.get("/admin/stats/rankings");
+        // 🔍 在這裡印出來
+        console.log("後端 200 回傳的原始資料：", response);
+
+        // 如果 response 直接就是陣列
+        if (Array.isArray(response)) {
+            this.userInsights = response;
+        }
+        // 如果 response 是一個物件，裡面包著 user_insights
+        else if (response && response.user_insights) {
+            this.userInsights = response.user_insights;
+        }
+        console.log("存入 Store 後的資料：", this.userInsights);
+    } catch (err) {
+        console.error("雖然 200 但處理資料出錯:", err);
+    } finally {
+        this.loading = false;
+    }
+  },
   },
 });
