@@ -233,6 +233,7 @@ h2 {
     /* ← 關鍵 */
     width: 100%;
     max-width: 1400px;
+    padding: 0;
 }
 
 
@@ -250,12 +251,13 @@ h2 {
     /* 接受滾輪 */
     scroll-behavior: smooth;
     /* 滑動更順 */
-    padding: 0 clamp(16px, 4vw, 40px);
+    padding: 0;
     scrollbar-width: none;
 }
 
 .stat-card {
-    flex: 0 0 230px;
+    flex: 1;
+    min-width: 200px;
     background-color: var(--bg-card);
 }
 
