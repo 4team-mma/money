@@ -394,8 +394,8 @@ const handleSend = async () => {
                         </div>
                         <div class="detail-item">
                             <span class="label">等級稱號：</span>
-                            <span class="val level-tag">Lv.{{ userStore.selectedUser.level }} (XP: {{
-                                userStore.selectedUser.xp }})</span>
+                            <span class="val level-tag">Lv.{{ userStore.selectedUser.level.toLocaleString() }} (XP: {{
+                                userStore.selectedUser.xp.toLocaleString() }})</span>
                         </div>
                     </div>
                     <div class="xp-section">
@@ -404,22 +404,22 @@ const handleSend = async () => {
                         <div class="xp-progress-container">
                             <div class="xp-bar" :style="{ width: xpPercentage + '%' }"></div>
                         </div>
-                        <div class="xp-text">{{ userStore.selectedUser.xp }} / {{ nextLevelXP }} XP</div>
+                        <div class="xp-text">{{ userStore.selectedUser.xp.toLocaleString() }} / {{ nextLevelXP.toLocaleString() }} XP</div>
                         <div class="xp-action-row"><input type="number" v-model="xpAmount" class="mma-input-sm"
                                 placeholder="數值" />XP <button class="btn-xp-give" @click="confirmXP">發放獎勵</button></div>
                     </div>
                     <div class="detail-stats">
                         <div class="stat-box">
-                            <small>💰 累積消費</small>
-                            <div class="primary-text">{{ formatCurrency(userStore.selectedUser.totalSpent) }}</div>
+                            <small>📝 本月收/支總筆數</small>
+                            <div class="val-bold">{{ userStore.selectedUser.monthly_records?.toLocaleString() }} 次</div>
                         </div>
                         <div class="stat-box">
-                            <small>📝 記帳次數</small>
-                            <div class="val-bold">{{ userStore.selectedUser.transactions }} 次</div>
+                            <small>📝 累計收/支總筆數</small>
+                            <div class="val-bold">{{ userStore.selectedUser.total_records?.toLocaleString() }} 次</div>
                         </div>
                         <div class="stat-box">
-                            <small>💎 剩餘點數</small>
-                            <div class="val-bold">{{ userStore.selectedUser.points || 0 }} P</div>
+                            <small>💎 剩餘成就點數</small>
+                            <div class="val-bold">{{ (userStore.selectedUser.points || 0).toLocaleString() }} P</div>
                         </div>
                     </div>
                     <div class="notify-section">
