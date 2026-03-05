@@ -12,11 +12,13 @@ MMA App 是一個基於 Vue 3、Vite 的開發中的前端專案，整合 Elemen
 ![Vue 3](https://img.shields.io/badge/Vue-3.5.26-42b883?logo=vue.js)
 ![Vue Router](https://img.shields.io/badge/Vue_Router-4.6.4-42b883?logo=vue.js)
 ![Pinia](https://img.shields.io/badge/Pinia-3.0.4-fad000?logo=pinia)
+![Pinia Persistedstate](https://img.shields.io/badge/Pinia_Persistedstate-4.7.1-fad000?logo=pinia)
 ![Element Plus](https://img.shields.io/badge/Element_Plus-2.13.0-409eff?logo=element)
 ![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3.8-7952b3?logo=bootstrap)
 ![Bootstrap Icons](https://img.shields.io/badge/Bootstrap_Icons-1.13.1-7952b3?logo=bootstrap)
 ![V-Calendar](https://img.shields.io/badge/V--Calendar-3.0.1-00bfa5?logo=calendar)
 ![@popperjs/core](https://img.shields.io/badge/@popperjs/core-2.11.8-ff6f61?logo=popper)
+![Chart.js](https://img.shields.io/badge/Chart.js-4.5.1-ff6384?logo=chart.js)
 ![Axios](https://img.shields.io/badge/Axios-1.13.2-5a29e4?logo=axios)
 <br>開發工具：
 ![Vite](https://img.shields.io/badge/Vite-7.3.0-646cff?logo=vite)
@@ -50,6 +52,7 @@ git remote set-url origin https://github.com/4team-mma/money.git
 - Vue Router：SPA 路由管理。
 - Axios：簡單易用的 HTTP 請求工具。
 - V-Calendar：日期選擇與日曆功能。
+- Chart.js：資料視覺化與圖表呈現。
 
 ## 開始專案需要先準備的東西（只檢查一次）
 
@@ -82,12 +85,6 @@ git clone https://github.com/4team-mma/money.git
 ## 安裝專案套件（第一次或套件更新後）
 ```bash
 pnpm install
-pnpm add pinia
-pnpm install element-plus
-pnpm install chart.js
-
-# 安裝 v-calendar 套件
-pnpm install v-calendar@3.0.1 @popperjs/core
 ```
 - 這是在安裝專案需要用到的套件
 - 通常只在「第一次」或「套件有變更」時需要執行
@@ -118,9 +115,3 @@ pnpm build
 ```bash
 pnpm run preview
 ```
-
-## Contributors
-
-<a href="https://github.com/4team-mma/money/graphs/contributors">
-  <img src="https://contributors-img.web.app/image?repo=4team-mma/money" />
-</a>
