@@ -269,6 +269,19 @@ const handleSend = async () => {
   if (!input.value.trim() || isTyping.value) return
 
   const query = input.value
+  // 🌟 新增：取得正確的台灣時間字串
+  const now = new Date();
+  // 手動組合成標準格式，最安全！
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  
+  const exactTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+
+
   messages.value.push({ id: Date.now(), text: query, sender: 'user', timestamp: new Date().toISOString() })
 
   // ✅ 1. 馬上清空輸入框
@@ -292,7 +305,7 @@ const handleSend = async () => {
 
     // 🌟 只需要傳送 message，其他花式指令都交給後端處理
     const response = await postAiRobotChat({
-      message: query
+      message: `[系統指令：目前台北正確時間為 ${exactTime}，請以此為準，不要自行換算時區] ${query}`
     });
 
     const replyText = response.reply;
