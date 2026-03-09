@@ -5,10 +5,25 @@ import { useRoute } from 'vue-router'
 import api from '@/api';
 // ⚡️ 修改點 1：改用具名匯入，直接引入需要的函式
 import { postAiRobotChat } from '@/api/robot';
-
+import { useAccountStore } from '@/stores/useAccountStore';
 const route = useRoute()
 const messagesContainer = ref(null)
 
+
+// 初始化 Store
+const accountStore = useAccountStore();
+
+// 🌟 修正版：動態尋找帳戶 ID，增加安全檢查
+const getAccountId = (accountName) => {
+  if (!accountName || typeof accountName !== 'string') return null;
+  
+  // 🌟 注意：比對的是 a.itemName，這是你在 Store 裡定義的名稱
+  const found = accountStore.accounts.find(a => {
+    const storeName = a.itemName || ''; 
+    return storeName.includes(accountName) || accountName.includes(storeName);
+  });
+  return found ? found.account_id : null;
+};
 
 // ==========================================
 // 🆕 新增：Icon 自動匹配小幫手 (配合資料庫 add_class_icon)
@@ -314,48 +329,86 @@ const handleSend = async () => {
 }
 
 // ==========================================
-// 🚀 升級：確認卡片的按鈕邏輯 (真實寫入資料庫)
+// 🚀 升級：雙模式確認卡片 (備註優化版)
 // ==========================================
 const confirmRecord = async (msgId, data) => {
-  // 1. 找到這則訊息
   const msg = messages.value.find(m => m.id === msgId);
   if (!msg) return;
 
   try {
-    // 2. 組合要丟給後端的資料
-    const payload = {
-      add_date: new Date().toISOString().split('T')[0], 
-      add_amount: data.add_amount,
-      add_type: 0,                                      
-      add_class: data.add_class,
-      add_class_icon: getClassIcon(data.add_class),     
-      
-      // 判斷帳戶 ID
-      account_id: data.account_name.includes('台新') ? 3 : 8, 
-      
-      add_member: data.add_member,
-      add_tag: data.add_tag,
-      add_note: data.add_note
-    };
+    const todayStr = new Date().toISOString().split('T')[0];
 
-    console.log("📦 準備寫入資料庫的 Payload：", payload);
+    // 🌟 1. 取得 Store 裡的帳戶資料
+    if (accountStore.accounts.length === 0) {
+      await accountStore.loadAccounts(true);
+    }
+    const firstAccount = accountStore.accounts[0];
+    if (!firstAccount) {
+      throw new Error("喵... 找不到可用帳戶，請先新增帳戶喵！");
+    }
 
-    // 3. 呼叫你的新增記帳 API
-    const response = await api.post('/records/', payload);
+    // 🌟 2. 轉帳模式
+    if (data.record_type === 'transfer' || data.type === 'transfer') {
+      const fromName = data.from_account || data.account_from;
+      const toName = data.to_account || data.account_to;
 
-    // 4. 判斷是否成功寫入
+      const fromId = getAccountId(fromName);
+      const toId = getAccountId(toName);
+
+      const finalFromId = fromId || firstAccount.account_id;
+      const finalToId = toId || (accountStore.accounts[1]?.account_id || finalFromId);
+
+      // 🔍 關鍵修正：直接強制將備註設為「一般轉帳」，除非 AI 完全沒給資訊才用 default
+      // 如果你想保留 AI 抓到的資訊，但希望預設是「一般轉帳」，請改用以下這行：
+      const transferNote = (data.add_note === '領生活費' || !data.add_note) ? '一般轉帳' : data.add_note;
+
+      const transferPayload = {
+        transaction_date: todayStr,
+        from_account_id: finalFromId,
+        to_account_id: finalToId,
+        transaction_note: transferNote, 
+        amount: parseFloat(data.add_amount || data.amount || 0)
+      };
+
+      console.log(`🔄 轉帳成功：備註已設定為 [${transferNote}]`);
+      await api.post('/transfers/', transferPayload);
+      msg.text = `✅ 喵！已經幫小主人處理好轉帳囉！`;
+    }
     
-      console.log("✅ 資料庫寫入成功！", response.data);
-      
-      // 改變對話氣泡的狀態 (把卡片關掉，改成成功文字)
-      msg.is_command = false; 
-      msg.text = `✅ 喵！已經幫小主人把「${data.add_note}」花費 ${data.add_amount} 元記到帳本裡了喵！`;
+    // 🌟 3. 收支模式 (收入/支出)
+    else {
+      const accName = data.account_name || data.account;
+      const matchedId = getAccountId(accName);
+      const finalAccountId = matchedId || firstAccount.account_id;
 
+      console.log(`🎯 收支匹配: 關鍵字[${accName || '未指定'}] -> 最終採納[${finalAccountId}]`);
+
+      const isIncome = data.record_type === 'income' || data.add_type === true || data.type === 'income';
+      const payload = {
+        add_date: todayStr,
+        add_amount: parseFloat(data.add_amount || data.amount || 0),
+        add_type: isIncome,
+        add_class: data.add_class || '其他',
+        add_class_icon: getClassIcon(data.add_class),
+        account_id: finalAccountId, 
+        add_member: data.add_member || '自己',
+        add_tag: data.add_tag || '需要',
+        add_note: data.add_note || data.note || 'AI記帳'
+      };
+
+      await api.post('/records/', payload); 
+      const actionText = isIncome ? '收入' : '花費';
+      msg.text = `✅ 喵！已幫小主人把「${payload.add_note}」${actionText} ${payload.add_amount} 元記好囉！`;
+    }
+
+    // 成功後隱藏按鈕卡片
+    msg.is_command = false; 
 
   } catch (error) {
-    console.error("❌ 寫入資料庫失敗：", error);
+    console.error("❌ 寫入失敗：", error);
     msg.is_command = false;
-    msg.text = `⚠️ 喵... 寫入帳本失敗了，請檢查網路連線或 F12 查看詳細錯誤喵！`;
+    const errorMsg = error.response?.data?.detail?.[0]?.msg || error.message;
+    msg.text = `⚠️ 喵... 紀錄失敗了：${errorMsg}`;
   }
 };
 
@@ -434,14 +487,17 @@ const chatWindowStyle = computed(() => {
   return style;
 });
 
-onMounted(() => { 
-  if (isOpen.value) checkAndGreet() 
-  // 視窗縮放時重新計算邊界（選配）
+onMounted(async () => { 
+  // 🌟 確保元件掛載時立即同步帳戶資料
+  await accountStore.loadAccounts(); 
+  
+  if (isOpen.value) checkAndGreet();
+  
   window.addEventListener('resize', () => {
-    position.value.x = Math.min(position.value.x, window.innerWidth - 100)
-    position.value.y = Math.min(position.value.y, window.innerHeight - 100)
-  })
-})
+    position.value.x = Math.min(position.value.x, window.innerWidth - 100);
+    position.value.y = Math.min(position.value.y, window.innerHeight - 100);
+  });
+});
 </script>
 
 <template>
@@ -493,34 +549,36 @@ onMounted(() => {
             <p style="white-space: pre-wrap;">{{ message.text }}</p>
             
             <div v-if="message.is_command && message.action_data" class="action-card">
-              <div class="card-header">📝 記帳確認</div>
+              <div class="card-header">
+                {{ message.action_data.record_type === 'transfer' ? '🔄 轉帳確認' : '📝 收支確認' }}
+              </div>
               <div class="card-body">
                 <div class="data-row">
                   <span class="label">金額：</span>
-                  <span class="value amount">$ {{ message.action_data.add_amount }}</span>
+                  <span class="value amount" :style="{ color: message.action_data.record_type === 'income' ? '#10b981' : (message.action_data.record_type === 'expense' ? '#ef4444' : '#3b82f6') }">
+                    {{ message.action_data.record_type === 'income' ? '+' : (message.action_data.record_type === 'expense' ? '-' : '') }} $ {{ message.action_data.add_amount }}
+                  </span>
                 </div>
-                <div class="data-row">
-                  <span class="label">類別：</span>
-                  <span class="value">{{ message.action_data.add_class }}</span>
-                </div>
-                <div class="data-row">
-                  <span class="label">項目：</span>
-                  <span class="value">{{ message.action_data.add_note }}</span>
-                </div>
-                <div class="data-row">
-                  <span class="label">帳戶：</span>
-                  <span class="value">{{ message.action_data.account_name }}</span>
-                </div>
-                <div class="data-row">
-                  <span class="label">成員/標籤：</span>
-                  <span class="value tag-text">{{ message.action_data.add_member }} / {{ message.action_data.add_tag }}</span>
-                </div>
+
+                <template v-if="message.action_data.record_type !== 'transfer'">
+                  <div class="data-row"><span class="label">類別：</span><span class="value">{{ message.action_data.add_class }}</span></div>
+                  <div class="data-row"><span class="label">項目：</span><span class="value">{{ message.action_data.add_note }}</span></div>
+                  <div class="data-row"><span class="label">帳戶：</span><span class="value">{{ message.action_data.account_name }}</span></div>
+                  <div class="data-row"><span class="label">標籤：</span><span class="value tag-text">{{ message.action_data.add_member }} / {{ message.action_data.add_tag }}</span></div>
+                </template>
+
+                <template v-else>
+                  <div class="data-row"><span class="label">轉出 (From)：</span><span class="value">{{ message.action_data.from_account }}</span></div>
+                  <div class="data-row"><span class="label">轉入 (To)：</span><span class="value">{{ message.action_data.to_account }}</span></div>
+                  <div class="data-row"><span class="label">備註：</span><span class="value">{{ message.action_data.add_note }}</span></div>
+                </template>
               </div>
               <div class="card-footer">
                 <button class="btn cancel" @click="cancelRecord(message.id)">取消</button>
-                <button class="btn confirm" @click="confirmRecord(message.id, message.action_data)">確認記帳</button>
+                <button class="btn confirm" @click="confirmRecord(message.id, message.action_data)">確認送出</button>
               </div>
             </div>
+
             <span class="time">
               {{ formatTime(message.timestamp) }}
               <span v-if="message.sender === 'bot' && message.duration" class="meta-info">
