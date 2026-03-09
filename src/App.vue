@@ -7,8 +7,11 @@ import Nav from './components/Nav.vue'
 const isLoggedIn = ref(false)
 
 onMounted(() => {
-    isLoggedIn.value = window.location.pathname !== '/' &&
-    window.location.pathname !== '/login'
+    const hasToken = !!localStorage.getItem('user_token');
+    
+    isLoggedIn.value = hasToken && 
+                    window.location.pathname !== '/' && 
+                    window.location.pathname !== '/login';
 })
 </script>
 <template>
