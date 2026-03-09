@@ -2,6 +2,7 @@
 import { ref, nextTick, watch, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 
+import api from '@/api';
 // ⚡️ 修改點 1：改用具名匯入，直接引入需要的函式
 import { postAiRobotChat } from '@/api/robot';
 
@@ -9,7 +10,22 @@ const route = useRoute()
 const messagesContainer = ref(null)
 
 
-
+// ==========================================
+// 🆕 新增：Icon 自動匹配小幫手 (配合資料庫 add_class_icon)
+// ==========================================
+const getClassIcon = (className) => {
+  const iconMap = {
+    '飲食': '🍔',
+    '交通': '🚗',
+    '居家': '🏠',
+    '娛樂': '🎮',
+    '醫療': '💊',
+    '學習': '📚',
+    '帳單': '🧾',
+    '其他': '📦'
+  };
+  return iconMap[className] || '📌'; // 找不到就給個圖釘
+};
 
 // === 🚀 拖拽功能邏輯 ===
 const position = ref({ x: window.innerWidth - 120, y: window.innerHeight - 120 })
@@ -268,8 +284,12 @@ const handleSend = async () => {
     const duration = response.duration;
     const provider = response.provider;
 
-    // ✅ 4. 顯示回應來源模型
-    console.log(`✨ [Chat] 收到回應 (${provider}):`, replyText, `耗時: ${duration}s`);
+    // 🆕 新增：把後端傳來的 JSON 指令抓出來
+    const isCommand = response.is_command || false;
+    const actionData = response.action_data || null;
+
+    // ✅ 4. 顯示回應來源模型  `耗時: ${duration}s`
+    console.log(`✨ [Chat] 收到回應 (${provider}):`, replyText, `指令模式: ${isCommand}`,`耗時: ${duration}s`);
 
     messages.value.push({
       id: Date.now() + 1,
@@ -277,7 +297,9 @@ const handleSend = async () => {
       sender: 'bot',
       timestamp: new Date().toISOString(),
       duration: duration,
-      provider: provider
+      provider: provider,
+      is_command: isCommand,
+      action_data: actionData
     })
   } catch (error) {
     console.error("❌ [Chat] 錯誤:", error);
@@ -290,6 +312,66 @@ const handleSend = async () => {
     scrollToBottom()
   }
 }
+
+// ==========================================
+// 🚀 升級：確認卡片的按鈕邏輯 (真實寫入資料庫)
+// ==========================================
+const confirmRecord = async (msgId, data) => {
+  // 1. 找到這則訊息
+  const msg = messages.value.find(m => m.id === msgId);
+  if (!msg) return;
+
+  try {
+    // 2. 組合要丟給後端的資料
+    const payload = {
+      add_date: new Date().toISOString().split('T')[0], 
+      add_amount: data.add_amount,
+      add_type: 0,                                      
+      add_class: data.add_class,
+      add_class_icon: getClassIcon(data.add_class),     
+      
+      // 判斷帳戶 ID
+      account_id: data.account_name.includes('台新') ? 3 : 8, 
+      
+      add_member: data.add_member,
+      add_tag: data.add_tag,
+      add_note: data.add_note
+    };
+
+    console.log("📦 準備寫入資料庫的 Payload：", payload);
+
+    // 3. 呼叫你的新增記帳 API
+    const response = await api.post('/records/', payload);
+
+    // 4. 判斷是否成功寫入
+    
+      console.log("✅ 資料庫寫入成功！", response.data);
+      
+      // 改變對話氣泡的狀態 (把卡片關掉，改成成功文字)
+      msg.is_command = false; 
+      msg.text = `✅ 喵！已經幫小主人把「${data.add_note}」花費 ${data.add_amount} 元記到帳本裡了喵！`;
+
+
+  } catch (error) {
+    console.error("❌ 寫入資料庫失敗：", error);
+    msg.is_command = false;
+    msg.text = `⚠️ 喵... 寫入帳本失敗了，請檢查網路連線或 F12 查看詳細錯誤喵！`;
+  }
+};
+
+// ==========================================
+// 🆕 補回：取消卡片的按鈕邏輯
+// ==========================================
+const cancelRecord = (msgId) => {
+  // 1. 找到這則訊息
+  const msg = messages.value.find(m => m.id === msgId);
+  if (!msg) return;
+
+  // 2. 取消記帳，把卡片關掉
+  msg.is_command = false;
+  msg.text = `❌ 喵～已經取消記錄囉！小主人還有什麼要幫忙的嗎？`;
+};
+
 
 // ⚡️ 修正視窗位置：確保對話窗展開時位置正確
 const chatWindowStyle = computed(() => {
@@ -409,14 +491,42 @@ onMounted(() => {
           </div>
           <div class="bubble">
             <p style="white-space: pre-wrap;">{{ message.text }}</p>
+            
+            <div v-if="message.is_command && message.action_data" class="action-card">
+              <div class="card-header">📝 記帳確認</div>
+              <div class="card-body">
+                <div class="data-row">
+                  <span class="label">金額：</span>
+                  <span class="value amount">$ {{ message.action_data.add_amount }}</span>
+                </div>
+                <div class="data-row">
+                  <span class="label">類別：</span>
+                  <span class="value">{{ message.action_data.add_class }}</span>
+                </div>
+                <div class="data-row">
+                  <span class="label">項目：</span>
+                  <span class="value">{{ message.action_data.add_note }}</span>
+                </div>
+                <div class="data-row">
+                  <span class="label">帳戶：</span>
+                  <span class="value">{{ message.action_data.account_name }}</span>
+                </div>
+                <div class="data-row">
+                  <span class="label">成員/標籤：</span>
+                  <span class="value tag-text">{{ message.action_data.add_member }} / {{ message.action_data.add_tag }}</span>
+                </div>
+              </div>
+              <div class="card-footer">
+                <button class="btn cancel" @click="cancelRecord(message.id)">取消</button>
+                <button class="btn confirm" @click="confirmRecord(message.id, message.action_data)">確認記帳</button>
+              </div>
+            </div>
             <span class="time">
               {{ formatTime(message.timestamp) }}
-
               <span v-if="message.sender === 'bot' && message.duration" class="meta-info">
                 <span class="provider-tag" v-if="message.provider">[{{ message.provider.toUpperCase() }}]</span>
                 <span class="duration-tag">⏱️{{ formatDuration(message.duration) }}</span>
               </span>
-
             </span>
           </div>
         </div>
@@ -718,4 +828,99 @@ onMounted(() => {
   color: white;
   cursor: pointer;
 }
+
+
+/* ==========================================
+   🆕 新增：記帳確認卡片樣式
+   ========================================== */
+.action-card {
+  margin-top: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  /* 防止卡片太寬撐破對話框 */
+  width: 100%; 
+  min-width: 200px;
+}
+
+.card-header {
+  background: #f8fafc;
+  padding: 8px 12px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.card-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.data-row .label {
+  color: #64748b;
+}
+
+.data-row .value {
+  font-weight: bold;
+  color: #1e293b;
+}
+
+.data-row .amount {
+  color: #ef4444; /* 紅色強調金額 */
+  font-size: 1.1rem;
+}
+
+.card-footer {
+  display: flex;
+  border-top: 1px solid #e2e8f0;
+}
+
+.card-footer .btn {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.card-footer .btn.cancel {
+  color: #64748b;
+  border-right: 1px solid #e2e8f0;
+}
+
+.card-footer .btn.cancel:hover {
+  background: #f1f5f9;
+}
+
+.card-footer .btn.confirm {
+  color: #3b82f6; /* 藍色確認鈕 */
+}
+
+.card-footer .btn.confirm:hover {
+  background: #eff6ff;
+}
+
+.tag-text {
+  font-size: 0.8rem;
+  color: #3b82f6;
+  background: #eff6ff;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
 </style>
