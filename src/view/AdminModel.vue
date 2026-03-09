@@ -32,9 +32,10 @@ const currentGeminiLimit = computed(() => {
 });
 
 const ollamaModels = [
-    { label: 'Gemma 3 1B IT (Mac 舊款首選)', value: 'gemma3:1b', locked: false },
-    { label: 'Llama 3.2 3B (Win11 推薦)', value: 'llama3.2', locked: true },
-    { label: 'DeepSeek R1 (Win10 推薦)', value: 'deepseek-r1:7b', locked: true }
+    { label: 'Llama 3.2 3B (🏆 JSON 穩定首選)', value: 'llama3.2', locked: false },
+    { label: 'Gemma 3 4B (🚀 速度與精準平衡)', value: 'gemma3:4b', locked: false },
+    { label: 'DeepSeek R1 8B (🤔 邏輯推理/稍微慢)', value: 'deepseek-r1:8b', locked: false },
+    { label: 'Gemma 3 1B (極速但較笨)', value: 'gemma3:1b', locked: false }
 ]
 
 const DEFAULT_PROMPT = '你是理財助手喵喵。個性惜字如金，言簡意賅，善用成語。嚴禁冗詞贅字、表格與公式。回答限制 30 字內，直指核心，句尾務必帶喵~';
