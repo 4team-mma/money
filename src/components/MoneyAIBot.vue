@@ -1,7 +1,7 @@
 <script setup>
 import { ref, nextTick, watch, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
-
+import { onUnmounted } from 'vue';
 import api from '@/api';
 // ⚡️ 修改點 1：改用具名匯入，直接引入需要的函式
 import { postAiRobotChat } from '@/api/robot';
@@ -193,6 +193,39 @@ const sprayPaint = (e, isDragging) => {
 };
 // === 🎨 噴漆發洩小遊戲尾巴 ===
 
+let voiceTimer = null;
+// 在 script setup 內
+const checkVoiceSuccess = async () => {
+  try {
+    const res = await api.get('v1/ai/siri_voice/notifications?user_id=6'); 
+    if (res.data.has_new) {
+      // 🌟 關鍵：強制把對話框打開！
+      isOpen.value = true; 
+      
+      messages.value.push({
+        id: Date.now(),
+        text: "✨ 剛才透過 Siri 記帳成功囉！小主人太優秀了喵！",
+        sender: 'bot',
+        timestamp: new Date().toISOString()
+      });
+      
+      // 滾動到底部
+      scrollToBottom();
+      
+      // 更新 Store 資料
+      await accountStore.loadAccounts(true);
+    }
+  } catch (e) { }
+};
+
+onMounted(async () => {
+  // ... 妳原本的 code
+  voiceTimer = setInterval(checkVoiceSuccess, 5000);
+});
+
+onUnmounted(() => {
+  if (voiceTimer) clearInterval(voiceTimer); // 🌟 專業做法：離開頁面時一定要關掉
+});
 
 
 // 監聽狀態變化並儲存
