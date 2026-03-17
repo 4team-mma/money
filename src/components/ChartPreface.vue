@@ -126,7 +126,14 @@ const monthlyMOMStats = computed(() => {
 
 <template>
     <div class="full-width">
-        <h2 style="color: var(--text-primary) ;font-weight:700">圖表分析</h2>
+        <div class="header-container">
+            <div class="placeholder"></div>
+            <h2 class="absolute-center-title" style="color: var(--text-primary) ;font-weight:700">圖表分析</h2>
+            <div class="action-right">
+                <el-button type="text" @click="fetchAiSummary" class="ai-btn">  AI 智慧財務洞察
+                </el-button>
+            </div>
+        </div>
 
         <div class="PageTurn">
             <div class="btn-group t-btn-group" role="group">
@@ -305,4 +312,43 @@ h2 {
 .income-card { border-left: 4px solid #3b82f6;}
 .expenditure-card   { border-left: 4px solid #ef4444;}
 .net-card  { border-left: 4px solid #10b981;}
+
+.header-container {
+  position: relative;     /* 必須設定，作為標題定位的基準 */
+  display: flex;
+  justify-content: flex-end; /* 讓內容預設靠右 */
+  align-items: center;
+  width: 100%;
+  height: 50px;           /* 設定一個固定高度，確保對齊 */
+  margin-bottom: 20px;
+  padding: 0 29px;
+}
+
+.absolute-center-title {
+  /* 核心黑科技：絕對定位置中 */
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%); /* 往回推 50% 達成絕對置中 */
+  
+  color: var(--text-primary);
+  font-weight: 700;
+  margin: 0;
+  white-space: nowrap;
+  pointer-events: none; /* 避免擋到點擊事件 */
+}
+
+.action-right {
+  z-index: 1; /* 確保按鈕在標題上面，可以被點擊 */
+}
+
+.ai-btn {
+  /* color: #3b82f6; */
+  font-weight: bold;
+  border: 1px solid #333436 !important; /* 灰色邊框 */
+  padding: 8px 15px;
+  transition: all 0.3s;
+  border-radius: 16px;
+  cursor: pointer;
+}
+
 </style>
