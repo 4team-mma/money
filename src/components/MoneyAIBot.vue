@@ -193,40 +193,95 @@ const sprayPaint = (e, isDragging) => {
 };
 // === 🎨 噴漆發洩小遊戲尾巴 ===
 
-let voiceTimer = null;
-// 在 script setup 內
-const checkVoiceSuccess = async () => {
-  try {
-    const res = await api.get('v1/ai/siri_voice/notifications?user_id=6'); 
-    if (res.data.has_new) {
-      // 🌟 關鍵：強制把對話框打開！
-      isOpen.value = true; 
+// === 🎨 噴漆發洩小遊戲尾巴 ===
+
+let ws = null; // 存放 WebSocket 實例
+
+// 🌟 新增：建立 WebSocket 連線 (這取代了原本的 checkVoiceSuccess)
+const connectWebSocket = () => {
+  // 💡 就是改這裡！把名字對齊你的系統！
+  const token = localStorage.getItem("user_token") || localStorage.getItem("token");
+
+  if (!token) {
+    console.error('❌ [喵喵小助手] 找不到 Token！請確認是否已登入。');
+    return;
+  }
+
+  // 動態組合 WebSocket 網址
+  // 自動適應網域，避免 127.0.0.1 和 localhost 的衝突
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsHost = window.location.hostname; // 自動抓取目前的網域
+  
+  // 💡 組合出正確的 WebSocket 網址
+  const wsUrl = `${wsProtocol}//${wsHost}:8000/api/ws/chat?token=${token}`;
+
+  console.log('🔗 準備連線 WebSocket 網址:', wsUrl);
+  ws = new WebSocket(wsUrl);
+
+  ws.onopen = () => {
+    console.log('✅ [喵喵小助手] WebSocket 連線成功！電話線接通啦！');
+  };
+
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    
+    if (data.type === 'siri_sync') {
+      console.log('⚡ 收到 Siri 同步對話！', data);
+
+      isOpen.value = true;
       
       messages.value.push({
         id: Date.now(),
-        text: "✨ 剛才透過 Siri 記帳成功囉！小主人太優秀了喵！",
-        sender: 'bot',
+        text: `📱 (Siri 語音傳送) \n${data.user_query}`,
+        sender: 'user',
         timestamp: new Date().toISOString()
       });
-      
-      // 滾動到底部
+
+      messages.value.push({
+        id: Date.now() + 1,
+        text: data.ai_reply,
+        sender: 'bot',
+        timestamp: new Date().toISOString(),
+        duration: data.duration
+      });
+
       scrollToBottom();
-      
-      // 更新 Store 資料
-      await accountStore.loadAccounts(true);
+      accountStore.loadAccounts(true);
     }
-  } catch (e) { }
+  };
+
+  ws.onclose = () => {
+    console.log('❌ [喵喵小助手] 斷線了，3秒後嘗試重連...');
+    setTimeout(connectWebSocket, 3000);
+  };
 };
 
-onMounted(async () => {
-  // ... 妳原本的 code
-  voiceTimer = setInterval(checkVoiceSuccess, 5000);
+// 🌟 乾淨整合版的 onMounted
+onMounted(async () => { 
+  // 1. 確保元件掛載時立即同步帳戶資料
+  await accountStore.loadAccounts(); 
+  
+  // 2. 檢查是否需要發送問候語
+  if (isOpen.value) checkAndGreet();
+  
+  // 3. 視窗縮放邊界判定
+  window.addEventListener('resize', () => {
+    position.value.x = Math.min(position.value.x, window.innerWidth - 100);
+    position.value.y = Math.min(position.value.y, window.innerHeight - 100);
+  });
+
+  // 4. 啟動 WebSocket 連線 (取代了原本的 setInterval)
+  connectWebSocket();
 });
 
+// 🌟 乾淨整合版的 onUnmounted
 onUnmounted(() => {
-  if (voiceTimer) clearInterval(voiceTimer); // 🌟 專業做法：離開頁面時一定要關掉
+  // 離開網頁時，優雅地關閉電話線
+  if (ws) {
+    ws.onclose = null; // 防止觸發自動重連
+    ws.close();
+  }
 });
-
 
 // 監聽狀態變化並儲存
 watch(isOpen, (newVal) => localStorage.setItem('isMeowChatOpen', newVal))
