@@ -52,6 +52,12 @@ service.interceptors.response.use(
             localStorage.removeItem("token");
             localStorage.removeItem("currentUser");
 
+            localStorage.removeItem('meowChatHistory')
+            localStorage.removeItem('isMeowChatOpen')
+
+            localStorage.removeItem('category')
+            localStorage.removeItem('notification')
+
             // 跳回登入頁
             router.push("/");
 

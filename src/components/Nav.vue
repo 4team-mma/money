@@ -100,8 +100,7 @@ const logout = () => {
 
     // 清除 Pinia 持久化快取 (確保不同帳號登入時資料不打架)
     localStorage.removeItem('category')
-    localStorage.removeItem('categoryStats')
-    localStorage.removeItem('account')
+    localStorage.removeItem('notification')
 
     // 終極清除：強制重整並導回首頁，確保記憶體變數完全釋放
     window.location.href = '/';
