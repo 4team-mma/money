@@ -203,7 +203,9 @@ const connectWebSocket = () => {
   const token = localStorage.getItem("user_token") || localStorage.getItem("token");
 
   if (!token) {
-    console.error('❌ [喵喵小助手] 找不到 Token！請確認是否已登入。');
+    // 💡 把原本的 console.error 改成 console.log 或直接註解掉
+    // 這樣在登入畫面時，它就會默默等待，不會跳出嚇人的紅字錯誤了！
+    console.log('👀 [喵喵小助手] 尚未登入，等待小主人登入後再接通電話線...');
     return;
   }
 
