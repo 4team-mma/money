@@ -192,12 +192,8 @@ const sprayPaint = (e, isDragging) => {
   });
 };
 // === 🎨 噴漆發洩小遊戲尾巴 ===
-
-// === 🎨 噴漆發洩小遊戲尾巴 ===
-
 let ws = null; // 存放 WebSocket 實例
-
-// 🌟 新增：建立 WebSocket 連線 (這取代了原本的 checkVoiceSuccess)
+// 新增：建立 WebSocket 連線 (取代了原本的 checkVoiceSuccess)
 const connectWebSocket = () => {
   // 💡 就是改這裡！把名字對齊你的系統！
   const token = localStorage.getItem("user_token") || localStorage.getItem("token");
