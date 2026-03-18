@@ -623,7 +623,7 @@ onMounted(async () => {
 
   <Transition>
     <div v-if="isOpen" class="chat-window-custom" @mousedown.stop :style="chatWindowStyle">
-      <div class="chat-header-custom"@mousedown="startDrag" style="cursor: move;">
+      <div class="chat-header-custom" @mousedown="startDrag" style="cursor: move;">
         <div class="header-left">
           <div class="avatar-container-header">
             <img :src="catImg" class="header-icon" draggable="false"/>
