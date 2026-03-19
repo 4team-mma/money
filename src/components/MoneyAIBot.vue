@@ -192,18 +192,16 @@ const sprayPaint = (e, isDragging) => {
   });
 };
 // === 🎨 噴漆發洩小遊戲尾巴 ===
-
-// === 🎨 噴漆發洩小遊戲尾巴 ===
-
 let ws = null; // 存放 WebSocket 實例
-
-// 🌟 新增：建立 WebSocket 連線 (這取代了原本的 checkVoiceSuccess)
+// 新增：建立 WebSocket 連線 (取代了原本的 checkVoiceSuccess)
 const connectWebSocket = () => {
   // 💡 就是改這裡！把名字對齊你的系統！
   const token = localStorage.getItem("user_token") || localStorage.getItem("token");
 
   if (!token) {
-    console.error('❌ [喵喵小助手] 找不到 Token！請確認是否已登入。');
+    // 💡 把原本的 console.error 改成 console.log 或直接註解掉
+    // 這樣在登入畫面時，它就會默默等待，不會跳出嚇人的紅字錯誤了！
+    console.log('👀 [喵喵小助手] 尚未登入，等待小主人登入後再接通電話線...');
     return;
   }
 
@@ -625,7 +623,7 @@ onMounted(async () => {
 
   <Transition>
     <div v-if="isOpen" class="chat-window-custom" @mousedown.stop :style="chatWindowStyle">
-      <div class="chat-header-custom"@mousedown="startDrag" style="cursor: move;">
+      <div class="chat-header-custom" @mousedown="startDrag" style="cursor: move;">
         <div class="header-left">
           <div class="avatar-container-header">
             <img :src="catImg" class="header-icon" draggable="false"/>
