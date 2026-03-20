@@ -390,9 +390,15 @@ const handleSend = async () => {
     console.log(`🚀 [Chat] 發送請求: "${query}"`);
 
     // 🌟 只需要傳送 message，其他花式指令都交給後端處理
-    const response = await postAiRobotChat({
+    const rawRes = await postAiRobotChat({
       message: `[系統指令：目前台北正確時間為 ${exactTime}，請以此為準，不要自行換算時區] ${query}`
     });
+
+
+    const response = rawRes?.data || rawRes;
+    if (!response || !response.reply) {
+      throw new Error("前端收不到正確的資料格式喵！");
+    }
 
     const replyText = response.reply;
     const duration = response.duration;
@@ -696,7 +702,7 @@ onMounted(async () => {
       </div>
 
       <div class="input-area">
-        <input v-model="input" placeholder="輸入訊息..." @keydown.enter="handleSend" :disabled="isTyping" />
+        <input v-model="input" placeholder="輸入訊息..." @keyup.enter.prevent="handleSend" :disabled="isTyping" />
         <button class="send-btn" @click="handleSend" :disabled="isTyping">🐾</button>
       </div>
     </div>
