@@ -133,6 +133,7 @@ const greetingsMap = {
 const personasList = [
   // 把這行的 label 改成可愛喵喵 👇
   { value: 'cute', label: '😽 可愛喵喵' },
+  { value: 'gentle', label: '🐈 溫柔管家喵' },
   { value: 'professional', label: '🦁 嚴肅顧問'},
   { value: 'tsundere', label: '😼 傲嬌喵' },
   { value: 'lazy', label: '😿 厭世喵' },
@@ -410,10 +411,32 @@ const handleSend = async () => {
   try {
     console.log(`🚀 [Chat] 發送請求: "${query}"`);
 
-    // 🌟 只需要傳送 message，其他花式指令都交給後端處理
+    // 🧠 1. 抓取最近 4 筆對話當作「短期記憶」 (避開剛剛才 push 的自己這句)
+    const historyText = messages.value
+      .slice(-5, -1) 
+      .map(m => {
+        // 🌟 核心修改：如果是喵喵說的廢話，超過 30 個字就切斷，只留重點！
+        const safeText = m.text.length > 30 ? m.text.substring(0, 30) + '...' : m.text;
+        return `${m.sender === 'user' ? '小主人' : '喵喵'}：${safeText}`;
+      })
+      .join('\n');
+
+    // 🛡️ 2. 獨立宣告「台北時區防護咒語」 (絕對不能丟掉！)
+    const timeInstruction = `[系統指令：目前台北正確時間為 ${exactTime}，請以此為準，不要自行換算時區]`;
+
+    // 🧠 3. 動態組合 prompt：有記憶就帶記憶，沒記憶就照舊
+    let finalPrompt = '';
+    if (historyText.trim().length > 0) {
+      // 把時區指令、歷史記憶、現在的問題，三合一完美打包！
+      finalPrompt = `${timeInstruction}\n【以下是我們剛剛的對話記憶，請參考上下文回答】\n${historyText}\n\n【現在】\n小主人說：${query}`;
+    } else {
+      finalPrompt = `${timeInstruction} ${query}`;
+    }
+
+    // 🌟 4. 發送給後端
     const rawRes = await postAiRobotChat({
-      message: `[系統指令：目前台北正確時間為 ${exactTime}，請以此為準，不要自行換算時區] ${query}`,
-      persona: selectedPersona.value // 把選到的人格傳過去！
+      message: finalPrompt,
+      persona: selectedPersona.value
     });
 
 
