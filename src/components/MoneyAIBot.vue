@@ -16,10 +16,10 @@ const accountStore = useAccountStore();
 // 🌟 修正版：動態尋找帳戶 ID，增加安全檢查
 const getAccountId = (accountName) => {
   if (!accountName || typeof accountName !== 'string') return null;
-  
+
   // 🌟 注意：比對的是 a.itemName，這是你在 Store 裡定義的名稱
   const found = accountStore.accounts.find(a => {
-    const storeName = a.itemName || ''; 
+    const storeName = a.itemName || '';
     return storeName.includes(accountName) || accountName.includes(storeName);
   });
   return found ? found.account_id : null;
@@ -52,7 +52,7 @@ const startDrag = (e) => {
   isDragging.value = true
   // 記錄點擊時的原始座標
   startPos.value = { x: e.clientX, y: e.clientY }
-  
+
   dragOffset.value = {
     x: e.clientX - position.value.x,
     y: e.clientY - position.value.y
@@ -63,14 +63,14 @@ const startDrag = (e) => {
 
 const onDragging = (e) => {
   if (!isDragging.value) return
-  
+
   // 計算新座標並加上簡易邊界檢查（預留 10px 邊距）
   let newX = e.clientX - dragOffset.value.x
   let newY = e.clientY - dragOffset.value.y
-  
+
   const maxX = window.innerWidth - 100
   const maxY = window.innerHeight - 100
-  
+
   position.value.x = Math.max(10, Math.min(newX, maxX))
   position.value.y = Math.max(10, Math.min(newY, maxY))
 }
@@ -80,14 +80,14 @@ const stopDrag = (e) => {
 
   // 1. 停止拖拽狀態
   isDragging.value = false;
-  
+
   // 2. 移除全域監聽
   window.removeEventListener('mousemove', onDragging);
   window.removeEventListener('mouseup', stopDrag);
 
   // 3. 關鍵判定：如果滑鼠放開時，位移極小，代表使用者只是想「點一下」
   const moveDistance = Math.sqrt(
-    Math.pow(e.clientX - startPos.value.x, 2) + 
+    Math.pow(e.clientX - startPos.value.x, 2) +
     Math.pow(e.clientY - startPos.value.y, 2)
   );
 
@@ -129,6 +129,28 @@ const greetingsMap = {
   '/Settings': '喵～這裡可以調整樣式和系統設定，選個你喜歡的主題吧。⚙️'
 }
 
+// 🌟 喵喵人格清單
+const personasList = [
+  // 把這行的 label 改成可愛喵喵 👇
+  { value: 'cute', label: '😽 可愛喵喵' },
+  { value: 'gentle', label: '🐈 溫柔管家喵' },
+  { value: 'professional', label: '🦁 嚴肅顧問'},
+  { value: 'tsundere', label: '😼 傲嬌喵' },
+  { value: 'lazy', label: '😿 厭世喵' },
+  { value: 'rich', label: '💰 土豪喵' },
+  { value: 'panic', label: '😹 恐慌喵' },
+  { value: 'poet', label: '😺 文青喵' },
+  { value: 'chuuni', label: '🙀 中二病喵' }
+];
+
+// 讀取/儲存選擇的人格
+const selectedPersona = ref(localStorage.getItem('meowPersona') || 'cute');
+watch(selectedPersona, (newVal) => {
+  localStorage.setItem('meowPersona', newVal);
+  scrollToBottom();
+});
+
+
 // 🐱 喵喵的隨機等待語錄
 const waitingJokes = [
   "喵喵正在翻閱帳本... 📖",
@@ -149,13 +171,13 @@ const isDrawing = ref(false); // 判斷是否正在按住滑鼠
 // 滑鼠按下去：開始畫圖，並先噴一發大圈圈
 const startDrawing = (e) => {
   isDrawing.value = true;
-  sprayPaint(e, false); 
+  sprayPaint(e, false);
 };
 
 // 滑鼠移動：如果是按住的狀態，就連續畫出小圈圈（畫筆效果）
 const draw = (e) => {
   if (!isDrawing.value) return;
-  sprayPaint(e, true); 
+  sprayPaint(e, true);
 };
 
 // 滑鼠放開或離開畫面：停止畫圖
@@ -168,12 +190,12 @@ const sprayPaint = (e, isDragging) => {
   // 🛡️ 防當機機制：畫面上最多保留 300 個圈圈，超過就從最舊的開始刪除
   // 避免使用者瘋狂畫圖導致 Vue 渲染太多 DOM 而卡死
   if (paintDrops.value.length > 300) {
-    paintDrops.value.shift(); 
+    paintDrops.value.shift();
   }
 
   const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FDCB6E', '#6C5CE7', '#FF8ED4', '#A8E6CF', '#FF9F43'];
   const randomColor = colors[Math.floor(Math.random() * colors.length)];
-  
+
   // 💡 如果是拖曳中，筆刷小一點 (10px~25px)；如果是單點噴漆，筆刷大一點 (30px~80px)
   const size = isDragging ? (Math.random() * 15 + 10) : (Math.random() * 50 + 30);
   const borderRadius = `${Math.random() * 30 + 35}% ${Math.random() * 30 + 35}% ${Math.random() * 30 + 35}% ${Math.random() * 30 + 35}%`;
@@ -209,7 +231,7 @@ const connectWebSocket = () => {
   // 自動適應網域，避免 127.0.0.1 和 localhost 的衝突
   const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsHost = window.location.hostname; // 自動抓取目前的網域
-  
+
   // 💡 組合出正確的 WebSocket 網址
   const wsUrl = `${wsProtocol}//${wsHost}:8000/api/ws/chat?token=${token}`;
 
@@ -222,12 +244,12 @@ const connectWebSocket = () => {
 
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
-    
+
     if (data.type === 'siri_sync') {
       console.log('⚡ 收到 Siri 同步對話！', data);
 
       isOpen.value = true;
-      
+
       messages.value.push({
         id: Date.now(),
         text: `📱 (Siri 語音傳送) \n${data.user_query}`,
@@ -255,13 +277,13 @@ const connectWebSocket = () => {
 };
 
 // 🌟 乾淨整合版的 onMounted
-onMounted(async () => { 
+onMounted(async () => {
   // 1. 確保元件掛載時立即同步帳戶資料
-  await accountStore.loadAccounts(); 
-  
+  await accountStore.loadAccounts();
+
   // 2. 檢查是否需要發送問候語
   if (isOpen.value) checkAndGreet();
-  
+
   // 3. 視窗縮放邊界判定
   window.addEventListener('resize', () => {
     position.value.x = Math.min(position.value.x, window.innerWidth - 100);
@@ -364,7 +386,7 @@ const handleSend = async () => {
   const hours = String(now.getHours()).padStart(2, '0');
   const minutes = String(now.getMinutes()).padStart(2, '0');
   const seconds = String(now.getSeconds()).padStart(2, '0');
-  
+
   const exactTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 
 
@@ -373,7 +395,7 @@ const handleSend = async () => {
   // ✅ 1. 馬上清空輸入框
   input.value = ''
   // 🎨 清空畫布與狀態
-  paintDrops.value = [] 
+  paintDrops.value = []
   isDrawing.value = false // 確保每次發問都是重置狀態
 
   isTyping.value = true
@@ -389,9 +411,32 @@ const handleSend = async () => {
   try {
     console.log(`🚀 [Chat] 發送請求: "${query}"`);
 
-    // 🌟 只需要傳送 message，其他花式指令都交給後端處理
+    // 🧠 1. 抓取最近 4 筆對話當作「短期記憶」 (避開剛剛才 push 的自己這句)
+    const historyText = messages.value
+      .slice(-5, -1) 
+      .map(m => {
+        // 🌟 核心修改：如果是喵喵說的廢話，超過 30 個字就切斷，只留重點！
+        const safeText = m.text.length > 30 ? m.text.substring(0, 30) + '...' : m.text;
+        return `${m.sender === 'user' ? '小主人' : '喵喵'}：${safeText}`;
+      })
+      .join('\n');
+
+    // 🛡️ 2. 獨立宣告「台北時區防護咒語」 (絕對不能丟掉！)
+    const timeInstruction = `[系統指令：目前台北正確時間為 ${exactTime}，請以此為準，不要自行換算時區]`;
+
+    // 🧠 3. 動態組合 prompt：有記憶就帶記憶，沒記憶就照舊
+    let finalPrompt = '';
+    if (historyText.trim().length > 0) {
+      // 把時區指令、歷史記憶、現在的問題，三合一完美打包！
+      finalPrompt = `${timeInstruction}\n【以下是我們剛剛的對話記憶，請參考上下文回答】\n${historyText}\n\n【現在】\n小主人說：${query}`;
+    } else {
+      finalPrompt = `${timeInstruction} ${query}`;
+    }
+
+    // 🌟 4. 發送給後端
     const rawRes = await postAiRobotChat({
-      message: `[系統指令：目前台北正確時間為 ${exactTime}，請以此為準，不要自行換算時區] ${query}`
+      message: finalPrompt,
+      persona: selectedPersona.value
     });
 
 
@@ -409,7 +454,7 @@ const handleSend = async () => {
     const actionData = response.action_data || null;
 
     // ✅ 4. 顯示回應來源模型  `耗時: ${duration}s`
-    console.log(`✨ [Chat] 收到回應 (${provider}):`, replyText, `指令模式: ${isCommand}`,`耗時: ${duration}s`);
+    console.log(`✨ [Chat] 收到回應 (${provider}):`, replyText, `指令模式: ${isCommand}`, `耗時: ${duration}s`);
 
     messages.value.push({
       id: Date.now() + 1,
@@ -471,7 +516,7 @@ const confirmRecord = async (msgId, data) => {
         transaction_date: todayStr,
         from_account_id: finalFromId,
         to_account_id: finalToId,
-        transaction_note: transferNote, 
+        transaction_note: transferNote,
         amount: parseFloat(data.add_amount || data.amount || 0)
       };
 
@@ -479,7 +524,7 @@ const confirmRecord = async (msgId, data) => {
       await api.post('/transfers/', transferPayload);
       msg.text = `✅ 喵！已經幫小主人處理好轉帳囉！`;
     }
-    
+
     // 🌟 3. 收支模式 (收入/支出)
     else {
       const accName = data.account_name || data.account;
@@ -495,19 +540,19 @@ const confirmRecord = async (msgId, data) => {
         add_type: isIncome,
         add_class: data.add_class || '其他',
         add_class_icon: getClassIcon(data.add_class),
-        account_id: finalAccountId, 
+        account_id: finalAccountId,
         add_member: data.add_member || '自己',
         add_tag: data.add_tag || '需要',
         add_note: data.add_note || data.note || 'AI記帳'
       };
 
-      await api.post('/records/', payload); 
+      await api.post('/records/', payload);
       const actionText = isIncome ? '收入' : '花費';
       msg.text = `✅ 喵！已幫小主人把「${payload.add_note}」${actionText} ${payload.add_amount} 元記好囉！`;
     }
 
     // 成功後隱藏按鈕卡片
-    msg.is_command = false; 
+    msg.is_command = false;
 
   } catch (error) {
     console.error("❌ 寫入失敗：", error);
@@ -586,18 +631,18 @@ const chatWindowStyle = computed(() => {
     }
   }
 
-// 4. 設定動畫起點 (讓縮放從貓咪中心開始)
+  // 4. 設定動畫起點 (讓縮放從貓咪中心開始)
   style.transformOrigin = `${isInRightHalf ? 'right' : 'left'} ${isInBottomHalf ? 'bottom' : 'top'}`;
 
   return style;
 });
 
-onMounted(async () => { 
+onMounted(async () => {
   // 🌟 確保元件掛載時立即同步帳戶資料
-  await accountStore.loadAccounts(); 
-  
+  await accountStore.loadAccounts();
+
   if (isOpen.value) checkAndGreet();
-  
+
   window.addEventListener('resize', () => {
     position.value.x = Math.min(position.value.x, window.innerWidth - 100);
     position.value.y = Math.min(position.value.y, window.innerHeight - 100);
@@ -606,125 +651,137 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="money-ai-bot"
-  :style="{ left: position.x + 'px', top: position.y + 'px' }">
+  <div class="money-ai-bot" :style="{ left: position.x + 'px', top: position.y + 'px' }">
     <button v-if="!isOpen" class="bot-toggle-transparent" @mousedown="startDrag">
-      <img :src="catImg" class="floating-cat" alt="cat" draggable="false"/>
+      <img :src="catImg" class="floating-cat" alt="cat" draggable="false" />
       <div class="stars-container">
         <span class="star s1">✦</span>
         <span class="star s3">✨</span>
       </div>
     </button>
     <Teleport to="body">
-      <div v-if="isTyping" class="spray-canvas" 
-      @mousedown="startDrawing"
-      @mousemove="draw"
-      @mouseup="stopDrawing"
-      @mouseleave="stopDrawing"
-      >
+      <div v-if="isTyping" class="spray-canvas" @mousedown="startDrawing" @mousemove="draw" @mouseup="stopDrawing"
+        @mouseleave="stopDrawing">
         <div v-for="drop in paintDrops" :key="drop.id" class="paint-drop" :style="drop.style"></div>
         <div class="spray-hint">AI 思考中... 點擊畫面亂噴發或按住滑鼠畫圖，發洩一下吧喵！🎨</div>
       </div>
     </Teleport>
 
-  <Transition>
-    <div v-if="isOpen" class="chat-window-custom" @mousedown.stop :style="chatWindowStyle">
-      <div class="chat-header-custom" @mousedown="startDrag" style="cursor: move;">
-        <div class="header-left">
-          <div class="avatar-container-header">
-            <img :src="catImg" class="header-icon" draggable="false"/>
-          </div>
-          <div class="bot-status">
-            <span class="name">Money 喵喵小助手</span>
-            <span class="status">{{ isTyping ? '正在動腦...' : '隨時為您服務' }}</span>
-          </div>
-        </div>
-        <div class="header-actions">
-          <button class="clear-btn" @click="clearChat" title="清空對話">🗑️</button>
-          <button class="close-x" @click="isOpen = false">✕</button>
-        </div>
-      </div>
-
-      <div class="messages-container" ref="messagesContainer">
-        <div v-for="message in messages" :key="message.id" :class="['msg-row', message.sender]">
-          <div v-if="message.sender === 'bot'" class="avatar-container-msg">
-            <img :src="catImg" class="msg-avatar" />
-          </div>
-          <div class="bubble">
-            <p style="white-space: pre-wrap;">{{ message.text }}</p>
-            
-            <div v-if="message.is_command && message.action_data" class="action-card">
-              <div class="card-header">
-                {{ message.action_data.record_type === 'transfer' ? '🔄 轉帳確認' : '📝 收支確認' }}
-              </div>
-              <div class="card-body">
-                <div class="data-row">
-                  <span class="label">金額：</span>
-                  <span class="value amount" :style="{ color: message.action_data.record_type === 'income' ? '#10b981' : (message.action_data.record_type === 'expense' ? '#ef4444' : '#3b82f6') }">
-                    {{ message.action_data.record_type === 'income' ? '+' : (message.action_data.record_type === 'expense' ? '-' : '') }} $ {{ message.action_data.add_amount }}
-                  </span>
-                </div>
-
-                <template v-if="message.action_data.record_type !== 'transfer'">
-                  <div class="data-row"><span class="label">類別：</span><span class="value">{{ message.action_data.add_class }}</span></div>
-                  <div class="data-row"><span class="label">項目：</span><span class="value">{{ message.action_data.add_note }}</span></div>
-                  <div class="data-row"><span class="label">帳戶：</span><span class="value">{{ message.action_data.account_name }}</span></div>
-                  <div class="data-row"><span class="label">標籤：</span><span class="value tag-text">{{ message.action_data.add_member }} / {{ message.action_data.add_tag }}</span></div>
-                </template>
-
-                <template v-else>
-                  <div class="data-row"><span class="label">轉出 (From)：</span><span class="value">{{ message.action_data.from_account }}</span></div>
-                  <div class="data-row"><span class="label">轉入 (To)：</span><span class="value">{{ message.action_data.to_account }}</span></div>
-                  <div class="data-row"><span class="label">備註：</span><span class="value">{{ message.action_data.add_note }}</span></div>
-                </template>
-              </div>
-              <div class="card-footer">
-                <button class="btn cancel" @click="cancelRecord(message.id)">取消</button>
-                <button class="btn confirm" @click="confirmRecord(message.id, message.action_data)">確認送出</button>
-              </div>
+    <Transition>
+      <div v-if="isOpen" class="chat-window-custom" @mousedown.stop :style="chatWindowStyle">
+        <div class="chat-header-custom" @mousedown="startDrag" style="cursor: move;">
+          <div class="header-left">
+            <div class="avatar-container-header">
+              <img :src="catImg" class="header-icon" draggable="false" />
             </div>
+            <div class="bot-status">
+              <span class="name">Money 喵喵小助手</span>
+              <span class="status">{{ isTyping ? '正在動腦...' : '隨時為您服務' }}</span>
+            </div>
+          </div>
+          <div class="header-actions">
 
-            <span class="time">
-              {{ formatTime(message.timestamp) }}
-              <span v-if="message.sender === 'bot' && message.duration" class="meta-info">
-                <span class="provider-tag" v-if="message.provider">[{{ message.provider.toUpperCase() }}]</span>
-                <span class="duration-tag">⏱️{{ formatDuration(message.duration) }}</span>
+              <select v-model="selectedPersona" class="persona-select" title="切換喵喵性格">
+                <option v-for="p in personasList" :key="p.value" :value="p.value">
+                  {{ p.label }}
+                </option>
+              </select>              
+              <button class="clear-btn" @click="clearChat" title="清空對話">🗑️</button>
+              <button class="close-x" @click="isOpen = false">✕</button>
+            </div>
+        </div>
+
+        <div class="messages-container" ref="messagesContainer">
+          <div v-for="message in messages" :key="message.id" :class="['msg-row', message.sender]">
+            <div v-if="message.sender === 'bot'" class="avatar-container-msg">
+              <img :src="catImg" class="msg-avatar" />
+            </div>
+            <div class="bubble">
+              <p style="white-space: pre-wrap;">{{ message.text }}</p>
+
+              <div v-if="message.is_command && message.action_data" class="action-card">
+                <div class="card-header">
+                  {{ message.action_data.record_type === 'transfer' ? '🔄 轉帳確認' : '📝 收支確認' }}
+                </div>
+                <div class="card-body">
+                  <div class="data-row">
+                    <span class="label">金額：</span>
+                    <span class="value amount"
+                      :style="{ color: message.action_data.record_type === 'income' ? '#10b981' : (message.action_data.record_type === 'expense' ? '#ef4444' : '#3b82f6') }">
+                      {{ message.action_data.record_type === 'income' ? '+' : (message.action_data.record_type ===
+                      'expense' ? '-' : '') }} $ {{ message.action_data.add_amount }}
+                    </span>
+                  </div>
+
+                  <template v-if="message.action_data.record_type !== 'transfer'">
+                    <div class="data-row"><span class="label">類別：</span><span class="value">{{
+                      message.action_data.add_class }}</span></div>
+                    <div class="data-row"><span class="label">項目：</span><span class="value">{{
+                      message.action_data.add_note }}</span></div>
+                    <div class="data-row"><span class="label">帳戶：</span><span class="value">{{
+                      message.action_data.account_name }}</span></div>
+                    <div class="data-row"><span class="label">標籤：</span><span class="value tag-text">{{
+                      message.action_data.add_member }} / {{ message.action_data.add_tag }}</span></div>
+                  </template>
+
+                  <template v-else>
+                    <div class="data-row"><span class="label">轉出 (From)：</span><span class="value">{{
+                      message.action_data.from_account }}</span></div>
+                    <div class="data-row"><span class="label">轉入 (To)：</span><span class="value">{{
+                      message.action_data.to_account }}</span></div>
+                    <div class="data-row"><span class="label">備註：</span><span class="value">{{
+                      message.action_data.add_note }}</span></div>
+                  </template>
+                </div>
+                <div class="card-footer">
+                  <button class="btn cancel" @click="cancelRecord(message.id)">取消</button>
+                  <button class="btn confirm" @click="confirmRecord(message.id, message.action_data)">確認送出</button>
+                </div>
+              </div>
+
+              <span class="time">
+                {{ formatTime(message.timestamp) }}
+                <span v-if="message.sender === 'bot' && message.duration" class="meta-info">
+                  <span class="provider-tag" v-if="message.provider">[{{ message.provider.toUpperCase() }}]</span>
+                  <span class="duration-tag">⏱️{{ formatDuration(message.duration) }}</span>
+                </span>
               </span>
-            </span>
+            </div>
+          </div>
+          <div v-if="isTyping" class="msg-row bot">
+            <div class="avatar-container-msg">
+              <img :src="catImg" class="msg-avatar" />
+            </div>
+            <div class="bubble typing">{{ loadingText }}</div>
           </div>
         </div>
-        <div v-if="isTyping" class="msg-row bot">
-          <div class="avatar-container-msg">
-            <img :src="catImg" class="msg-avatar" />
-          </div>
-          <div class="bubble typing">{{ loadingText }}</div>
-        </div>
-      </div>
 
-      <div class="input-area">
-        <input v-model="input" placeholder="輸入訊息..." @keyup.enter.prevent="handleSend" :disabled="isTyping" />
-        <button class="send-btn" @click="handleSend" :disabled="isTyping">🐾</button>
+        <div class="input-area">
+          <input v-model="input" placeholder="輸入訊息..." @keyup.enter.prevent="handleSend" :disabled="isTyping" />
+          <button class="send-btn" @click="handleSend" :disabled="isTyping">🐾</button>
+        </div>
       </div>
-    </div>
-  </Transition>
+    </Transition>
   </div>
 </template>
 
 <style scoped>
 @import "../assets/css/ai_painting.css";
+
 /* 🎯 恢復您最愛的 Win11 原始樣式 */
 .money-ai-bot {
   position: fixed;
   z-index: 9999;
   /* 禁止選取文字，避免拖曳時選到一堆藍字 */
-  user-select: none; 
+  user-select: none;
   overflow: visible !important;
 }
 
 .bot-toggle-transparent {
   background: transparent !important;
   border: none !important;
-  cursor: grab; /* 抓取手勢 */
+  cursor: grab;
+  /* 抓取手勢 */
   padding: 0;
   position: relative;
   width: 90px;
@@ -789,18 +846,23 @@ onMounted(async () => {
 }
 
 /* 視窗彈出動畫 */
-.v-enter-active, .v-leave-active {
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); /* 帶點 Q 彈感 */
+.v-enter-active,
+.v-leave-active {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* 帶點 Q 彈感 */
 }
 
-.v-enter-from, .v-leave-to {
+.v-enter-from,
+.v-leave-to {
   opacity: 0;
-  transform: scale(0.5); /* 從一半大小開始彈出 */
+  transform: scale(0.5);
+  /* 從一半大小開始彈出 */
 }
 
 /* 對話窗與頭像防變形處理 */
 .chat-window-custom {
-  position: absolute; /* 相對於 .money-ai-bot 定位 */
+  position: absolute;
+  /* 相對於 .money-ai-bot 定位 */
   max-width: 90vw;
   width: 360px;
   height: 520px;
@@ -1004,7 +1066,7 @@ onMounted(async () => {
   overflow: hidden;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   /* 防止卡片太寬撐破對話框 */
-  width: 100%; 
+  width: 100%;
   min-width: 200px;
 }
 
@@ -1041,7 +1103,8 @@ onMounted(async () => {
 }
 
 .data-row .amount {
-  color: #ef4444; /* 紅色強調金額 */
+  color: #ef4444;
+  /* 紅色強調金額 */
   font-size: 1.1rem;
 }
 
@@ -1071,7 +1134,8 @@ onMounted(async () => {
 }
 
 .card-footer .btn.confirm {
-  color: #3b82f6; /* 藍色確認鈕 */
+  color: #3b82f6;
+  /* 藍色確認鈕 */
 }
 
 .card-footer .btn.confirm:hover {
@@ -1085,5 +1149,25 @@ onMounted(async () => {
   padding: 2px 6px;
   border-radius: 4px;
 }
+
+/* 🌟 下拉選單樣式 */
+.persona-select {
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: bold;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.persona-select:hover {
+  border-color: #cbd5e1;
+  background-color: #fff;
+}
+
 
 </style>
