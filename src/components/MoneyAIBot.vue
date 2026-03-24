@@ -134,7 +134,7 @@ const personasList = [
   // 把這行的 label 改成可愛喵喵 👇
   { value: 'cute', label: '😽 可愛喵喵' },
   { value: 'gentle', label: '🐈 溫柔管家喵' },
-  { value: 'professional', label: '🦁 嚴肅顧問'},
+  { value: 'professional', label: '🦁 嚴肅顧問' },
   { value: 'tsundere', label: '😼 傲嬌喵' },
   { value: 'lazy', label: '😿 厭世喵' },
   { value: 'rich', label: '💰 土豪喵' },
@@ -418,7 +418,7 @@ const handleSend = async () => {
 
     // 🧠 1. 抓取最近 4 筆對話當作「短期記憶」 (避開剛剛才 push 的自己這句)
     const historyText = messages.value
-      .slice(-5, -1) 
+      .slice(-5, -1)
       .map(m => {
         // 🌟 核心修改：如果是喵喵說的廢話，超過 30 個字就切斷，只留重點！
         const safeText = m.text.length > 30 ? m.text.substring(0, 30) + '...' : m.text;
@@ -686,14 +686,14 @@ onMounted(async () => {
           </div>
           <div class="header-actions">
 
-              <select v-model="selectedPersona" class="persona-select" title="切換喵喵性格">
-                <option v-for="p in personasList" :key="p.value" :value="p.value">
-                  {{ p.label }}
-                </option>
-              </select>              
-              <button class="clear-btn" @click="clearChat" title="清空對話">🗑️</button>
-              <button class="close-x" @click="isOpen = false">✕</button>
-            </div>
+            <select v-model="selectedPersona" class="persona-select" title="切換喵喵性格">
+              <option v-for="p in personasList" :key="p.value" :value="p.value">
+                {{ p.label }}
+              </option>
+            </select>
+            <button class="clear-btn" @click="clearChat" title="清空對話">🗑️</button>
+            <button class="close-x" @click="isOpen = false">✕</button>
+          </div>
         </div>
 
         <div class="messages-container" ref="messagesContainer">
@@ -714,7 +714,7 @@ onMounted(async () => {
                     <span class="value amount"
                       :style="{ color: message.action_data.record_type === 'income' ? '#10b981' : (message.action_data.record_type === 'expense' ? '#ef4444' : '#3b82f6') }">
                       {{ message.action_data.record_type === 'income' ? '+' : (message.action_data.record_type ===
-                      'expense' ? '-' : '') }} $ {{ message.action_data.add_amount }}
+                        'expense' ? '-' : '') }} $ {{ message.action_data.add_amount }}
                     </span>
                   </div>
 
@@ -723,17 +723,37 @@ onMounted(async () => {
                       message.action_data.add_class }}</span></div>
                     <div class="data-row"><span class="label">項目：</span><span class="value">{{
                       message.action_data.add_note }}</span></div>
-                    <div class="data-row"><span class="label">帳戶：</span><span class="value">{{
-                      message.action_data.account_name }}</span></div>
+
+                    <div class="data-row">
+                      <span class="label">帳戶：</span>
+                      <select v-model="message.action_data.account_name" class="value ai-select">
+                        <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">
+                          {{ acc.itemName }}
+                        </option>
+                      </select>
+                    </div>
+
                     <div class="data-row"><span class="label">標籤：</span><span class="value tag-text">{{
                       message.action_data.add_member }} / {{ message.action_data.add_tag }}</span></div>
                   </template>
 
                   <template v-else>
-                    <div class="data-row"><span class="label">轉出 (From)：</span><span class="value">{{
-                      message.action_data.from_account }}</span></div>
-                    <div class="data-row"><span class="label">轉入 (To)：</span><span class="value">{{
-                      message.action_data.to_account }}</span></div>
+                    <div class="data-row">
+                      <span class="label">轉出 (From)：</span>
+                      <select v-model="message.action_data.from_account" class="value ai-select">
+                        <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">{{
+                          acc.itemName }}</option>
+                      </select>
+                    </div>
+
+                    <div class="data-row">
+                      <span class="label">轉入 (To)：</span>
+                      <select v-model="message.action_data.to_account" class="value ai-select">
+                        <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">{{
+                          acc.itemName }}</option>
+                      </select>
+                    </div>
+
                     <div class="data-row"><span class="label">備註：</span><span class="value">{{
                       message.action_data.add_note }}</span></div>
                   </template>
@@ -1174,5 +1194,22 @@ onMounted(async () => {
   background-color: #fff;
 }
 
+/* 🚀 AI 帳戶下拉選單樣式 */
+.ai-select {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  background-color: var(--bg-card);
+  outline: none;
+  cursor: pointer;
+  flex: 1; /* 讓它填滿剩餘空間 */
+  max-width: 140px; /* 避免選單太長破壞版面 */
+}
+
+.ai-select:focus {
+  border-color: var(--color-primary);
+}
 
 </style>
