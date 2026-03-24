@@ -1,8 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
-import axios from 'axios';
-
+import api from '@/api';
 // 變數定義
 const avatarUrl = ref(null); //存放後端回傳的路徑
 const activeTab = ref('profile')
@@ -11,19 +10,22 @@ const selectedFile = ref(null); // 用來存放準備上傳的檔案
 const originalAvatarUrl = ref(null);
 const isPendingDelete = ref(false); // 新增一個變數來追蹤是否點了「移除」
 
+
+const apiBase = import.meta.env.VITE_API_BASE_URL === '/api' 
+                ? 'http://localhost:8000' 
+                : import.meta.env.VITE_API_BASE_URL.replace('/api', '');
+
 // 在 script 區塊加入
 const displayAvatarUrl = computed(() => {
     if (!avatarUrl.value) return null;
 
-    // 如果是剛剛選的檔案 (blob 開頭)，直接回傳預覽網址
     if (avatarUrl.value.startsWith('blob:')) {
         return avatarUrl.value;
     }
 
-    // ✅ 關鍵：在路徑後面加上時間戳記 t=...
-    // 這樣網址會變成 /static/ProfilePicture/user_6.png?t=1707897600
     const timestamp = Date.now();
-    return `http://localhost:8000${avatarUrl.value}?t=${timestamp}`;
+    // 🌟 3. 把 localhost:8000 換成 apiBase
+    return `${apiBase}${avatarUrl.value}?t=${timestamp}`;
 });
 
 // 圖面大小設定
@@ -41,17 +43,15 @@ const handleFileChange = (e) => {
 // =========================
 
 onMounted(async () => {
-    // 確保有 username 才能抓資料
     if (username.value) {
         try {
-            const response = await axios.get(
-                `http://localhost:8000/api/setting/setting_profile/get-profile/${username.value}`
-            );
-            // 在 onMounted 的 response.data.success 裡面修改如下：
-            if (response.data.success) {
-                const d = response.data.data;
+            // 🌟 4. 改用 api.get，並且只寫 /setting 開頭的相對路徑
+            const response = await api.get(`/setting/setting_profile/get-profile/${username.value}`);
+            
+            // 🌟 5. 注意！因為攔截器已經幫你脫掉一層殼了，這裡的 response.data.success 要改成 response.success
+            if (response.success) {
+                const d = response.data; // 這裡也從 response.data.data 變成 response.data
 
-                // 整理一份乾淨的資料物件
                 const fetchedData = {
                     name: d.name || '',
                     email: d.email || '',
@@ -59,11 +59,8 @@ onMounted(async () => {
                     about: d.about || ''
                 };
 
-                // 同步給「編輯組」與「對照組」
                 profile.value = { ...fetchedData };
                 originalProfile.value = { ...fetchedData };
-
-                // 頭像路徑獨立處理
                 avatarUrl.value = d.avatar_url || null;
                 originalAvatarUrl.value = d.avatar_url || null;
             }
@@ -128,13 +125,12 @@ const saveProfile = async () => {
             about: profile.value.about
         };
 
-        const textResponse = await axios.put(
-            `http://localhost:8000/api/setting/setting_profile/update-profile/${username.value}`,
-            updateData
-        );
+        // 🌟 6. 更新文字資料 (把 axios.put 改成 api.put)
+        const textResponse = await api.put(`/setting/setting_profile/update-profile/${username.value}`, updateData);
 
-        if (!textResponse.data.success) {
-            alert("❌ 文字資料更新失敗：" + textResponse.data.message);
+        // 注意拿掉 .data
+        if (!textResponse.success) {
+            alert("❌ 文字資料更新失敗：" + textResponse.message);
             return;
         }
 
@@ -142,9 +138,10 @@ const saveProfile = async () => {
 
         // A. 如果使用者點了「移除」
         if (typeof isPendingDelete !== 'undefined' && isPendingDelete.value) {
-            await axios.post(`http://localhost:8000/api/setting/setting_profile/remove-avatar/${username.value}`);
+            // 🌟 7. 移除頭像 (改成 api.post)
+            await api.post(`/setting/setting_profile/remove-avatar/${username.value}`);
             isPendingDelete.value = false;
-            originalAvatarUrl.value = null; // 同步備份狀態
+            originalAvatarUrl.value = null; 
         }
 
         // B. 如果使用者選了「新照片」
@@ -152,23 +149,19 @@ const saveProfile = async () => {
             const formData = new FormData();
             formData.append('file', selectedFile.value);
 
-            const imgResponse = await axios.post(
-                `http://localhost:8000/api/setting/setting_profile/upload-avatar/${username.value}`,
-                formData
-            );
+            // 🌟 8. 上傳頭像 (改成 api.post)
+            const imgResponse = await api.post(`/setting/setting_profile/upload-avatar/${username.value}`, formData);
 
-            if (imgResponse.data.success) {
-                // 加上時間戳記確保畫面更新
-                const newUrl = imgResponse.data.avatar_url + '?t=' + Date.now();
+            // 注意拿掉 .data
+            if (imgResponse.success) {
+                const newUrl = imgResponse.avatar_url + '?t=' + Date.now();
                 avatarUrl.value = newUrl;
-
-                // 更新備份路徑
                 if (typeof originalAvatarUrl !== 'undefined') {
-                    originalAvatarUrl.value = imgResponse.data.avatar_url;
+                    originalAvatarUrl.value = imgResponse.avatar_url;
                 }
                 selectedFile.value = null;
             } else {
-                alert("⚠ 文字更新成功，但頭像上傳失敗：" + imgResponse.data.message);
+                alert("⚠ 文字更新成功，但頭像上傳失敗：" + imgResponse.message);
             }
         }
 

@@ -2,9 +2,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRecordStore } from '@/stores/useRecordStore'
 import { useAccountStore } from '@/stores/useAccountStore'
-import axios from 'axios'
-import { ElDrawer, ElButton, ElDivider, ElStatistic, ElMessage, ElNotification } from 'element-plus'
-
+import { ElDrawer, ElButton, ElDivider, ElMessage, ElNotification } from 'element-plus'
+import api from '@/api'
 const recordStore = useRecordStore()
 const accountStore = useAccountStore()
 
@@ -15,53 +14,50 @@ const drawerVisible = ref(false) // 控制側邊抽屜是否顯示
 
 // --- 核心邏輯：向後端請求 AI 洞察 ---
 const fetchAiSummary = async () => {
-  // 1. 開始載入動畫
-  aiLoading.value = true
-  
-  try {
-    // 2. 取得 Token (請確認你登入時是用這個 key 存入 localStorage)
-    const token = localStorage.getItem('user_token')
-    
-    if (!token) {
-      ElMessage.warning('請先登入帳號，才能使用 AI 洞察功能喔！')
-      return
+    aiLoading.value = true
+
+    try {
+        // Token 檢查可以保留，增加防呆
+        const token = localStorage.getItem('user_token')
+        if (!token) {
+            ElMessage.warning('請先登入帳號，才能使用 AI 洞察功能喔！')
+            return
+        }
+
+        //  3. 直接用 api.get，不要寫死網址，也不用自己帶 Header！
+        // 網址只要寫 /api 後面的路徑就好，service.js 會自動幫你補上前面的 Render 網址
+        const response = await api.get('/v1/ai/analysis/financial-insight')
+
+        // 注意回傳格式
+        // axios 攔截器通常會直接回傳 response.data，所以這裡可能不需要 .data
+        // 如果你發現壞掉，請改回 response.data
+        aiData.value = response; // 或者 response.data，取決於你的攔截器寫法
+        drawerVisible.value = true
+
+        // 加個小通知增加儀式感
+        ElNotification({
+            title: '分析完成',
+            message: 'AI 顧問已為您準備好專屬財務建議',
+            type: 'success',
+            position: 'bottom-right'
+        })
+
+    } catch (error) {
+        console.error('AI 請求出錯:', error)
+
+        // 根據錯誤代碼給予提示
+        const status = error.response?.status
+        if (status === 401) {
+            ElMessage.error('認證失效，請重新登入')
+        } else if (status === 404) {
+            ElMessage.error('找不到 AI 介面，請確認 API 路徑')
+        } else {
+            ElMessage.error('AI 顧問目前忙碌中，請稍後再試')
+        }
+    } finally {
+        // 5. 不管成功或失敗，都要關閉按鈕的載入狀態
+        aiLoading.value = false
     }
-
-    // 3. 發送請求 (路徑請對應你的 prefix)
-    const response = await axios.get('http://localhost:8000/api/v1/ai/analysis/financial-insight', {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
-
-    // 4. 請求成功：儲存數據並開啟抽屜
-    aiData.value = response.data
-    drawerVisible.value = true
-    
-    // 加個小通知增加儀式感
-    ElNotification({
-      title: '分析完成',
-      message: 'AI 顧問已為您準備好專屬財務建議',
-      type: 'success',
-      position: 'bottom-right'
-    })
-
-  } catch (error) {
-    console.error('AI 請求出錯:', error)
-    
-    // 根據錯誤代碼給予提示
-    const status = error.response?.status
-    if (status === 401) {
-      ElMessage.error('認證失效，請重新登入')
-    } else if (status === 404) {
-      ElMessage.error('找不到 AI 介面，請確認 API 路徑')
-    } else {
-      ElMessage.error('AI 顧問目前忙碌中，請稍後再試')
-    }
-  } finally {
-    // 5. 不管成功或失敗，都要關閉按鈕的載入狀態
-    aiLoading.value = false
-  }
 }
 
 // 初始化資料抓取
@@ -188,28 +184,23 @@ const monthlyMOMStats = computed(() => {
             <div class="placeholder"></div>
             <h2 class="absolute-center-title" style="color: var(--text-primary) ;font-weight:700">圖表分析</h2>
             <div class="action-right">
-                <el-button type="text" @click="fetchAiSummary" class="ai-btn">  AI 智慧財務洞察
+                <el-button type="text" @click="fetchAiSummary" class="ai-btn"> AI 智慧財務洞察
                 </el-button>
-                <el-drawer
-                v-model="drawerVisible"
-                :modal="true"
-                :append-to-body="true"
-                title="🤖 AI 智慧財務顧問"
-                direction="rtl"
-                size="380px"
-                >
-                <h3 style="padding-left: 20px;">AI 智慧財務洞察</h3>
-                <div v-if="aiData" class="ai-content">
-                    <p style="white-space: pre-wrap; line-height: 1.8;padding: 20px;">{{ aiData.summary }}</p>
-                    <el-divider />
-                    <div class="metrics-footer">
-                        <el-text size="small"; style="padding-left: 20px;">本月支出：NT$ {{ aiData.raw_metrics.total_expense }}</el-text>
+                <el-drawer v-model="drawerVisible" :modal="true" :append-to-body="true" title="🤖 AI 智慧財務顧問"
+                    direction="rtl" size="380px">
+                    <h3 style="padding-left: 20px;">AI 智慧財務洞察</h3>
+                    <div v-if="aiData" class="ai-content">
+                        <p style="white-space: pre-wrap; line-height: 1.8;padding: 20px;">{{ aiData.summary }}</p>
+                        <el-divider />
+                        <div class="metrics-footer">
+                            <el-text size="small" ; style="padding-left: 20px;">本月支出：NT$ {{
+                                aiData.raw_metrics.total_expense }}</el-text>
+                        </div>
                     </div>
-                </div>
-                <div v-else-if="aiLoading" v-loading="true" style="height: 200px;"></div>
-            </el-drawer>
+                    <div v-else-if="aiLoading" v-loading="true" style="height: 200px;"></div>
+                </el-drawer>
+            </div>
         </div>
-    </div>
 
         <div class="PageTurn">
             <div class="btn-group t-btn-group" role="group">
@@ -293,9 +284,9 @@ const monthlyMOMStats = computed(() => {
 <style scoped>
 @import '../assets/css/dashboard.css';
 
-.btn-outline-primary{
+.btn-outline-primary {
     border-color: var(--text-primary);
-    color:var(--text-primary);  
+    color: var(--text-primary);
 }
 
 .PageTurn {
@@ -347,7 +338,7 @@ h2 {
 .card-title {
     font-size: 14px;
     font-weight: 500;
-    color:var(--text-secondary);
+    color: var(--text-secondary);
 }
 
 .card-header {
@@ -372,70 +363,88 @@ h2 {
 
 
 .t-btn-group .btn.active {
-    background-color: var(--color-primary) !important; /* 原本 #0d6efd */
-    color: var(--bg-body) !important; /* 原本 white */
+    background-color: var(--color-primary) !important;
+    /* 原本 #0d6efd */
+    color: var(--bg-body) !important;
+    /* 原本 white */
     border-color: var(--color-primary) !important;
 }
 
 /* 2. 滑鼠移過去 (Hover) 狀態：顯示白框 */
 .t-btn-group .btn:hover {
     background-color: color-mix(in srgb, var(--color-primary), transparent 90%) !important;
-    color: var(--color-primary) !important;       
-    border: 1px solid var(--color-primary) !important; 
+    color: var(--color-primary) !important;
+    border: 1px solid var(--color-primary) !important;
     box-shadow: none !important;
 }
 
-.income-card { border-left: 4px solid #3b82f6;}
-.expenditure-card   { border-left: 4px solid #ef4444;}
-.net-card  { border-left: 4px solid #10b981;}
+.income-card {
+    border-left: 4px solid #3b82f6;
+}
+
+.expenditure-card {
+    border-left: 4px solid #ef4444;
+}
+
+.net-card {
+    border-left: 4px solid #10b981;
+}
 
 .header-container {
-  position: relative;     /* 必須設定，作為標題定位的基準 */
-  display: flex;
-  justify-content: flex-end; /* 讓內容預設靠右 */
-  align-items: center;
-  width: 100%;
-  height: 50px;           /* 設定一個固定高度，確保對齊 */
-  margin-bottom: 20px;
-  padding: 0 29px;
+    position: relative;
+    /* 必須設定，作為標題定位的基準 */
+    display: flex;
+    justify-content: flex-end;
+    /* 讓內容預設靠右 */
+    align-items: center;
+    width: 100%;
+    height: 50px;
+    /* 設定一個固定高度，確保對齊 */
+    margin-bottom: 20px;
+    padding: 0 29px;
 }
 
 .absolute-center-title {
-  /* 核心黑科技：絕對定位置中 */
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%); /* 往回推 50% 達成絕對置中 */
-  
-  color: var(--text-primary);
-  font-weight: 700;
-  margin: 0;
-  white-space: nowrap;
-  pointer-events: none; /* 避免擋到點擊事件 */
+    /* 核心黑科技：絕對定位置中 */
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    /* 往回推 50% 達成絕對置中 */
+
+    color: var(--text-primary);
+    font-weight: 700;
+    margin: 0;
+    white-space: nowrap;
+    pointer-events: none;
+    /* 避免擋到點擊事件 */
 }
 
 .action-right {
-  z-index: 1; /* 確保按鈕在標題上面，可以被點擊 */
+    z-index: 1;
+    /* 確保按鈕在標題上面，可以被點擊 */
 }
 
 .ai-btn {
-  /* color: #3b82f6; */
-  font-weight: bold;
-  border: 1px solid #333436 !important; /* 灰色邊框 */
-  padding: 8px 15px;
-  transition: all 0.3s;
-  border-radius: 16px;
-  cursor: pointer;
+    /* color: #3b82f6; */
+    font-weight: bold;
+    border: 1px solid #333436 !important;
+    /* 灰色邊框 */
+    padding: 8px 15px;
+    transition: all 0.3s;
+    border-radius: 16px;
+    cursor: pointer;
 }
 
 .ai-btn {
-  color: #3b82f6;
-  font-weight: bold;
-  transition: all 0.3s;
+    color: #3b82f6;
+    font-weight: bold;
+    transition: all 0.3s;
 }
 
 .ai-btn:hover {
-  transform: scale(1.05); /* 滑鼠移上去稍微放大 */
-  text-shadow: 0 0 8px rgba(64, 158, 255, 0.4); /* 增加一點發光感 */
+    transform: scale(1.05);
+    /* 滑鼠移上去稍微放大 */
+    text-shadow: 0 0 8px rgba(64, 158, 255, 0.4);
+    /* 增加一點發光感 */
 }
-
 </style>
