@@ -216,24 +216,29 @@ const sprayPaint = (e, isDragging) => {
 // === 🎨 噴漆發洩小遊戲尾巴 ===
 let ws = null; // 存放 WebSocket 實例
 // 新增：建立 WebSocket 連線 (取代了原本的 checkVoiceSuccess)
+
 const connectWebSocket = () => {
-  // 💡 就是改這裡！把名字對齊你的系統！
   const token = localStorage.getItem("user_token") || localStorage.getItem("token");
 
   if (!token) {
-    // 💡 把原本的 console.error 改成 console.log 或直接註解掉
-    // 這樣在登入畫面時，它就會默默等待，不會跳出嚇人的紅字錯誤了！
     console.log('👀 [喵喵小助手] 尚未登入，等待小主人登入後再接通電話線...');
     return;
   }
 
-  // 動態組合 WebSocket 網址
-  // 自動適應網域，避免 127.0.0.1 和 localhost 的衝突
-  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsHost = window.location.hostname; // 自動抓取目前的網域
+  // 🌟 完美兼容寫法：從環境變數抓 API 網址
+  const apiBase = import.meta.env.VITE_API_BASE_URL;
+  let wsUrl = '';
 
-  // 💡 組合出正確的 WebSocket 網址
-  const wsUrl = `${wsProtocol}//${wsHost}:8000/api/ws/chat?token=${token}`;
+  if (apiBase === '/api') {
+    // 【地端開發模式】
+    wsUrl = `ws://localhost:8000/api/ws/chat?token=${token}`;
+  } else {
+    // 【雲端 Vercel 模式】
+    // apiBase 會是 https://money-api-tdc5.onrender.com/api
+    // 我們要把 https:// 換成 wss://，並把 http:// 換成 ws://
+    const wssBase = apiBase.replace('https://', 'wss://').replace('http://', 'ws://');
+    wsUrl = `${wssBase}/ws/chat?token=${token}`;
+  }
 
   console.log('🔗 準備連線 WebSocket 網址:', wsUrl);
   ws = new WebSocket(wsUrl);
