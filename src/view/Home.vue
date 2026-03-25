@@ -1,28 +1,43 @@
 <script setup>
-import { ref, onMounted } from 'vue' // 🌟 記得引入 onMounted
+import { ref, onMounted } from 'vue' 
 import { useRouter } from 'vue-router'
 import api from '@/api'
 import { ElMessage } from 'element-plus'
+import liff from '@line/liff'
+
 const router = useRouter()
 
-
+// Google Client ID 與 LIFF ID (改用 import.meta.env.VITE_LIFF_ID)
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
-//  Google Client ID (與註冊頁一致)
+const LIFF_ID = import.meta.env.VITE_LIFF_ID
 
+// 用來存放 LINE 的資訊
+const lineUserId = ref(null)
 
 const formData = ref({
     email: '',
     password: ''
 })
 
-// --- Google 登入邏輯 (新增) ---
-onMounted(() => {
-    // 渲染 Google 按鈕
+// --- 初始化邏輯 (修正為 async) ---
+onMounted(async () => {
+    // 1. 初始化 LIFF
+    try {
+        await liff.init({ liffId: LIFF_ID })
+        if (liff.isLoggedIn()) {
+            const profile = await liff.getProfile()
+            lineUserId.value = profile.userId
+            console.log("LINE ID 載入成功:", lineUserId.value)
+        }
+    } catch (err) {
+        console.log("非 LINE 環境或 LIFF 初始化失敗", err)
+    }
+
+    // 2. Google 登入按鈕渲染
     if (window.google) {
         window.google.accounts.id.initialize({
             client_id: GOOGLE_CLIENT_ID,
             callback: handleGoogleCallback,
-            
         });
         
         window.google.accounts.id.renderButton(
@@ -30,8 +45,8 @@ onMounted(() => {
             { 
                 theme: "outline", 
                 size: "large",
-                width: "320", // 配合下方 CSS 的寬度
-                text: "signin_with", // 顯示 "使用 Google 登入"
+                width: "320",
+                text: "signin_with",
                 shape: "rectangular",
                 logo_alignment: "left"
             }
@@ -39,30 +54,20 @@ onMounted(() => {
     }
 });
 
+// --- Google 登入回調 (同步支援 LINE 綁定) ---
 const handleGoogleCallback = async (response) => {
     const credential = response.credential;
     try {
-        const res = await api.post('/auth/google', { token: credential });
+        // 🌟 補上 line_user_id，讓 Google 登入也能一併綁定
+        const res = await api.post('/auth/google', { 
+            token: credential,
+            line_user_id: lineUserId.value 
+        });
         
-        // 🌟 統一儲存邏輯 (跟您原本的手動登入保持一致)
         if (res.access_token) {
-            localStorage.setItem('currentUser', JSON.stringify(res.user));
-            localStorage.setItem('user_token', res.access_token); // 統一叫 user_token
-            
-            // 更新 Axios 預設 Header
-            api.defaults.headers.common['Authorization'] = `Bearer ${res.access_token}`;
-
+            saveUserSession(res);
             ElMessage.success('Google 登入成功！');
-            
-            // 延遲跳轉確保寫入
-            setTimeout(() => {
-                // 如果後端回傳 user.role，可在此判斷跳轉
-                if (res.user && res.user.role === 'admin') {
-                    router.push('/loading');
-                } else {
-                    router.push('/loading');
-                }
-            }, 100);
+            postLoginRedirect();
         }
     } catch (err) {
         console.error('Google 登入失敗:', err);
@@ -70,41 +75,52 @@ const handleGoogleCallback = async (response) => {
     }
 };
 
-// --- 手動登入邏輯 (維持不變) ---
+// --- 手動登入邏輯 ---
 const handleLogin = async () => {
     const { email: loginIdentifier, password } = formData.value
-    
     try {
         const res = await api.post('/auth/login', {
             identifier: loginIdentifier,
-            password: password
+            password: password,
+            line_user_id: lineUserId.value 
         });
 
         if (res && res.access_token) {
-            const user = res.user;
-            const token = res.access_token;
-
-            // 存入 localStorage
-            localStorage.setItem('currentUser', JSON.stringify(user));
-            localStorage.setItem('user_token', token); 
+            saveUserSession(res);
             
-            // 🌟 建議補上這行：讓後續 API 請求能立刻帶上 Token
-            api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-            ElMessage.success('登入成功！');
-
-            if (user.role === 'admin') {
-                router.push('/loading');
-            } else {
-                router.push('/loading');
-            }
+            const msg = lineUserId.value ? '登入並綁定 LINE 成功！' : '登入成功！';
+            ElMessage.success(msg);
+            
+            postLoginRedirect();
         }
     } catch (err) {
-        console.log('登入失敗，攔截器已處理彈窗');
+        console.log('登入失敗');
     }
 }
 
+// --- 封裝重複邏輯：儲存 Session ---
+const saveUserSession = (res) => {
+    localStorage.setItem('currentUser', JSON.stringify(res.user));
+    localStorage.setItem('user_token', res.access_token); 
+    api.defaults.headers.common['Authorization'] = `Bearer ${res.access_token}`;
+}
+
+// --- 封裝重複邏輯：跳轉判斷 ---
+const postLoginRedirect = () => {
+    // 如果在 LINE 內開啟，1.5 秒後關閉視窗，讓用戶回到聊天室
+    // 這個 LINE 專用的關閉視窗邏輯，只有在 LINE 裡面打開網頁才會執行
+    if (liff.isInClient() && lineUserId.value) {
+        setTimeout(() => {
+            liff.closeWindow();
+        }, 1500);
+    } else {
+        //  當你在本機地端使用 Chrome 打開時，liff.isInClient() 是 false
+        // 它會執行這行，正常跳轉到你的 /loading 頁面，完全不影響！
+        router.push('/loading');
+    }
+}
 const handleRegister = () => router.push('/Register')
+
 </script>
 
 <template>

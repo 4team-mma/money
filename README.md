@@ -53,6 +53,7 @@ git remote set-url origin https://github.com/4team-mma/money.git
 - Axios：簡單易用的 HTTP 請求工具。
 - V-Calendar：日期選擇與日曆功能。
 - Chart.js：資料視覺化與圖表呈現。
+- Line/liff
 
 ## 開始專案需要先準備的東西（只檢查一次）
 
