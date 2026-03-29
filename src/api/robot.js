@@ -26,3 +26,44 @@ export const postAiRobotChat = (data) => {
     timeout: 120000 
   });
 };
+
+
+
+/**
+ * 4. 邱比特大腦：A/B 意圖測試對比
+ * 對應後端: POST /api/ai_test/compare
+ * @param {string} message - 測試語句
+ */
+// 1. 手動對比
+export const compareAiIntents = (message) => {
+  // 必須包含 v1/ai 這兩層父路徑
+  return api.post("/v1/ai/ai_test/compare", { message }); 
+};
+
+// 2. 批次測試
+export const runAiBatchTest = () => {
+  return api.post("/v1/ai/ai_test/batch_run");
+};
+
+// 3. 上傳 Excel
+export const uploadAiTestExcel = (formData) => {
+  return api.post("/v1/ai/ai_test/upload_test_file", formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+};
+
+// 4. 清除暫存
+export const clearAiTestFile = () => {
+  return api.delete("/v1/ai/ai_test/clear_test_file");
+};
+
+/**
+ * 5. (選填) 更新審核結果
+ * 如果你在測試頁面發現 AI 錯了，可以直接修正它
+ */
+export const updateCorrectedIntent = (reviewId, correctedIntent) => {
+  return api.put(`/v1/ai/ai_test/logs/${reviewId}`, { corrected_intent: correctedIntent });
+};
+
+
+
