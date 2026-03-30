@@ -23,7 +23,7 @@ export const postAiRobotChat = (data) => {
   return api.post("/ai_models/chat", data, {
     // ⚠️ 關鍵：這裡必須覆蓋全域的 10秒 設定，改成 120秒
     // 因為 AI 生成很慢，不加這個會導致前端報錯 "timeout of 10000ms exceeded"
-    timeout: 120000 
+    timeout: 30000
   });
 };
 
@@ -42,7 +42,11 @@ export const compareAiIntents = (message) => {
 
 // 2. 批次測試
 export const runAiBatchTest = () => {
-  return api.post("/v1/ai/ai_test/batch_run");
+  return api.post("/v1/ai/ai_test/batch_run", undefined, {
+    // ⚠️ 關鍵：覆蓋全域的 10秒 設定，改成 120秒 (兩分鐘)
+    // 批次測試 32 題需要時間，讓前端耐心等候！
+    timeout: 120000 
+  });
 };
 
 // 3. 上傳 Excel

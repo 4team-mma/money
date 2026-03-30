@@ -741,16 +741,18 @@ onMounted(async () => {
                     <div class="data-row">
                       <span class="label">轉出 (From)：</span>
                       <select v-model="message.action_data.from_account" class="value ai-select">
-                        <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">{{
-                          acc.itemName }}</option>
+                        <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">
+                          {{ acc.itemName }}
+                        </option>
                       </select>
                     </div>
 
                     <div class="data-row">
                       <span class="label">轉入 (To)：</span>
                       <select v-model="message.action_data.to_account" class="value ai-select">
-                        <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">{{
-                          acc.itemName }}</option>
+                        <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">
+                          {{ acc.itemName }}
+                        </option>
                       </select>
                     </div>
 

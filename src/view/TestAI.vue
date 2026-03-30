@@ -1,34 +1,59 @@
 <script setup>
-import { ref } from 'vue';
-// 🌟 修正點 1：從 robot.js 引入你定義好的正確函式
+/**
+ * 邱比特大腦：意圖識別 A/B 測試擂台
+ */
+import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import {
     compareAiIntents,
     runAiBatchTest,
     uploadAiTestExcel,
-    clearAiTestFile
+    clearAiTestFile,
+    updateCorrectedIntent
 } from '@/api/robot';
 import { ElMessage } from 'element-plus';
 
+const router = useRouter();
 const testMessage = ref('');
 const loading = ref(false);
 const singleResult = ref(null);
 const batchLoading = ref(false);
 const batchReport = ref(null);
 const hasCustomFile = ref(false);
+const onlyShowErrors = ref(false);
+const intentOptions = ['RECORD', 'QUERY', 'CHAT', 'ADVISOR', 'MULTI_RECORD', 'MULTI_QUERY', 'MULTI_KNOWLEDGE', 'KNOWLEDGE'];
+const singleCorrection = ref('');
+const showSingleCorrection = ref(false);
 
-// 1. 單句對比測試
-// TestAI.vue 裡面的 runSingleTest 修正
+const filteredBatchDetails = computed(() => {
+    if (!batchReport.value) return [];
+    if (onlyShowErrors.value) {
+        return batchReport.value.details.filter(item => !item.is_correct);
+    }
+    return batchReport.value.details;
+});
+// 登出邏輯
+const handleLogout = () => {
+    localStorage.removeItem('user_token');
+    localStorage.removeItem('currentUser');
+    ElMessage.success('已安全登出喵！');
+    router.push('/');
+};
+
+// 單句對比測試
 const runSingleTest = async () => {
     if (!testMessage.value.trim()) return;
     loading.value = true;
     try {
         const res = await compareAiIntents(testMessage.value);
-        // 🌟 這裡：如果你的 axios 有攔截器直接回傳 data，就用 res
-        // 如果沒有，就用 res.data
-        const responseData = res.data || res; 
-        singleResult.value = responseData; 
+        const responseData = res.data || res;
         
-        console.log("收到結果喵：", singleResult.value); // 在 Console 看一下有沒有東西
+        // 🌟 這裡註解已經移除了！
+        singleResult.value = responseData;
+        singleCorrection.value = responseData.mix_ai.intent;
+        showSingleCorrection.value = true;
+
+        console.log("收到結果喵：", singleResult.value);
         ElMessage.success('對比完成喵！');
     } catch (err) {
         console.error("對比失敗：", err);
@@ -38,312 +63,605 @@ const runSingleTest = async () => {
     }
 };
 
-// 2. 批次掃描測試
+// 儲存單句修正
+const saveSingleCorrection = async () => {
+    try {
+        if (!singleResult.value.review_id) {
+            ElMessage.warning('後端尚未回傳 review_id！');
+            return;
+        }
+
+        await updateCorrectedIntent(singleResult.value.review_id, singleCorrection.value);
+        singleResult.value.mix_ai.intent = singleCorrection.value;
+        showSingleCorrection.value = false; // 存檔後收起介面
+        ElMessage.success('✅ 已成功將修正寫入資料庫！');
+    } catch (err) {
+        ElMessage.error('修正失敗，請確認 API 是否正確。');
+    }
+};
+
+// 批次掃描測試
 const runBatchTest = async () => {
     batchLoading.value = true;
     try {
-        // 🌟 修正點 3：改用 robot.js 的函式
         const res = await runAiBatchTest();
-        batchReport.value = res.data;
-        ElMessage.success('批次掃描完成喵！');
+        batchReport.value = res.data || res;
+        ElMessage.success(`批次分析完成！目前準確率 ${(batchReport.value.accuracy * 100).toFixed(1)}%`);
     } catch (err) {
-        ElMessage.error('批次掃描失敗');
+        console.error("批次失敗：", err);
+        ElMessage.error('批次測試失敗：請檢查後端 temp/excel 資料夾');
     } finally {
         batchLoading.value = false;
     }
 };
 
-// 3. 上傳檔案
+// 儲存批次修正
+const saveCorrection = async (item) => {
+    try {
+        await updateCorrectedIntent(item.review_id, item.correction);
+        item.is_correct = (item.correction === item.pred);
+        ElMessage.success('✅ 已成功將修正寫入資料庫！');
+    } catch (err) {
+        ElMessage.error('修正失敗，請確認 API 是否正確。');
+    }
+};
+
+// 上傳與清除檔案
 const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
-
     const formData = new FormData();
     formData.append('file', file);
-
     try {
-        // 🌟 修正點 4：改用 robot.js 的函式
         await uploadAiTestExcel(formData);
         hasCustomFile.value = true;
-        ElMessage.success('測試檔上傳成功喵！');
-    } catch (err) {
-        ElMessage.error('上傳失敗');
-    }
+        ElMessage.success('自定義題庫上傳成功');
+    } catch (err) { ElMessage.error('上傳失敗'); }
 };
-
-// 4. 清除檔案
+//清除檔案
 const clearTempFile = async () => {
     try {
-        // 🌟 修正點 5：改用 robot.js 的函式
         await clearAiTestFile();
         hasCustomFile.value = false;
         batchReport.value = null;
-        ElMessage.success('已恢復為預設測試集喵。');
-    } catch (err) {
-        ElMessage.error('清除失敗');
-    }
+        ElMessage.success('已清空並恢復預設');
+    } catch (err) { ElMessage.error('清空失敗'); }
 };
-
-// 🎨 顏色邏輯不變
+// 🎨 顏色邏輯
 const getConfidenceColor = (score) => {
     if (score > 0.9) return '#10b981';
     if (score > 0.7) return '#f59e0b';
     return '#ef4444';
 };
-
-const getAccuracyColor = (acc) => {
-    if (acc >= 0.95) return '#10b981';
-    if (acc >= 0.8) return '#3b82f6';
-    return '#ef4444';
-};
 </script>
 
 <template>
-    <div class="test-ai-container">
-        <div class="test-header">
-            <div class="title-section">
-                <h1>🚀 邱比特大腦：意圖識別 A/B 測試擂台</h1>
-                <p class="subtitle">比較「傳統關鍵字」與「ONNX + V10 攔截器」的差異</p>
-            </div>
-
-            <div class="file-management">
-                <div class="file-status" :class="{ 'has-file': hasCustomFile }">
-                    模式：{{ hasCustomFile ? '📁 自定義測試檔' : '🏆 預設黃金測試集' }}
-                </div>
-                <input type="file" ref="fileInput" @change="handleFileUpload" accept=".xlsx" hidden />
-                <button class="action-btn upload" @click="$refs.fileInput.click()">📤 上傳 Excel</button>
-                <button v-if="hasCustomFile" class="action-btn clear" @click="clearTempFile">🗑️ 清除</button>
-            </div>
-        </div>
-
-        <div class="input-panel">
-            <input v-model="testMessage" placeholder="輸入小主人語句進行單次測試..." @keyup.enter="runSingleTest"
-                :disabled="loading" />
-            <button @click="runSingleTest" :disabled="loading">
-                {{ loading ? '運算中...' : '發動對比 🐾' }}
-            </button>
-        </div>
-
-        <div class="arena" v-if="singleResult">
-            <div class="bot-card legacy">
-                <div class="bot-tag">🏠 傳統喵喵</div>
-                <div class="intent-box">{{ singleResult.legacy.intent }}</div>
-                <div class="bot-desc">純關鍵字匹配邏輯</div>
-            </div>
-
-            <div class="vs-divider">VS</div>
-
-            <div class="bot-card mix-ai">
-                <div class="bot-tag">✨ 邱比特大腦 (混合版)</div>
-                <div class="intent-box highlight">{{ singleResult.mix_ai.intent }}</div>
-
-                <div class="metrics">
-                    <div class="metric-item">
-                        <span>信心度：</span>
-                        <b :style="{ color: getConfidenceColor(singleResult.mix_ai.confidence) }">
-                            {{ (singleResult.mix_ai.confidence * 100).toFixed(2) }}%
-                        </b>
+    <div class="mma-lab-page">
+        <div class="mma-lab-content">
+            <header class="mma-lab-header mma-card-shadow">
+                <div class="header-main">
+                    <div class="brand-box">
+                        <span class="sparkle">✨</span>
+                        <div class="brand-text">
+                            <h1>🚀 邱比特大腦：意圖識別 A/B 測試擂台</h1>
+                            <p>比較「傳統關鍵字」與「ONNX + V10 攔截器」的差異</p>
+                        </div>
                     </div>
-                    <div class="metric-item">
-                        <span>原始直覺：</span>
-                        <small>{{ singleResult.mix_ai.raw_ai_guess }}</small>
+                    <div class="header-right">
+                        <div class="mode-info">
+                            <span class="mode-tag" :class="{ 'is-custom': hasCustomFile }">
+                                模式：{{ hasCustomFile ? '📁 自定義測試檔' : '🏆 預設黃金測試集' }}
+                            </span>
+                            <button class="mma-btn outline" @click="$refs.fileInput.click()">📤 上傳新題庫</button>
+                            <button v-if="hasCustomFile" class="mma-btn outline danger" @click="clearTempFile">🗑️
+                                恢復預設</button>
+                            <input type="file" ref="fileInput" @change="handleFileUpload" accept=".xlsx" hidden />
+                        </div>
+                        <button class="mma-btn solid danger" @click="handleLogout">🚪 登出</button>
                     </div>
                 </div>
-                <div class="bot-desc">ONNX 模型 + V10 行為路由器</div>
-            </div>
-        </div>
 
-        <div class="batch-panel">
-            <div class="panel-header">
-                <h3>📊 批次自動測試報告</h3>
-                <button @click="runBatchTest" class="batch-run-btn" :disabled="batchLoading">
-                    {{ batchLoading ? '測試中...' : '🏃 執行全自動掃描' }}
-                </button>
-            </div>
-
-            <div v-if="batchReport" class="report-stats">
-                <div class="stat-card">
-                    <span class="label">總測試題數</span>
-                    <span class="value">{{ batchReport.total }}</span>
+                <div class="header-stats" v-if="batchReport">
+                    <div class="stat-unit">
+                        <span class="label">樣本總數</span>
+                        <span class="val">{{ batchReport.total }}</span>
+                    </div>
+                    <div class="stat-sep"></div>
+                    <div class="stat-unit">
+                        <span class="label">V2 準確率</span>
+                        <span class="val" :class="batchReport.accuracy >= 0.9 ? 'green' : 'orange'">
+                            {{ (batchReport.accuracy * 100).toFixed(1) }}%
+                        </span>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <span class="label">準確率 (Accuracy)</span>
-                    <span class="value" :style="{ color: getAccuracyColor(batchReport.accuracy) }">
-                        {{ (batchReport.accuracy * 100).toFixed(1) }}%
-                    </span>
-                </div>
-            </div>
+            </header>
 
-            <div v-if="batchReport" class="report-table-wrapper">
-                <table class="report-table">
-                    <thead>
-                        <tr>
-                            <th>測試語句</th>
-                            <th>預期意圖</th>
-                            <th>AI 預測</th>
-                            <th>信心度</th>
-                            <th>結果</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="(item, idx) in batchReport.details" :key="idx">
-                            <td class="text-left">{{ item.text }}</td>
-                            <td><span class="badge true">{{ item.true }}</span></td>
-                            <td><span class="badge pred">{{ item.pred }}</span></td>
-                            <td>{{ (item.conf * 100).toFixed(1) }}%</td>
-                            <td :class="item.is_correct ? 'correct' : 'wrong'">
-                                {{ item.is_correct ? '✅ 成功' : '❌ 誤判' }}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            <section class="mma-card-shadow arena-section">
+                <div class="search-group">
+                    <input v-model="testMessage" placeholder="請輸入測試語句，按 Enter 發動進攻..." @keyup.enter="runSingleTest" />
+                    <button class="mma-btn solid primary" @click="runSingleTest" :disabled="loading">
+                        {{ loading ? '掃描運算中... ⏳' : '發動對比 🐾' }}
+                    </button>
+                </div>
+
+                <div class="battle-arena" v-if="singleResult">
+                    <div class="arena-card legacy">
+                        <div class="card-title">🏠 傳統喵喵</div>
+                        <div class="result-box">{{ singleResult.legacy.intent }}</div>
+                        <div class="card-footer">純關鍵字匹配邏輯</div>
+                        <div class="ai-reply-box">
+                            <span class="reply-label">💬 實際回覆：</span>
+                            <div class="reply-content">{{ singleResult.legacy.response }}</div>
+                        </div>
+                    </div>
+
+                    <div class="vs-divider">VS</div>
+
+                    <div class="arena-card mixai">
+                        <div class="card-title">✨ 邱比特大腦 (混合版)</div>
+                        <div class="result-box highlight">{{ singleResult.mix_ai.intent }}</div>
+                        <div class="conf-info" v-if="singleResult.mix_ai.intent !== 'BLOCKED'">
+                            信心度：<b :style="{ color: getConfidenceColor(singleResult.mix_ai.confidence) }">
+                                {{ (singleResult.mix_ai.confidence * 100).toFixed(2) }}%
+                            </b>
+                        </div>
+                        <div class="card-footer">ONNX 模型 + V10 行為路由器</div>
+                        <div class="ai-reply-box mixai-reply">
+                            <span class="reply-label">💬 實際回覆：</span>
+                            <div class="reply-content">{{ singleResult.mix_ai.response }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="single-correction-box" v-if="singleResult && showSingleCorrection">
+                    <span>🤖 邱比特大腦判斷得如何？</span>
+                    <button class="mma-btn outline" @click="showSingleCorrection = false">✅ 判斷完全正確</button>
+                    <span style="color: #cbd5e1;">|</span>
+                    <span>我要糾正它：</span>
+                    <select v-model="singleCorrection" class="mma-select">
+                        <option v-for="opt in intentOptions" :key="opt" :value="opt">{{ opt }}</option>
+                    </select>
+                    <button class="mma-btn solid primary" @click="saveSingleCorrection">儲存修正</button>
+                </div>
+            </section>
+
+            <section class="mma-card-shadow batch-section">
+                <div class="section-title-row">
+                    <h2>📊 批次自動測試報告</h2>
+                    <div class="title-actions">
+                        <label class="mma-checkbox">
+                            <input type="checkbox" v-model="onlyShowErrors" />
+                            <span class="box"></span> 僅顯示失敗項
+                        </label>
+                        <button class="mma-btn solid secondary" @click="runBatchTest" :disabled="batchLoading">
+                            {{ batchLoading ? '掃描中...' : '🏃 執行全自動掃描' }}
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container" v-if="batchReport">
+                    <table class="mma-table">
+                        <thead>
+                            <tr>
+                                <th class="text-left">測試語句</th>
+                                <th>V1原始 判定</th>
+                                <th>V2新大腦 判定</th>
+                                <th>信心度</th>
+                                <th>狀態</th>
+                                <th>🛠️ 校正 (入資料庫)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in filteredBatchDetails" :key="item.review_id"
+                                :class="{ 'error-row': !item.is_correct }">
+                                <td class="text-left font-bold">{{ item.text }}</td>
+                                <td><span class="pill gray">{{ item.legacy_pred }}</span></td>
+                                <td><span class="pill blue">{{ item.pred }}</span></td>
+                                <td>{{ (item.conf * 100).toFixed(1) }}%</td>
+                                <td :class="item.is_correct ? 'ok-text' : 'err-text'">{{ item.is_correct ? '✅' : '❌' }}</td>
+                                <td class="fix-cell">
+                                    <template v-if="!item.is_correct">
+                                        <select v-model="item.correction" class="mma-select">
+                                            <option v-for="opt in intentOptions" :key="opt" :value="opt">{{ opt }}</option>
+                                        </select>
+                                        <button class="btn-save-mini" @click="saveCorrection(item)">儲存</button>
+                                    </template>
+                                    <span v-else class="ok-text" style="font-size: 16px;">👍 完美命中</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
         </div>
     </div>
 </template>
 
-
-
 <style scoped>
-/* 樣式部分採用乾淨、專業的科技感設計 */
-.test-ai-container {
-    max-width: 1000px;
-    margin: 40px auto;
-    padding: 20px;
-    font-family: 'Segoe UI', system-ui, sans-serif;
+/* 核心樣式：置中排版、間距寬敞 */
+.mma-lab-page {
+    background-color: #f1f5f9;
+    min-height: 100vh;
+    padding: 50px 20px;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
-.test-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    margin-bottom: 30px;
+.mma-lab-content {
+    max-width: 1300px;
+    margin: 0 auto;
 }
 
-.file-management {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.file-status {
-    font-size: 0.85rem;
-    padding: 5px 12px;
-    background: #eee;
-    border-radius: 20px;
-    color: #666;
-}
-
-.file-status.has-file {
-    background: #e0f2fe;
-    color: #0369a1;
-    font-weight: bold;
-}
-
-.input-panel {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 40px;
-}
-
-.input-panel input {
-    flex: 1;
-    padding: 15px 20px;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    font-size: 1.1rem;
-}
-
-.arena {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 50px;
-}
-
-.bot-card {
-    flex: 1;
+.mma-card-shadow {
     background: white;
-    padding: 30px;
     border-radius: 24px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+    margin-bottom: 30px;
+    padding: 35px;
     border: 1px solid #f1f5f9;
 }
 
-.intent-box {
-    font-size: 2.2rem;
-    font-weight: 900;
+/* Header */
+.mma-lab-header {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.header-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.brand-box {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.sparkle {
+    font-size: 32px;
+    background: #eff6ff;
+    padding: 12px;
+    border-radius: 16px;
+}
+
+.brand-text h1 {
+    margin: 0;
+    font-size: 26px;
+    color: #1e293b;
+}
+
+.brand-text p {
+    margin: 5px 0 0 0;
     color: #64748b;
-    margin: 20px 0;
+    font-size: 15px;
 }
 
-.intent-box.highlight {
-    color: #3b82f6;
+.header-right {
+    display: flex;
+    gap: 20px;
+    align-items: center;
 }
 
-.vs-divider {
-    width: 60px;
-    height: 60px;
-    background: #1e293b;
-    color: white;
-    border-radius: 50%;
+.mode-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mode-tag {
+    font-size: 12px;
+    font-weight: 800;
+    padding: 6px 15px;
+    border-radius: 20px;
+    background: #f8fafc;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+.mode-tag.is-custom {
+    background: #dcfce7;
+    color: #166534;
+    border-color: #bbf7d0;
+}
+
+/* 統計數字欄 */
+.header-stats {
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 50px;
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+}
+
+.stat-unit {
+    text-align: center;
+}
+
+.stat-unit .label {
+    display: block;
+    font-size: 12px;
+    color: #94a3b8;
     font-weight: bold;
-    margin: 0 20px;
+    margin-bottom: 5px;
 }
 
-.report-table-wrapper {
-    background: white;
-    border-radius: 12px;
+.stat-unit .val {
+    font-size: 24px;
+    font-weight: 900;
+    color: #1e293b;
+}
+
+.stat-sep {
+    width: 1px;
+    height: 35px;
+    background: #e2e8f0;
+}
+
+/* 搜尋框與擂台 */
+.search-group {
+    display: flex;
+    gap: 15px;
+    background: #f8fafc;
+    padding: 10px;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 50px;
+}
+
+.search-group input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 0 20px;
+    font-size: 18px;
+    outline: none;
+}
+
+.battle-arena {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 40px;
+}
+
+.arena-card {
+    flex: 1;
+    padding: 40px 30px;
+    border-radius: 24px;
+    background: #fff;
+    border: 1px solid #f1f5f9;
+    text-align: center;
+}
+
+.arena-card.mixai {
+    border: 2px solid #3b82f6;
+    background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+}
+
+.arena-card .card-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+}
+
+.arena-card .result-box {
+    font-size: 44px;
+    font-weight: 900;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+}
+
+.arena-card .result-box.highlight {
+    color: #3b82f6;
+}
+
+.arena-card .card-footer {
+    font-size: 13px;
+    color: #94a3b8;
+}
+
+.vs-divider {
+    font-size: 26px;
+    font-weight: 900;
+    color: #cbd5e1;
+}
+
+/* 表格 */
+.section-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.mma-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #475569;
+}
+
+.table-container {
+    border-radius: 20px;
     overflow: hidden;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
 }
 
-.report-table {
+.mma-table {
     width: 100%;
     border-collapse: collapse;
+    background: white;
 }
 
-.report-table th {
+.mma-table th {
     background: #f8fafc;
-    padding: 12px;
-    font-size: 0.9rem;
+    padding: 20px;
+    font-size: 14px;
     color: #64748b;
+    border-bottom: 2px solid #f1f5f9;
 }
 
-.report-table td {
-    padding: 12px;
+.mma-table td {
+    padding: 20px;
     border-bottom: 1px solid #f1f5f9;
     text-align: center;
 }
 
-.badge {
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 0.75rem;
+.error-row {
+    background: #fff1f2;
+}
+
+/* 標籤小方塊 */
+.pill {
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 12px;
     font-weight: bold;
 }
 
-.badge.true {
-    background: #dcfce7;
-    color: #166534;
-}
-
-.badge.pred {
+.pill.blue {
     background: #dbeafe;
     color: #1e40af;
 }
 
-.correct {
+.pill.gray {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+/* 按鈕系列 */
+.mma-btn {
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    transition: 0.2s;
+}
+
+.mma-btn.solid.primary {
+    background: #1e293b;
+    color: white;
+}
+
+.mma-btn.solid.secondary {
+    background: #3b82f6;
+    color: white;
+}
+
+.mma-btn.solid.danger {
+    background: #ef4444;
+    color: white;
+}
+
+.mma-btn.outline {
+    background: white;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+}
+
+.btn-save-mini {
+    background: #10b981;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.mma-select {
+    padding: 8px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    outline: none;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.ok-text {
     color: #10b981;
+    font-weight: 900;
+}
+
+.err-text {
+    color: #ef4444;
+    font-weight: 900;
+}
+
+.text-left {
+    text-align: left !important;
+}
+
+.font-bold {
     font-weight: bold;
 }
 
-.wrong {
-    color: #ef4444;
+/* 🌟 新增：單句校正工具列樣式 */
+.single-correction-box {
+    margin-top: 30px;
+    padding: 20px;
+    background: #f8fafc;
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    color: #475569;
     font-weight: bold;
+    animation: fadeIn 0.5s ease-in-out;
 }
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 🌟 AI 實際回覆對話框樣式 */
+.ai-reply-box {
+    margin-top: 25px;
+    padding: 15px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    text-align: left;
+    font-size: 14px;
+    color: #334155;
+    line-height: 1.6;
+}
+
+.ai-reply-box.mixai-reply {
+    background: #f0fdf4; /* 給新大腦一點淺綠色背景區分 */
+    border-color: #bbf7d0;
+}
+
+.reply-label {
+    display: block;
+    font-weight: 800;
+    color: #64748b;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.reply-content {
+    white-space: pre-wrap; /* 讓 AI 的換行能正常顯示 */
+}
+
 </style>

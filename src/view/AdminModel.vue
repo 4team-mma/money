@@ -8,20 +8,20 @@ const selectedAiModel = ref('ollama')
 const isEditMode = ref(false)
 const isSaving = ref(false)
 
-// 🎯 Gemini 模型清單
+// 🎯 Gemini 模型清單 (根據最新 3 系列截圖更新)
 const geminiModels = [
-    { label: 'Gemini 2.5 Flash (目前主力/穩定)', value: 'gemini-2.5-flash' },
-    { label: 'Gemini 3 Flash (最新高速版)', value: 'gemini-3-flash' },
-    { label: 'Gemini 2.5 Pro (進階邏輯/需確認配額)', value: 'gemini-2.5-pro' },
-    { label: 'Gemini 2.5 Flash Lite (輕量極速)', value: 'gemini-2.5-flash-lite' }
+    { label: 'Gemini 3 Flash (最新/效能最強)', value: 'gemini-3-flash-preview' },
+    { label: 'Gemini 3.1 Flash-Lite (極速/最省額度)', value: 'gemini-3.1-flash-lite-preview' },
+    { label: 'Gemini 2.5 Flash (性能與速度平衡)', value: 'gemini-2.5-flash' },
+    { label: 'Gemini 2.5 Pro (穩定/處理複雜長文)', value: 'gemini-2.5-pro' }
 ]
 
-// 🎯 定義各模型的限制資訊
+// 🎯 定義各模型的限制資訊 (對齊官方 RPM/RPD 數據)
 const modelLimitsInfo = {
-    'gemini-2.5-flash': { rpm: '5 RPM', rpd: '20 RPD', desc: '✅ 基礎版，適合一般對話與測試。' },
-    'gemini-3-flash': { rpm: '5 RPM', rpd: '20 RPD', desc: '⚡ 新一代極速模型，效能更好。' },
-    'gemini-2.5-pro': { rpm: '依官方', rpd: '依官方', desc: '⚠️ 你的帳號目前此模型無配額 (顯示 0/0)，可能需綁定信用卡。' },
-    'gemini-2.5-flash-lite': { rpm: '依官方', rpd: '依官方', desc: '🚀 輕量版，你的帳號目前此模型無配額。' },
+    'gemini-3-flash-preview': { rpm: '15 RPM', rpd: '200 RPD', desc: '✨ 最新 3 系列，具備 Pro 等級推理能力且速度極快，效能最強且免費額度穩定！' },
+    'gemini-3.1-flash-lite-preview': { rpm: '15 RPM', rpd: '1,000 RPD', desc: '🚀 針對極高吞吐量優化，最省額度、回應最快。' },
+    'gemini-2.5-flash': { rpm: '10 RPM', rpd: '250 RPD', desc: '✅ 性能與速度平衡的成熟版本。' },
+    'gemini-2.5-pro': { rpm: '5 RPM', rpd: '100 RPD', desc: '🧠 雖然是舊版，但在處理複雜邏輯與長文本時依然非常穩定。' },
     'default': { rpm: '-', rpd: '-', desc: '請選擇一個模型以查看限制資訊' }
 }
 
