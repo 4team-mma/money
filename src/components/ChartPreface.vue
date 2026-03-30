@@ -4,6 +4,7 @@ import { useRecordStore } from '@/stores/useRecordStore'
 import { useAccountStore } from '@/stores/useAccountStore'
 import { ElDrawer, ElButton, ElDivider, ElMessage, ElNotification } from 'element-plus'
 import api from '@/api'
+import { vLoading } from 'element-plus' // 💡 補上這一行
 const recordStore = useRecordStore()
 const accountStore = useAccountStore()
 
@@ -12,32 +13,32 @@ const aiData = ref(null)       // 存放後端回傳的 AI 建議與指標
 const aiLoading = ref(false)   // 按鈕的載入狀態（會讓按鈕轉圈圈）
 const drawerVisible = ref(false) // 控制側邊抽屜是否顯示
 
-// --- 核心邏輯：向後端請求 AI 洞察 ---
 const fetchAiSummary = async () => {
+    // 1. 防呆檢查：沒 Token 就不發請求，節省資源
+    const token = localStorage.getItem('user_token')
+    if (!token) {
+        ElMessage.warning('請先登入帳號，才能使用 AI 洞察功能喔！')
+        return
+    }
+
+    // 2. 開啟 Loading 狀態 (按鈕轉圈圈)
     aiLoading.value = true
 
     try {
-        // Token 檢查可以保留，增加防呆
-        const token = localStorage.getItem('user_token')
-        if (!token) {
-            ElMessage.warning('請先登入帳號，才能使用 AI 洞察功能喔！')
-            return
-        }
+        // 3. 發送 API 請求：增加 timeout 到 30 秒，給 AI 充足時間思考
+        const response = await api.get('/v1/ai/analysis/financial-insight', {
+            timeout: 30000 
+        })
+        console.log('API 回傳的原始結構:', response) // 💡 加這行，打開瀏覽器 F12 看看
 
-        //  3. 直接用 api.get，不要寫死網址，也不用自己帶 Header！
-        // 網址只要寫 /api 後面的路徑就好，service.js 會自動幫你補上前面的 Render 網址
-        const response = await api.get('/v1/ai/analysis/financial-insight')
-
-        // 注意回傳格式
-        // axios 攔截器通常會直接回傳 response.data，所以這裡可能不需要 .data
-        // 如果你發現壞掉，請改回 response.data
-        aiData.value = response; // 或者 response.data，取決於你的攔截器寫法
+        // 4. 資料賦值 (根據 axios 攔截器習慣，通常資料在 response.data 或 response)
+        // 這裡建議先用 console.log 檢查一次結構，如果是妳原本的寫法就用 response
+        aiData.value = response.data || response
         drawerVisible.value = true
 
-        // 加個小通知增加儀式感
         ElNotification({
             title: '分析完成',
-            message: 'AI 顧問已為您準備好專屬財務建議',
+            message: 'AI 顧問已根據心理學與數據模型為您準備好建議',
             type: 'success',
             position: 'bottom-right'
         })
@@ -45,17 +46,18 @@ const fetchAiSummary = async () => {
     } catch (error) {
         console.error('AI 請求出錯:', error)
 
-        // 根據錯誤代碼給予提示
-        const status = error.response?.status
-        if (status === 401) {
-            ElMessage.error('認證失效，請重新登入')
-        } else if (status === 404) {
-            ElMessage.error('找不到 AI 介面，請確認 API 路徑')
+        // 5. 針對不同的錯誤給予精確回饋
+        if (error.code === 'ECONNABORTED') {
+            ElMessage.error('AI 思考太久超時了，請再試一次或確認網路狀況')
         } else {
-            ElMessage.error('AI 顧問目前忙碌中，請稍後再試')
+            const status = error.response?.status
+            const errorMsg = status === 401 ? '認證失效，請重新登入' 
+                           : status === 404 ? '找不到 AI 介面，請確認路徑' 
+                           : 'AI 顧問目前忙碌中，請稍後再試'
+            ElMessage.error(errorMsg)
         }
     } finally {
-        // 5. 不管成功或失敗，都要關閉按鈕的載入狀態
+        // 6. 無論成功或失敗，最後都要關閉 Loading 狀態
         aiLoading.value = false
     }
 }
@@ -190,14 +192,17 @@ const monthlyMOMStats = computed(() => {
                     direction="rtl" size="380px">
                     <h3 style="padding-left: 20px;">AI 智慧財務洞察</h3>
                     <div v-if="aiData" class="ai-content">
-                        <p style="white-space: pre-wrap; line-height: 1.8;padding: 20px;">{{ aiData.summary }}</p>
+                        <p style="white-space: pre-wrap; line-height: 1.8;padding: 20px;">{{ aiData.ai_insight }}</p>
                         <el-divider />
                         <div class="metrics-footer">
                             <el-text size="small" ; style="padding-left: 20px;">本月支出：NT$ {{
-                                aiData.raw_metrics.total_expense }}</el-text>
+                                aiData.metrics?.total_expense }}</el-text>
                         </div>
                     </div>
-                    <div v-else-if="aiLoading" v-loading="true" style="height: 200px;"></div>
+                    <div v-else-if="aiLoading" style="height: 200px; display: flex; align-items: center; justify-content: center;">
+                        <el-icon class="is-loading" :size="30"><Loading /></el-icon>
+                        <span style="margin-left: 10px;">AI 顧問思考中...</span>
+                    </div>
                 </el-drawer>
             </div>
         </div>
