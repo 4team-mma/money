@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import Chart_Preface from '@/components/ChartPreface.vue'
 import { statsApi } from '@/api/stats'
 import { Chart, registerables } from 'chart.js'
+import { getLocalDateString } from '@/utils/dateHelper';
 
 Chart.register(...registerables)
 
@@ -208,8 +209,8 @@ onMounted(async () => {
         const end = new Date()
         const start = new Date()
         start.setMonth(start.getMonth() - 12)
-        startDate.value = start.toISOString().split('T')[0]
-        endDate.value = end.toISOString().split('T')[0]
+        startDate.value = getLocalDateString(start);
+        endDate.value = getLocalDateString(end);
 
         await nextTick()
         renderChart()
