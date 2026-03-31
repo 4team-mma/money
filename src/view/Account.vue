@@ -89,6 +89,7 @@ onMounted(() => {
     window.addEventListener('click', closeMenu);
     fetchAccounts();
     triggerMissionAction('view_accounts');
+    window.addEventListener('sync-money-data', fetchTransactions);
 });
 
 // API 操作

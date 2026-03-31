@@ -74,6 +74,7 @@
     onMounted(() => {
         fetchTransactions();
         triggerMissionAction('view_calendar');
+        window.addEventListener('sync-money-data', fetchTransactions);
     });
 
     // 當年份或月份改變時，重新抓取 API

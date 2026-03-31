@@ -173,7 +173,8 @@ const checkInDays = computed(() => {
 
 onMounted(() => {
     fetchUserLevelSummary(); 
-    fetchMyCheckinStatus();  
+    fetchMyCheckinStatus(); 
+    window.addEventListener('sync-money-data', fetchTransactions); 
 });
 </script>
 
