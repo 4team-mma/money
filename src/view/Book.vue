@@ -3,7 +3,7 @@
     import BookTransactionDetails from "@/components/BookTransactionDetails.vue";
     import BookSummaryCard from "@/components/BookSummaryCard.vue";
     import api from "@/api";
-    import { ref, computed, onMounted, watch } from "vue";
+    import { ref, computed, onMounted, watch , onUnmounted} from "vue";
     import { ElMessage } from 'element-plus';
     import { getLocalDate, getLocalDateString } from '@/utils/dateHelper'
     import { triggerMissionAction } from '@/api/gamification';
@@ -75,7 +75,13 @@
         fetchTransactions();
         triggerMissionAction('view_calendar');
         window.addEventListener('sync-money-data', fetchTransactions);
+        
     });
+
+    onUnmounted(() => {
+    // 離開時，把剛才裝的全部拆掉
+    window.removeEventListener('sync-money-data', fetchTransactions);
+});
 
     // 當年份或月份改變時，重新抓取 API
     watch([year, month], () => {
