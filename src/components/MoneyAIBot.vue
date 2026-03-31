@@ -3,6 +3,7 @@ import { ref, nextTick, watch, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { onUnmounted } from 'vue';
 import api from '@/api';
+import { getLocalDate } from '@/utils/dateHelper';
 // ⚡️ 修改點 1：改用具名匯入，直接引入需要的函式
 import { postAiRobotChat } from '@/api/robot';
 import { useAccountStore } from '@/stores/useAccountStore';
@@ -523,7 +524,7 @@ const confirmRecord = async (msgId, index, data) => {
   if (!msg) return;
 
   try {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalDate();
 
     // 🌟 1. 取得 Store 裡的帳戶資料
     if (accountStore.accounts.length === 0) {
