@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, onUnmounted } from 'vue';
 import { accountApi } from '@/api/account';
 import AccountAdd1 from '@/components/AccountAdd1.vue';
 import AccountEdit from '@/components/AccountEdit.vue';
@@ -89,7 +89,15 @@ onMounted(() => {
     window.addEventListener('click', closeMenu);
     fetchAccounts();
     triggerMissionAction('view_accounts');
-    window.addEventListener('sync-money-data', fetchTransactions);
+    //裡負責抓取帳戶清單的函數叫做 fetchAccounts
+    window.addEventListener('sync-money-data', fetchAccounts);
+});
+
+onUnmounted(() => {
+    // 離開時，把剛才裝的全部拆掉
+    window.removeEventListener('click', closeMenu);
+    window.removeEventListener('sync-money-data', fetchAccounts);
+    
 });
 
 // API 操作

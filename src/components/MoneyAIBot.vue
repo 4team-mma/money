@@ -581,9 +581,17 @@ const confirmRecord = async (msgId, index, data) => {
       msg.is_command = false;
       msg.text = `✅ 喵！已經幫小主人把所有帳都記好囉！`;
     }
-    // 🌟 這裡最重要！一定要在 Post 成功後發射
-    window.dispatchEvent(new CustomEvent('sync-money-data'));
-    console.log("📢 廣播：同步訊號已發出！");
+    
+    // window.dispatchEvent(new CustomEvent('sync-money-data'));
+    // console.log("📢 廣播：同步訊號已發出！");
+
+    // ✅ 改成延遲 300 毫秒再廣播，確保後端資料庫已經寫死進去了
+    setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('sync-money-data'));
+        console.log("📢 廣播：同步訊號已發出 (延遲 500ms)！");
+    }, 500);
+
+
 
   } catch (error) {
     console.error("❌ 寫入失敗：", error);

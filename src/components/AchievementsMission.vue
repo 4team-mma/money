@@ -69,15 +69,26 @@ const emit = defineEmits(['reward-claimed'])
 
 // 領取獎勵
 const handleClaim = async (m) => {
+    if (m.isClaiming) return; // 🌟 防止重複點擊
+    
     try {
-        await claimMissionReward(m.miss_id)
-        ElMessage.success('領取獎勵成功！')
-        fetchMissions()
-        emit('reward-claimed'); // 通知父組件同步更新數據
+        m.isClaiming = true; // 開始領取，鎖定狀態
+        await claimMissionReward(m.miss_id);
+        ElMessage.success('領取獎勵成功！');
+        
+        // 成功後才執行這個，這會觸發父組件 handleGlobalSync
+        emit('reward-claimed'); 
+        
+        await fetchMissions(); // 重新整理列表
     } catch (error) {
-        console.error("領取失敗", error)
+        console.error("領取失敗", error);
+        // 如果失敗了，可以把按鈕還給用戶
+        m.isClaiming = false;
     }
-}
+};
+
+// 🌟 必須加上這行，父組件才呼叫得到！
+defineExpose({ fetchMissions });
 
 onMounted(() => {
     fetchMissions()
