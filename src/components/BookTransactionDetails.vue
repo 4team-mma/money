@@ -54,11 +54,18 @@
 
     // 標題顯示邏輯
     const displayTitle = computed(() => {
-        if (props.selectedDate) return props.selectedDate;
-        // 如果沒有 selectedDate，取第一筆資料的年份月份
-        if (props.transactions && props.transactions.length > 0) {
-            return props.transactions[0].add_date?.substring(0, 7) + " 全月紀錄";
+        // 1. 如果是日模式，直接顯示選中的日期
+        if (props.displayMode === 'day') {
+            return props.selectedDate || "請選擇日期";
         }
+
+        // 2. 如果是月模式，且有交易資料，顯示「年份-月份 全月紀錄」
+        if (props.displayMode === 'month' && props.transactions?.length > 0) {
+            const firstDate = props.transactions[0].add_date;
+            return firstDate ? `${firstDate.substring(0, 7)} 全月紀錄` : "無資料";
+        }
+
+        // 3. 預設回傳
         return "請選擇日期";
     });
 
