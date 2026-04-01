@@ -9,7 +9,7 @@ import { postAiRobotChat } from '@/api/robot';
 import { useAccountStore } from '@/stores/useAccountStore';
 const route = useRoute()
 const messagesContainer = ref(null)
-
+const inputRef = ref(null) // 新增這行來引用輸入框
 
 // 初始化 Store
 const accountStore = useAccountStore();
@@ -271,7 +271,7 @@ const connectWebSocket = () => {
         duration: data.duration
       });
 
-      
+
 
       scrollToBottom();
       accountStore.loadAccounts(true);
@@ -469,26 +469,26 @@ const handleSend = async () => {
     // 🌟 魔法 2：解決「需要手動刷新」的 Token 時間差問題！
     // 如果準備要出卡片了，卻發現帳戶清單是空的，立刻強制重抓一次！
     if (isCommand && accountStore.accounts.length === 0) {
-        await accountStore.loadAccounts(true);
+      await accountStore.loadAccounts(true);
     }
 
     // 🌟 魔法 3：自動對齊下拉選單的預設值
     // 確保 AI 說的帳戶名稱，能 100% 對應到下拉選單裡的選項，避免選單變空白
     if (isCommand && actionData) {
-        actionData.forEach(item => {
-            if (item.record_type !== 'transfer') {
-                const match = accountStore.accounts.find(a => a.itemName === item.account_name);
-                if (!match && accountStore.accounts.length > 0) {
-                    item.account_name = accountStore.accounts[0].itemName; // 找不到就塞第一個帳戶給它
-                }
-            } else {
-                const matchFrom = accountStore.accounts.find(a => a.itemName === item.from_account);
-                if (!matchFrom && accountStore.accounts.length > 0) item.from_account = accountStore.accounts[0].itemName;
-                
-                const matchTo = accountStore.accounts.find(a => a.itemName === item.to_account);
-                if (!matchTo && accountStore.accounts.length > 0) item.to_account = accountStore.accounts[0].itemName;
-            }
-        });
+      actionData.forEach(item => {
+        if (item.record_type !== 'transfer') {
+          const match = accountStore.accounts.find(a => a.itemName === item.account_name);
+          if (!match && accountStore.accounts.length > 0) {
+            item.account_name = accountStore.accounts[0].itemName; // 找不到就塞第一個帳戶給它
+          }
+        } else {
+          const matchFrom = accountStore.accounts.find(a => a.itemName === item.from_account);
+          if (!matchFrom && accountStore.accounts.length > 0) item.from_account = accountStore.accounts[0].itemName;
+
+          const matchTo = accountStore.accounts.find(a => a.itemName === item.to_account);
+          if (!matchTo && accountStore.accounts.length > 0) item.to_account = accountStore.accounts[0].itemName;
+        }
+      });
     }
 
     // ✅ 4. 顯示回應來源模型  `耗時: ${duration}s`
@@ -513,6 +513,11 @@ const handleSend = async () => {
     if (loadingInterval) clearInterval(loadingInterval);
     loadingInterval = null;
     scrollToBottom()
+    // 🚀 關鍵：回傳後自動對焦
+    await nextTick();
+    if (inputRef.value) {
+      inputRef.value.focus();
+
   }
 }
 
@@ -557,7 +562,7 @@ const confirmRecord = async (msgId, index, data) => {
       const accName = data.account_name || data.account;
       const finalAccountId = getAccountId(accName) || firstAccount.account_id;
       const isIncome = data.record_type === 'income' || data.add_type === true || data.type === 'income';
-      
+
       const payload = {
         add_date: todayStr,
         add_amount: parseFloat(data.add_amount || data.amount || 0),
@@ -581,14 +586,14 @@ const confirmRecord = async (msgId, index, data) => {
       msg.is_command = false;
       msg.text = `✅ 喵！已經幫小主人把所有帳都記好囉！`;
     }
-    
+
     // window.dispatchEvent(new CustomEvent('sync-money-data'));
     // console.log("📢 廣播：同步訊號已發出！");
 
     // ✅ 改成延遲 300 毫秒再廣播，確保後端資料庫已經寫死進去了
     setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('sync-money-data'));
-        console.log("📢 廣播：同步訊號已發出 (延遲 500ms)！");
+      window.dispatchEvent(new CustomEvent('sync-money-data'));
+      console.log("📢 廣播：同步訊號已發出 (延遲 500ms)！");
     }, 500);
 
 
@@ -742,24 +747,29 @@ onMounted(async () => {
               <p style="white-space: pre-wrap;">{{ message.text }}</p>
 
               <template v-if="message.is_command && message.action_data && message.action_data.length > 0">
-                <div v-for="(actionItem, idx) in message.action_data" :key="idx" class="action-card" style="margin-bottom: 12px;">
+                <div v-for="(actionItem, idx) in message.action_data" :key="idx" class="action-card"
+                  style="margin-bottom: 12px;">
                   <div class="card-header">
                     {{ actionItem.record_type === 'transfer' ? '🔄 轉帳確認' : '📝 收支確認' }}
-                    <span style="font-size: 12px; color: #94a3b8; font-weight: normal; margin-left: auto;">({{ idx + 1 }}/{{ message.action_data.length }})</span>
+                    <span style="font-size: 12px; color: #94a3b8; font-weight: normal; margin-left: auto;">({{ idx + 1
+                      }}/{{ message.action_data.length }})</span>
                   </div>
-                  
+
                   <div class="card-body">
                     <div class="data-row">
                       <span class="label">金額：</span>
                       <span class="value amount"
                         :style="{ color: actionItem.record_type === 'income' ? '#10b981' : (actionItem.record_type === 'expense' ? '#ef4444' : '#3b82f6') }">
-                        {{ actionItem.record_type === 'income' ? '+' : (actionItem.record_type === 'expense' ? '-' : '') }} $ {{ actionItem.add_amount }}
+                        {{ actionItem.record_type === 'income' ? '+' : (actionItem.record_type === 'expense' ? '-' : '')
+                        }} $ {{ actionItem.add_amount }}
                       </span>
                     </div>
 
                     <template v-if="actionItem.record_type !== 'transfer'">
-                      <div class="data-row"><span class="label">類別：</span><span class="value">{{ actionItem.add_class }}</span></div>
-                      <div class="data-row"><span class="label">項目：</span><span class="value">{{ actionItem.add_note }}</span></div>
+                      <div class="data-row"><span class="label">類別：</span><span class="value">{{ actionItem.add_class
+                          }}</span></div>
+                      <div class="data-row"><span class="label">項目：</span><span class="value">{{ actionItem.add_note
+                          }}</span></div>
 
                       <div class="data-row">
                         <span class="label">帳戶：</span>
@@ -770,28 +780,32 @@ onMounted(async () => {
                         </select>
                       </div>
 
-                      <div class="data-row"><span class="label">標籤：</span><span class="value tag-text">{{ actionItem.add_member }} / {{ actionItem.add_tag }}</span></div>
+                      <div class="data-row"><span class="label">標籤：</span><span class="value tag-text">{{
+                          actionItem.add_member }} / {{ actionItem.add_tag }}</span></div>
                     </template>
 
                     <template v-else>
                       <div class="data-row">
                         <span class="label">轉出 (From)：</span>
                         <select v-model="actionItem.from_account" class="value ai-select">
-                          <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">{{ acc.itemName }}</option>
+                          <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">{{
+                            acc.itemName }}</option>
                         </select>
                       </div>
 
                       <div class="data-row">
                         <span class="label">轉入 (To)：</span>
                         <select v-model="actionItem.to_account" class="value ai-select">
-                          <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">{{ acc.itemName }}</option>
+                          <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">{{
+                            acc.itemName }}</option>
                         </select>
                       </div>
 
-                      <div class="data-row"><span class="label">備註：</span><span class="value">{{ actionItem.add_note }}</span></div>
+                      <div class="data-row"><span class="label">備註：</span><span class="value">{{ actionItem.add_note
+                          }}</span></div>
                     </template>
                   </div>
-                  
+
                   <div class="card-footer">
                     <button class="btn cancel" @click="cancelRecord(message.id, idx)">取消</button>
                     <button class="btn confirm" @click="confirmRecord(message.id, idx, actionItem)">確認送出</button>
@@ -817,7 +831,8 @@ onMounted(async () => {
         </div>
 
         <div class="input-area">
-          <input v-model="input" placeholder="輸入訊息..." @keyup.enter.prevent="handleSend" :disabled="isTyping" />
+          <input ref="inputRef" v-model="input" placeholder="輸入訊息..." @keyup.enter.prevent="handleSend"
+            :disabled="isTyping" />
           <button class="send-btn" @click="handleSend" :disabled="isTyping">🐾</button>
         </div>
       </div>
@@ -1239,12 +1254,13 @@ onMounted(async () => {
   background-color: var(--bg-card);
   outline: none;
   cursor: pointer;
-  flex: 1; /* 讓它填滿剩餘空間 */
-  max-width: 140px; /* 避免選單太長破壞版面 */
+  flex: 1;
+  /* 讓它填滿剩餘空間 */
+  max-width: 140px;
+  /* 避免選單太長破壞版面 */
 }
 
 .ai-select:focus {
   border-color: var(--color-primary);
 }
-
 </style>
