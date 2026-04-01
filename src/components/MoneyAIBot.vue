@@ -695,6 +695,7 @@ onMounted(async () => {
     position.value.y = Math.min(position.value.y, window.innerHeight - 100);
   });
 });
+}
 </script>
 
 <template>
