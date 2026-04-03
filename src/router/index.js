@@ -33,6 +33,7 @@ import Notifications from "@/view/Notifications.vue";
 import AdminData from "@/view/AdminData.vue";
 import AdminSetting from "@/view/AdminSetting.vue";
 import TestAI from "@/view/TestAI.vue";
+import AdminAiConfig from "@/view/AdminAiConfig.vue";
 
 const routes = [
   {
@@ -243,6 +244,12 @@ const routes = [
     path: "/TestAI",
     component: TestAI,
     name: "TestAI",
+    meta: { requiresAuth: true, hideNav: true }
+  },
+    {
+    path: "/AdminAiConfig",
+    component: AdminAiConfig,
+    name: "AdminAiConfig",
     meta: { requiresAuth: true, hideNav: true }
   }
 

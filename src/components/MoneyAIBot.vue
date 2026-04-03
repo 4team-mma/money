@@ -1,24 +1,22 @@
 <script setup>
-import { ref, nextTick, watch, onMounted, computed } from 'vue'
+// ==========================================
+// 1. 引用與基礎狀態 (Imports & Basic State)
+// ==========================================
+import { ref, nextTick, watch, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { onUnmounted } from 'vue';
-import api from '@/api';
-import { getLocalDate } from '@/utils/dateHelper';
-// ⚡️ 修改點 1：改用具名匯入，直接引入需要的函式
-import { postAiRobotChat } from '@/api/robot';
-import { useAccountStore } from '@/stores/useAccountStore';
+import api from '@/api'
+import { getLocalDate } from '@/utils/dateHelper'
+import { postAiRobotChat } from '@/api/robot'
+import { useAccountStore } from '@/stores/useAccountStore'
+
 const route = useRoute()
 const messagesContainer = ref(null)
+const inputRef = ref(null)
+const accountStore = useAccountStore()
 
-
-// 初始化 Store
-const accountStore = useAccountStore();
-
-// 🌟 修正版：動態尋找帳戶 ID，增加安全檢查
+// 🌟 帳戶與 Icon 處理
 const getAccountId = (accountName) => {
   if (!accountName || typeof accountName !== 'string') return null;
-
-  // 🌟 注意：比對的是 a.itemName，這是你在 Store 裡定義的名稱
   const found = accountStore.accounts.find(a => {
     const storeName = a.itemName || '';
     return storeName.includes(accountName) || accountName.includes(storeName);
@@ -26,670 +24,257 @@ const getAccountId = (accountName) => {
   return found ? found.account_id : null;
 };
 
-// ==========================================
-// 🆕 新增：Icon 自動匹配小幫手 (配合資料庫 add_class_icon)
-// ==========================================
 const getClassIcon = (className) => {
-  const iconMap = {
-    '飲食': '🍔',
-    '交通': '🚗',
-    '居家': '🏠',
-    '娛樂': '🎮',
-    '醫療': '💊',
-    '學習': '📚',
-    '帳單': '🧾',
-    '其他': '📦'
-  };
-  return iconMap[className] || '📌'; // 找不到就給個圖釘
+  const iconMap = { '飲食': '🍔', '交通': '🚗', '居家': '🏠', '娛樂': '🎮', '醫療': '💊', '學習': '📚', '帳單': '🧾', '其他': '📦' };
+  return iconMap[className] || '📌';
 };
 
-// === 🚀 拖拽功能邏輯 ===
+// 🌟 格式化工具
+const formatTime = (isoStr) => isoStr ? new Date(isoStr).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) : '';
+const formatDuration = (seconds) => {
+  if (!seconds) return '';
+  if (seconds < 60) return `${seconds}s`;
+  const mins = Math.floor(seconds / 60);
+  const secs = (seconds % 60).toFixed(1);
+  return `${mins}m ${secs}s`;
+};
+const scrollToBottom = () => {
+  nextTick(() => { if (messagesContainer.value) messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight });
+};
+// ==========================================
+// 2. 互動功能 (Drag, Paint Game & WebSocket)
+// ==========================================
 const position = ref({ x: window.innerWidth - 120, y: window.innerHeight - 120 })
 const isDragging = ref(false)
 const dragOffset = ref({ x: 0, y: 0 })
 const startPos = ref({ x: 0, y: 0 })
-// 開始拖拽
+
 const startDrag = (e) => {
   isDragging.value = true
-  // 記錄點擊時的原始座標
   startPos.value = { x: e.clientX, y: e.clientY }
-
-  dragOffset.value = {
-    x: e.clientX - position.value.x,
-    y: e.clientY - position.value.y
-  }
-  window.addEventListener('mousemove', onDragging)
-  window.addEventListener('mouseup', stopDrag)
+  dragOffset.value = { x: e.clientX - position.value.x, y: e.clientY - position.value.y }
+  window.addEventListener('mousemove', onDragging);
+  window.addEventListener('mouseup', stopDrag);
 }
-
 const onDragging = (e) => {
   if (!isDragging.value) return
-
-  // 計算新座標並加上簡易邊界檢查（預留 10px 邊距）
   let newX = e.clientX - dragOffset.value.x
   let newY = e.clientY - dragOffset.value.y
-
   const maxX = window.innerWidth - 100
   const maxY = window.innerHeight - 100
-
   position.value.x = Math.max(10, Math.min(newX, maxX))
   position.value.y = Math.max(10, Math.min(newY, maxY))
 }
-
 const stopDrag = (e) => {
-  if (!isDragging.value) return;
-
-  // 1. 停止拖拽狀態
-  isDragging.value = false;
-
-  // 2. 移除全域監聽
+  if (!isDragging.value) return
+  isDragging.value = false
   window.removeEventListener('mousemove', onDragging);
   window.removeEventListener('mouseup', stopDrag);
-
-  // 3. 關鍵判定：如果滑鼠放開時，位移極小，代表使用者只是想「點一下」
-  const moveDistance = Math.sqrt(
-    Math.pow(e.clientX - startPos.value.x, 2) +
-    Math.pow(e.clientY - startPos.value.y, 2)
-  );
-
-  if (moveDistance < 5) {
-    // 只有位移小於 5px 才觸發開啟視窗
-    isOpen.value = true;
-  }
+  const moveDistance = Math.sqrt(Math.pow(e.clientX - startPos.value.x, 2) + Math.pow(e.clientY - startPos.value.y, 2));
+  if (moveDistance < 5) isOpen.value = true;
 }
 
-// 讀取狀態與紀錄：localStorage 確保換頁不消失
-const isOpen = ref(localStorage.getItem('isMeowChatOpen') === 'true')
-const messages = ref(JSON.parse(localStorage.getItem('meowChatHistory')) || [{
-  id: 1,
-  text: '嗨！我是 喵喵小助手 💰 有什麼財務問題我可以幫你嗎？',
-  sender: 'bot',
-  timestamp: new Date().toISOString(),
-  duration: null
-}])
-
-const input = ref('')
-const isTyping = ref(false)
-// 新增：隨機等待語錄變數
-const loadingText = ref('思考中喵...');
-let loadingInterval = null;
-const catImg = new URL('@/assets/AI_cat.png', import.meta.url).href
-
-// 換頁自動問候語地圖
-const greetingsMap = {
-  '/Book': '喵～今天有什麼開支要紀錄嗎？點擊日期可以看詳細紀錄喔！🗓️',
-  '/dashboard': '喵～這是你的財務總覽，看看最近的收支平衡了嗎？📊',
-  '/Account': '喵～這裡可以管理你的金庫，要新增銀行帳號或錢包嗎？⛺',
-  '/BudgetManager': '喵～預算控管是修仙的第一步！我們來規劃這月的開銷吧。🐱',
-  '/Add': '喵～記下一筆支出，用戶等級就會提升喔！快輸入金額吧。➕',
-  '/Chart': '喵～想看哪段時間的支出分佈？我可以幫你解讀這些圖表喔。📈',
-  '/ConsumerAnalysis': '喵～最近的 CPI 物價趨勢有影響到你的錢包嗎？來看看分析。⛽',
-  '/SalaryAnalysis': '喵～想知道你的薪資在行業中位置？來看看增長率吧！💵',
-  '/Achievements': '喵～好多成就等著你收集！離理財大師又近一步了。🏆',
-  '/Feedback': '喵～有什麼不滿意的地方嗎？告訴喵喵，我會努力改進的！❓',
-  '/Settings': '喵～這裡可以調整樣式和系統設定，選個你喜歡的主題吧。⚙️'
-}
-
-// 🌟 喵喵人格清單
-const personasList = [
-  // 把這行的 label 改成可愛喵喵 👇
-  { value: 'cute', label: '😽 可愛喵喵' },
-  { value: 'gentle', label: '🐈 溫柔管家喵' },
-  { value: 'professional', label: '🦁 嚴肅顧問' },
-  { value: 'tsundere', label: '😼 傲嬌喵' },
-  { value: 'lazy', label: '😿 厭世喵' },
-  { value: 'rich', label: '💰 土豪喵' },
-  { value: 'panic', label: '😹 恐慌喵' },
-  { value: 'poet', label: '😺 文青喵' },
-  { value: 'chuuni', label: '🙀 中二病喵' }
-];
-
-// 讀取/儲存選擇的人格
-const selectedPersona = ref(localStorage.getItem('meowPersona') || 'cute');
-watch(selectedPersona, (newVal) => {
-  localStorage.setItem('meowPersona', newVal);
-  scrollToBottom();
-});
-
-
-// 🐱 喵喵的隨機等待語錄
-const waitingJokes = [
-  "喵喵正在翻閱帳本... 📖",
-  "正在計算罐罐的匯率... 🐟",
-  "數據量有點大，喵喵努力消化中... 🐾",
-  "連線到大腦中，請稍候喵... ⚡",
-  "喵？這筆帳好像有點複雜... 🤔",
-  "正在幫你省錢，別急別急... 💰",
-  "喵喵正在跟財神爺連線... ☎️",
-  "正在偷看你的錢包... 啊不是，是幫你分析... 🫣"
-];
-
-
-// === 🎨 噴漆與畫圖發洩小遊戲邏輯 ===
+// 🎨 噴漆畫圖功能
 const paintDrops = ref([]);
-const isDrawing = ref(false); // 判斷是否正在按住滑鼠
-
-// 滑鼠按下去：開始畫圖，並先噴一發大圈圈
-const startDrawing = (e) => {
-  isDrawing.value = true;
-  sprayPaint(e, false);
-};
-
-// 滑鼠移動：如果是按住的狀態，就連續畫出小圈圈（畫筆效果）
-const draw = (e) => {
-  if (!isDrawing.value) return;
-  sprayPaint(e, true);
-};
-
-// 滑鼠放開或離開畫面：停止畫圖
-const stopDrawing = () => {
-  isDrawing.value = false;
-};
-
-// 核心噴漆/畫圖功能
-const sprayPaint = (e, isDragging) => {
-  // 🛡️ 防當機機制：畫面上最多保留 300 個圈圈，超過就從最舊的開始刪除
-  // 避免使用者瘋狂畫圖導致 Vue 渲染太多 DOM 而卡死
-  if (paintDrops.value.length > 300) {
-    paintDrops.value.shift();
-  }
-
-  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FDCB6E', '#6C5CE7', '#FF8ED4', '#A8E6CF', '#FF9F43'];
-  const randomColor = colors[Math.floor(Math.random() * colors.length)];
-
-  // 💡 如果是拖曳中，筆刷小一點 (10px~25px)；如果是單點噴漆，筆刷大一點 (30px~80px)
-  const size = isDragging ? (Math.random() * 15 + 10) : (Math.random() * 50 + 30);
-  const borderRadius = `${Math.random() * 30 + 35}% ${Math.random() * 30 + 35}% ${Math.random() * 30 + 35}% ${Math.random() * 30 + 35}%`;
-
+const isDrawing = ref(false);
+const startDrawing = (e) => { isDrawing.value = true; sprayPaint(e, false); };
+const draw = (e) => { if (isDrawing.value) sprayPaint(e, true); };
+const stopDrawing = () => { isDrawing.value = false; };
+const sprayPaint = (e, isDraggingFlag) => {
+  if (paintDrops.value.length > 300) paintDrops.value.shift();
+  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FDCB6E', '#6C5CE7', '#FF8ED4'];
+  const size = isDraggingFlag ? (Math.random() * 15 + 10) : (Math.random() * 50 + 30);
   paintDrops.value.push({
     id: Date.now() + Math.random(),
     style: {
-      left: `${e.clientX - size / 2}px`,
-      top: `${e.clientY - size / 2}px`,
-      width: `${size}px`,
-      height: `${size}px`,
-      backgroundColor: randomColor,
-      borderRadius: borderRadius,
-      transform: `rotate(${Math.random() * 360}deg) scale(${Math.random() * 0.5 + 0.8})`
+      left: `${e.clientX - size / 2}px`, top: `${e.clientY - size / 2}px`,
+      width: `${size}px`, height: `${size}px`, backgroundColor: colors[Math.floor(Math.random() * colors.length)],
+      borderRadius: '50%', position: 'fixed', pointerEvents: 'none', zIndex: 9999, transform: `rotate(${Math.random() * 360}deg)`
     }
   });
 };
-// === 🎨 噴漆發洩小遊戲尾巴 ===
-let ws = null; // 存放 WebSocket 實例
-// 新增：建立 WebSocket 連線 (取代了原本的 checkVoiceSuccess)
 
+// 🔗 WebSocket 連線
+let ws = null;
 const connectWebSocket = () => {
   const token = localStorage.getItem("user_token") || localStorage.getItem("token");
-
-  if (!token) {
-    console.log('👀 [喵喵小助手] 尚未登入，等待小主人登入後再接通電話線...');
-    return;
-  }
-
-  // 🌟 完美兼容寫法：從環境變數抓 API 網址
+  if (!token) return;
   const apiBase = import.meta.env.VITE_API_BASE_URL;
-  let wsUrl = '';
-
-  if (apiBase === '/api') {
-    // 【地端開發模式】
-    wsUrl = `ws://localhost:8000/api/ws/chat?token=${token}`;
-  } else {
-    // 【雲端 Vercel 模式】
-    // apiBase 會是 https://money-api-tdc5.onrender.com/api
-    // 我們要把 https:// 換成 wss://，並把 http:// 換成 ws://
-    const wssBase = apiBase.replace('https://', 'wss://').replace('http://', 'ws://');
-    wsUrl = `${wssBase}/ws/chat?token=${token}`;
-  }
-
-  console.log('🔗 準備連線 WebSocket 網址:', wsUrl);
+  const wsUrl = apiBase === '/api' 
+    ? `ws://localhost:8000/api/ws/chat?token=${token}`
+    : `${apiBase.replace('https://', 'wss://').replace('http://', 'ws://')}/ws/chat?token=${token}`;
   ws = new WebSocket(wsUrl);
-
-  ws.onopen = () => {
-    console.log('✅ [喵喵小助手] WebSocket 連線成功！電話線接通啦！');
-  };
-
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
-
     if (data.type === 'siri_sync') {
-      console.log('⚡ 收到 Siri 同步對話！', data);
-
       isOpen.value = true;
-
-      messages.value.push({
-        id: Date.now(),
-        text: `📱 (Siri 語音傳送) \n${data.user_query}`,
-        sender: 'user',
-        timestamp: new Date().toISOString()
-      });
-
-      messages.value.push({
-        id: Date.now() + 1,
-        text: data.ai_reply,
-        sender: 'bot',
-        timestamp: new Date().toISOString(),
-        duration: data.duration
-      });
-
-      
-
+      messages.value.push({ id: Date.now(), text: `📱 (Siri 語音) \n${data.user_query}`, sender: 'user', timestamp: new Date().toISOString() });
+      messages.value.push({ id: Date.now() + 1, text: data.ai_reply, sender: 'bot', timestamp: new Date().toISOString(), duration: data.duration });
       scrollToBottom();
       accountStore.loadAccounts(true);
     }
   };
-
-  ws.onclose = () => {
-    console.log('❌ [喵喵小助手] 斷線了，3秒後嘗試重連...');
-    setTimeout(connectWebSocket, 3000);
-  };
+  ws.onclose = () => setTimeout(connectWebSocket, 3000);
 };
+// ==========================================
+// 3. AI 對話邏輯 (Chat & AI Response)
+// ==========================================
+const isOpen = ref(localStorage.getItem('isMeowChatOpen') === 'true')
+const messages = ref(JSON.parse(localStorage.getItem('meowChatHistory')) || [{
+  id: 1, text: '嗨！我是 喵喵小助手 💰', sender: 'bot', timestamp: new Date().toISOString()
+}])
+const input = ref('')
+const isTyping = ref(false)
+const loadingText = ref('思考中喵...')
+let loadingInterval = null
+const catImg = new URL('@/assets/AI_cat.png', import.meta.url).href
+const selectedPersona = ref(localStorage.getItem('meowPersona') || 'cute');
+const waitingJokes = ["喵喵正在翻閱帳本... 📖", "正在計算罐罐的匯率... 🐟", "數據量大，喵喵努力消化中... 🐾"];
 
-// 🌟 乾淨整合版的 onMounted
-onMounted(async () => {
-  // 1. 確保元件掛載時立即同步帳戶資料
-  await accountStore.loadAccounts();
+const personasList = [
+  { value: 'cute', label: '😽 可愛喵喵' }, { value: 'gentle', label: '🐈 溫柔管家喵' },
+  { value: 'professional', label: '🦁 嚴肅顧問' }, { value: 'tsundere', label: '😼 傲嬌喵' },
+  { value: 'lazy', label: '😿 厭世喵' }, { value: 'rich', label: '💰 土豪喵' }
+];
 
-  // 2. 檢查是否需要發送問候語
-  if (isOpen.value) checkAndGreet();
-
-  // 3. 視窗縮放邊界判定
-  window.addEventListener('resize', () => {
-    position.value.x = Math.min(position.value.x, window.innerWidth - 100);
-    position.value.y = Math.min(position.value.y, window.innerHeight - 100);
-  });
-
-  // 4. 啟動 WebSocket 連線 (取代了原本的 setInterval)
-  connectWebSocket();
-});
-
-// 🌟 乾淨整合版的 onUnmounted
-onUnmounted(() => {
-  // 離開網頁時，優雅地關閉電話線
-  if (ws) {
-    ws.onclose = null; // 防止觸發自動重連
-    ws.close();
-  }
-});
-
-// 監聽狀態變化並儲存
-watch(isOpen, (newVal) => localStorage.setItem('isMeowChatOpen', newVal))
-watch(messages, (newVal) => {
-  localStorage.setItem('meowChatHistory', JSON.stringify(newVal))
-}, { deep: true })
-
-watch(() => route.path, () => { if (isOpen.value) checkAndGreet() })
-
-const checkAndGreet = () => {
-  const customText = greetingsMap[route.path]
-  if (customText && !messages.value.some(m => m.text === customText)) {
-    messages.value.push({
-      id: Date.now(),
-      text: customText,
-      sender: 'bot',
-      timestamp: new Date().toISOString(),
-      duration: null
-    })
-    scrollToBottom()
-  }
-}
-
-// 🧹 清空紀錄按鈕 (優化版：6秒自動刪除提示訊息)
-const clearChat = () => {
-  if (confirm('喵？確定要清空所有對話紀錄嗎？')) {
-    const clearMsgId = Date.now();
-
-    // 1. 清空紀錄並放入「暫時性」的清空提示
-    messages.value = [{
-      id: clearMsgId,
-      text: '紀錄已清空喵！有什麼新問題嗎？',
-      sender: 'bot',
-      timestamp: new Date().toISOString(),
-      duration: null
-    }]
-
-    // 2. 🚀 6 秒後自動刪除該提示訊息
-    setTimeout(() => {
-      // 只有在該訊息還在 messages 陣列中時才刪除 (避免使用者已經開始新對話)
-      const index = messages.value.findIndex(m => m.id === clearMsgId);
-      if (index !== -1) {
-        messages.value.splice(index, 1);
-        // 刪除提示後，補上當前頁面的正常問候語
-        checkAndGreet();
-      }
-    }, 5000);
-  }
-}
-
-const formatTime = (isoStr) => new Date(isoStr).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
-
-const scrollToBottom = () => {
-  nextTick(() => {
-    if (messagesContainer.value) messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-  })
-}
-
-// ⚡️ 新增一個 helper 函式來格式化秒數
-const formatDuration = (seconds) => {
-  if (!seconds) return '';
-  if (seconds < 60) {
-    return `${seconds}s`;
-  } else {
-    const mins = Math.floor(seconds / 60);
-    const secs = (seconds % 60).toFixed(1);
-    return `${mins}m ${secs}s`;
-  }
-}
-
-// 🚀 發送邏輯
 const handleSend = async () => {
-  if (!input.value.trim() || isTyping.value) return
-
-  const query = input.value
-  // 🌟 新增：取得正確的台灣時間字串
+  if (!input.value.trim() || isTyping.value) return;
+  const query = input.value;
   const now = new Date();
-  // 手動組合成標準格式，最安全！
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const exactTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
-  const exactTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  messages.value.push({ id: Date.now(), text: query, sender: 'user', timestamp: new Date().toISOString() });
+  input.value = '';
+  paintDrops.value = [];
+  isTyping.value = true;
+  scrollToBottom();
 
-
-  messages.value.push({ id: Date.now(), text: query, sender: 'user', timestamp: new Date().toISOString() })
-
-  // ✅ 1. 馬上清空輸入框
-  input.value = ''
-  // 🎨 清空畫布與狀態
-  paintDrops.value = []
-  isDrawing.value = false // 確保每次發問都是重置狀態
-
-  isTyping.value = true
-  loadingText.value = "思考中喵..."
-  scrollToBottom()
-
-  // ✅ 2. 啟動隨機語錄 (每 1.5 秒換一句)
   loadingInterval = setInterval(() => {
-    const randomIdx = Math.floor(Math.random() * waitingJokes.length);
-    loadingText.value = waitingJokes[randomIdx];
+    loadingText.value = waitingJokes[Math.floor(Math.random() * waitingJokes.length)];
   }, 1500);
 
   try {
-    console.log(`🚀 [Chat] 發送請求: "${query}"`);
-
-    // 🧠 1. 抓取最近 4 筆對話當作「短期記憶」 (避開剛剛才 push 的自己這句)
-    const historyText = messages.value
-      .slice(-5, -1)
-      .map(m => {
-        // 🌟 核心修改：如果是喵喵說的廢話，超過 30 個字就切斷，只留重點！
-        const safeText = m.text.length > 30 ? m.text.substring(0, 30) + '...' : m.text;
-        return `${m.sender === 'user' ? '小主人' : '喵喵'}：${safeText}`;
-      })
-      .join('\n');
-
-    // 🛡️ 2. 獨立宣告「台北時區防護咒語」 (絕對不能丟掉！)
-    const timeInstruction = `[系統指令：目前台北正確時間為 ${exactTime}，請以此為準，不要自行換算時區]`;
-
-    // 🧠 3. 動態組合 prompt：有記憶就帶記憶，沒記憶就照舊
-    let finalPrompt = '';
-    if (historyText.trim().length > 0) {
-      // 把時區指令、歷史記憶、現在的問題，三合一完美打包！
-      finalPrompt = `${timeInstruction}\n【以下是我們剛剛的對話記憶，請參考上下文回答】\n${historyText}\n\n【現在】\n小主人說：${query}`;
-    } else {
-      finalPrompt = `${timeInstruction} ${query}`;
-    }
-
-    // 🌟 4. 發送給後端
-    const rawRes = await postAiRobotChat({
-      message: finalPrompt,
-      persona: selectedPersona.value
-    });
-
-
+    const historyText = messages.value.slice(-5, -1).map(m => `${m.sender === 'user' ? '小主人' : '喵喵'}：${m.text.substring(0, 30)}`).join('\n');
+    const finalPrompt = `[台北時間 ${exactTime}]\n${historyText}\n小主人：${query}`;
+    const rawRes = await postAiRobotChat({ message: finalPrompt, persona: selectedPersona.value });
     const response = rawRes?.data || rawRes;
-    if (!response || !response.reply) {
-      throw new Error("前端收不到正確的資料格式喵！");
-    }
 
-    const replyText = response.reply;
-    const duration = response.duration;
-    const provider = response.provider;
-
-    // 🆕 新增：把後端傳來的 JSON 指令抓出來
-    const isCommand = response.is_command || false;
     let actionData = response.action_data || null;
+    if (actionData && !Array.isArray(actionData)) actionData = [actionData];
 
-    // 🛡️ 魔法 1：不管 AI 吐單一物件還是陣列，我們通通把它包裝成陣列！
-    if (actionData !== null && !Array.isArray(actionData)) {
-      actionData = [actionData];
-    }
-
-    // 🌟 魔法 2：解決「需要手動刷新」的 Token 時間差問題！
-    // 如果準備要出卡片了，卻發現帳戶清單是空的，立刻強制重抓一次！
-    if (isCommand && accountStore.accounts.length === 0) {
-        await accountStore.loadAccounts(true);
-    }
-
-    // 🌟 魔法 3：自動對齊下拉選單的預設值
-    // 確保 AI 說的帳戶名稱，能 100% 對應到下拉選單裡的選項，避免選單變空白
-    if (isCommand && actionData) {
-        actionData.forEach(item => {
-            if (item.record_type !== 'transfer') {
-                const match = accountStore.accounts.find(a => a.itemName === item.account_name);
-                if (!match && accountStore.accounts.length > 0) {
-                    item.account_name = accountStore.accounts[0].itemName; // 找不到就塞第一個帳戶給它
-                }
-            } else {
-                const matchFrom = accountStore.accounts.find(a => a.itemName === item.from_account);
-                if (!matchFrom && accountStore.accounts.length > 0) item.from_account = accountStore.accounts[0].itemName;
-                
-                const matchTo = accountStore.accounts.find(a => a.itemName === item.to_account);
-                if (!matchTo && accountStore.accounts.length > 0) item.to_account = accountStore.accounts[0].itemName;
-            }
-        });
-    }
-
-    // ✅ 4. 顯示回應來源模型  `耗時: ${duration}s`
-    console.log(`✨ [Chat] 收到回應 (${provider}):`, replyText, `指令模式: ${isCommand}`, `耗時: ${duration}s`);
+    // 確保帳戶資料同步，避免下拉選單空白
+    if (response.is_command && accountStore.accounts.length === 0) await accountStore.loadAccounts(true);
 
     messages.value.push({
-      id: Date.now() + 1,
-      text: replyText,
-      sender: 'bot',
-      timestamp: new Date().toISOString(),
-      duration: duration,
-      provider: provider,
-      is_command: isCommand,
-      action_data: actionData
-    })
+      id: Date.now() + 1, text: response.reply, sender: 'bot', timestamp: new Date().toISOString(),
+      duration: response.duration, provider: response.provider, is_command: response.is_command, action_data: actionData
+    });
   } catch (error) {
-    console.error("❌ [Chat] 錯誤:", error);
-    messages.value.push({ id: Date.now() + 1, text: "喵... 我斷線了喵！請檢查網路連線。", sender: 'bot', timestamp: new Date().toISOString() });
+    messages.value.push({ id: Date.now() + 1, text: "喵... 我斷線了喵！", sender: 'bot', timestamp: new Date().toISOString() });
   } finally {
-    isTyping.value = false
-    // 清除隨機語錄計時器
+    isTyping.value = false;
     if (loadingInterval) clearInterval(loadingInterval);
-    loadingInterval = null;
-    scrollToBottom()
+    scrollToBottom();
+    await nextTick();
+    if (inputRef.value) inputRef.value.focus();
   }
-}
-
+};
 // ==========================================
-// 🚀 升級：雙模式確認卡片 (多筆記帳支援版)
+// 4. 卡片操作與生命週期 (Card Actions & Lifecycle)
 // ==========================================
 const confirmRecord = async (msgId, index, data) => {
   const msg = messages.value.find(m => m.id === msgId);
   if (!msg) return;
-
   try {
     const todayStr = getLocalDate();
-
-    // 🌟 1. 取得 Store 裡的帳戶資料
-    if (accountStore.accounts.length === 0) {
-      await accountStore.loadAccounts(true);
-    }
+    if (accountStore.accounts.length === 0) await accountStore.loadAccounts(true);
     const firstAccount = accountStore.accounts[0];
-    if (!firstAccount) throw new Error("喵... 找不到可用帳戶，請先新增帳戶喵！");
 
-    // 🌟 2. 轉帳模式
-    if (data.record_type === 'transfer' || data.type === 'transfer') {
-      const fromName = data.from_account || data.account_from;
-      const toName = data.to_account || data.account_to;
-
-      const fromId = getAccountId(fromName) || firstAccount.account_id;
-      const toId = getAccountId(toName) || (accountStore.accounts[1]?.account_id || fromId);
-      const transferNote = (data.add_note === '領生活費' || !data.add_note) ? '一般轉帳' : data.add_note;
-
-      const transferPayload = {
+    // 🔄 模式 1：轉帳模式
+    if (data.record_type === 'transfer') {
+      const payload = {
         transaction_date: todayStr,
-        from_account_id: fromId,
-        to_account_id: toId,
-        transaction_note: transferNote,
+        from_account_id: getAccountId(data.from_account) || firstAccount.account_id,
+        to_account_id: getAccountId(data.to_account) || (accountStore.accounts[1]?.account_id || firstAccount.account_id),
+        transaction_note: data.add_note || 'AI轉帳',
         amount: parseFloat(data.add_amount || data.amount || 0)
       };
-
-      await api.post('/transfers/', transferPayload);
-    }
-    // 🌟 3. 收支模式 (收入/支出)
+      await api.post('/transfers/', payload);
+    } 
+    // 📝 模式 2：一般收支模式
     else {
-      const accName = data.account_name || data.account;
-      const finalAccountId = getAccountId(accName) || firstAccount.account_id;
-      const isIncome = data.record_type === 'income' || data.add_type === true || data.type === 'income';
-      
+      const isIncome = data.record_type === 'income' || data.add_type === true;
       const payload = {
         add_date: todayStr,
         add_amount: parseFloat(data.add_amount || data.amount || 0),
         add_type: isIncome,
         add_class: data.add_class || '其他',
         add_class_icon: getClassIcon(data.add_class),
-        account_id: finalAccountId,
+        account_id: getAccountId(data.account_name) || firstAccount.account_id,
         add_member: data.add_member || '自己',
         add_tag: data.add_tag || '需要',
-        add_note: data.add_note || data.note || 'AI記帳'
+        add_note: data.add_note || 'AI記帳'
       };
-
       await api.post('/records/', payload);
     }
 
-    // ✅ 4. 成功後，把這張卡片從陣列中刪除
+    // 成功後處理：從卡片清單移除
     msg.action_data.splice(index, 1);
-
-    // 如果陣列空了 (所有卡片都確認或取消完畢)，就關閉指令模式
     if (msg.action_data.length === 0) {
       msg.is_command = false;
-      msg.text = `✅ 喵！已經幫小主人把所有帳都記好囉！`;
+      msg.text = `✅ 喵！已經幫小主人記好囉！`;
     }
-    
-    // window.dispatchEvent(new CustomEvent('sync-money-data'));
-    // console.log("📢 廣播：同步訊號已發出！");
-
-    // ✅ 改成延遲 300 毫秒再廣播，確保後端資料庫已經寫死進去了
-    setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('sync-money-data'));
-        console.log("📢 廣播：同步訊號已發出 (延遲 500ms)！");
-    }, 500);
-
-
-
+    setTimeout(() => window.dispatchEvent(new CustomEvent('sync-money-data')), 500);
   } catch (error) {
-    console.error("❌ 寫入失敗：", error);
-    const errorMsg = error.response?.data?.detail?.[0]?.msg || error.message;
-    alert(`⚠️ 記錄失敗：${errorMsg}`); // 單筆失敗跳通知就好，不要關閉卡片
+    alert(`⚠️ 記錄失敗：${error.message}`);
   }
 };
 
-// ==========================================
-// 🆕 取消單張卡片的按鈕邏輯
-// ==========================================
 const cancelRecord = (msgId, index) => {
   const msg = messages.value.find(m => m.id === msgId);
   if (!msg) return;
-
-  // 移除被取消的卡片
   msg.action_data.splice(index, 1);
-
-  // 如果全部都取消或處理完了，關閉指令模式
   if (msg.action_data.length === 0) {
     msg.is_command = false;
-    msg.text = `❌ 喵～已經完成您的指示囉！小主人還有什麼要幫忙的嗎？`;
+    msg.text = `❌ 喵～已經取消操作囉！`;
   }
 };
 
-
-// ⚡️ 修正視窗位置：確保對話窗展開時位置正確
 const chatWindowStyle = computed(() => {
-  // 檢查貓咪是否在螢幕上半部或下半部
   const isInBottomHalf = position.value.y > window.innerHeight / 2;
   const isInRightHalf = position.value.x > window.innerWidth / 2;
-
-  const winW = 360;
-  const winH = 520;
-  const padding = 20;
-
-
-  let style = {
-    position: 'absolute',
-    zIndex: 10000,
+  return {
+    position: 'absolute', zIndex: 10000,
+    bottom: isInBottomHalf ? '10px' : 'auto', top: isInBottomHalf ? 'auto' : '10px',
+    right: isInRightHalf ? '0px' : 'auto', left: isInRightHalf ? 'auto' : '0px',
+    transformOrigin: `${isInRightHalf ? 'right' : 'left'} ${isInBottomHalf ? 'bottom' : 'top'}`
   };
-  if (isInBottomHalf) {
-    // 預計向上彈出
-    style.bottom = '10px';
-    // 檢查視窗頂部是否會超出螢幕
-    if (position.value.y - winH < padding) {
-      // 如果會超出頂部，改為貼著螢幕頂部
-      style.bottom = 'auto';
-      style.top = `-${position.value.y - padding}px`;
-    }
-  } else {
-    // 預計向下彈出
-    style.top = '10px';
-    // 檢查視窗底部是否會超過螢幕
-    if (position.value.y + winH + 100 > window.innerHeight - padding) {
-      style.top = 'auto';
-      style.bottom = `-${window.innerHeight - position.value.y - padding}px`;
-    }
-  }
-
-  // 3. 水平位置修正
-  if (isInRightHalf) {
-    // 預計向左彈出 (右對齊)
-    style.right = '0px';
-    // 檢查左側是否會超出螢幕 (貓咪 x 座標小於視窗寬度)
-    if (position.value.x < winW + padding) {
-      // 強制往右偏移，讓視窗左側剛好留在螢幕內
-      style.right = 'auto';
-      style.left = `-${position.value.x - padding}px`;
-    }
-  } else {
-    // 預計向右彈出 (左對齊)
-    style.left = '0px';
-    // 檢查右側是否會超出螢幕
-    const spaceRight = window.innerWidth - position.value.x;
-    if (spaceRight < winW + padding) {
-      style.left = 'auto';
-      style.right = `-${spaceRight - padding}px`;
-    }
-  }
-
-  // 4. 設定動畫起點 (讓縮放從貓咪中心開始)
-  style.transformOrigin = `${isInRightHalf ? 'right' : 'left'} ${isInBottomHalf ? 'bottom' : 'top'}`;
-
-  return style;
 });
 
+// 🧹 清空紀錄
+const clearChat = () => {
+  if (confirm('喵？確定要清空嗎？')) {
+    messages.value = [{ id: Date.now(), text: '紀錄已清空喵！', sender: 'bot', timestamp: new Date().toISOString() }];
+  }
+};
+
 onMounted(async () => {
-  // 🌟 確保元件掛載時立即同步帳戶資料
   await accountStore.loadAccounts();
-
-  if (isOpen.value) checkAndGreet();
-
+  connectWebSocket();
   window.addEventListener('resize', () => {
     position.value.x = Math.min(position.value.x, window.innerWidth - 100);
     position.value.y = Math.min(position.value.y, window.innerHeight - 100);
   });
 });
+onUnmounted(() => { if (ws) { ws.onclose = null; ws.close(); } });
+
+watch(isOpen, (newVal) => localStorage.setItem('isMeowChatOpen', newVal));
+watch(messages, (newVal) => localStorage.setItem('meowChatHistory', JSON.stringify(newVal)), { deep: true });
+watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
+
+
+
+
 </script>
 
 <template>
@@ -742,24 +327,29 @@ onMounted(async () => {
               <p style="white-space: pre-wrap;">{{ message.text }}</p>
 
               <template v-if="message.is_command && message.action_data && message.action_data.length > 0">
-                <div v-for="(actionItem, idx) in message.action_data" :key="idx" class="action-card" style="margin-bottom: 12px;">
+                <div v-for="(actionItem, idx) in message.action_data" :key="idx" class="action-card"
+                  style="margin-bottom: 12px;">
                   <div class="card-header">
                     {{ actionItem.record_type === 'transfer' ? '🔄 轉帳確認' : '📝 收支確認' }}
-                    <span style="font-size: 12px; color: #94a3b8; font-weight: normal; margin-left: auto;">({{ idx + 1 }}/{{ message.action_data.length }})</span>
+                    <span style="font-size: 12px; color: #94a3b8; font-weight: normal; margin-left: auto;">({{ idx + 1
+                      }}/{{ message.action_data.length }})</span>
                   </div>
-                  
+
                   <div class="card-body">
                     <div class="data-row">
                       <span class="label">金額：</span>
                       <span class="value amount"
                         :style="{ color: actionItem.record_type === 'income' ? '#10b981' : (actionItem.record_type === 'expense' ? '#ef4444' : '#3b82f6') }">
-                        {{ actionItem.record_type === 'income' ? '+' : (actionItem.record_type === 'expense' ? '-' : '') }} $ {{ actionItem.add_amount }}
+                        {{ actionItem.record_type === 'income' ? '+' : (actionItem.record_type === 'expense' ? '-' : '')
+                        }} $ {{ actionItem.add_amount }}
                       </span>
                     </div>
 
                     <template v-if="actionItem.record_type !== 'transfer'">
-                      <div class="data-row"><span class="label">類別：</span><span class="value">{{ actionItem.add_class }}</span></div>
-                      <div class="data-row"><span class="label">項目：</span><span class="value">{{ actionItem.add_note }}</span></div>
+                      <div class="data-row"><span class="label">類別：</span><span class="value">{{ actionItem.add_class
+                          }}</span></div>
+                      <div class="data-row"><span class="label">項目：</span><span class="value">{{ actionItem.add_note
+                          }}</span></div>
 
                       <div class="data-row">
                         <span class="label">帳戶：</span>
@@ -770,28 +360,32 @@ onMounted(async () => {
                         </select>
                       </div>
 
-                      <div class="data-row"><span class="label">標籤：</span><span class="value tag-text">{{ actionItem.add_member }} / {{ actionItem.add_tag }}</span></div>
+                      <div class="data-row"><span class="label">標籤：</span><span class="value tag-text">{{
+                          actionItem.add_member }} / {{ actionItem.add_tag }}</span></div>
                     </template>
 
                     <template v-else>
                       <div class="data-row">
                         <span class="label">轉出 (From)：</span>
                         <select v-model="actionItem.from_account" class="value ai-select">
-                          <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">{{ acc.itemName }}</option>
+                          <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">{{
+                            acc.itemName }}</option>
                         </select>
                       </div>
 
                       <div class="data-row">
                         <span class="label">轉入 (To)：</span>
                         <select v-model="actionItem.to_account" class="value ai-select">
-                          <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">{{ acc.itemName }}</option>
+                          <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">{{
+                            acc.itemName }}</option>
                         </select>
                       </div>
 
-                      <div class="data-row"><span class="label">備註：</span><span class="value">{{ actionItem.add_note }}</span></div>
+                      <div class="data-row"><span class="label">備註：</span><span class="value">{{ actionItem.add_note
+                          }}</span></div>
                     </template>
                   </div>
-                  
+
                   <div class="card-footer">
                     <button class="btn cancel" @click="cancelRecord(message.id, idx)">取消</button>
                     <button class="btn confirm" @click="confirmRecord(message.id, idx, actionItem)">確認送出</button>
@@ -817,7 +411,8 @@ onMounted(async () => {
         </div>
 
         <div class="input-area">
-          <input v-model="input" placeholder="輸入訊息..." @keyup.enter.prevent="handleSend" :disabled="isTyping" />
+          <input ref="inputRef" v-model="input" placeholder="輸入訊息..." @keyup.enter.prevent="handleSend"
+            :disabled="isTyping" />
           <button class="send-btn" @click="handleSend" :disabled="isTyping">🐾</button>
         </div>
       </div>
@@ -1239,12 +834,13 @@ onMounted(async () => {
   background-color: var(--bg-card);
   outline: none;
   cursor: pointer;
-  flex: 1; /* 讓它填滿剩餘空間 */
-  max-width: 140px; /* 避免選單太長破壞版面 */
+  flex: 1;
+  /* 讓它填滿剩餘空間 */
+  max-width: 140px;
+  /* 避免選單太長破壞版面 */
 }
 
 .ai-select:focus {
   border-color: var(--color-primary);
 }
-
 </style>

@@ -11,6 +11,7 @@ import AdminModel from './AdminModel.vue'
 import AdminMain from './AdminMain.vue'
 import AdminsComments from './AdminsComments.vue'
 import AdminSetting from './AdminSetting.vue'
+import AdminAiConfig from './AdminAiConfig.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -23,6 +24,7 @@ const activeTab = ref('AdminData') // 預設頁面
 const navigation = [
     { name: '數據分析', id: 'AdminData', icon: '📊' },
     { name: '模型管理', id: 'AdminModel', icon: '🔌' },
+    { name: 'AI審核', id: 'AdminAiConfig', icon: '🔌' },
     { name: '用戶管理', id: 'AdminMain', icon: '👥' },
     { name: '問題回饋', id: 'AdminsComments', icon: '💬' },
     { name: '系統設定', id: 'AdminSetting', icon: '⚙️' },
@@ -113,6 +115,9 @@ onMounted(async () => {
             <div class="scroll-view">
                 <AdminData v-if="activeTab === 'AdminData'" :currentStyle="currentStyle" />
                 <AdminModel v-if="activeTab === 'AdminModel'" :currentStyle="currentStyle" />
+                
+                <AdminAiConfig v-if="activeTab === 'AdminAiConfig'" />
+                
                 <AdminMain v-if="activeTab === 'AdminMain'" 
                     :currentStyle="currentStyle" 
                     :currentLoginAdmin="currentLoginAdmin"

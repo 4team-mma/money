@@ -1,6 +1,6 @@
 <script setup>
 /**
- * 邱比特大腦：意圖識別 A/B 測試擂台
+ * 邱比特大腦：意圖識別 A/B 測試擂台 (三強對決版)
  */
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
@@ -16,23 +16,24 @@ import { ElMessage } from 'element-plus';
 const router = useRouter();
 const testMessage = ref('');
 const loading = ref(false);
-const singleResult = ref(null);
+const singleResult = ref(null); // 預期後端回傳 { legacy, v1_ai, v2_ai, review_id }
 const batchLoading = ref(false);
 const batchReport = ref(null);
 const hasCustomFile = ref(false);
 const onlyShowErrors = ref(false);
-const intentOptions = ['RECORD', 'QUERY', 'CHAT', 'ADVISOR', 'MULTI_RECORD', 'MULTI_QUERY', 'MULTI_KNOWLEDGE', 'KNOWLEDGE'];
+const intentOptions = ['RECORD', 'QUERY', 'CHAT', 'ADVISOR', 'KNOWLEDGE', 'MULTI_RECORD', 'MULTI_QUERY', 'MULTI_ADVISOR', 'MULTI_KNOWLEDGE'];
 const singleCorrection = ref('');
 const showSingleCorrection = ref(false);
 
 const filteredBatchDetails = computed(() => {
     if (!batchReport.value) return [];
     if (onlyShowErrors.value) {
-        return batchReport.value.details.filter(item => !item.is_correct);
+        // 只要 V2 沒有拿滿分 (1.0)，就視為需要檢視的錯誤/瑕疵
+        return batchReport.value.details.filter(item => item.v2_score < 1.0);
     }
     return batchReport.value.details;
 });
-// 登出邏輯
+
 const handleLogout = () => {
     localStorage.removeItem('user_token');
     localStorage.removeItem('currentUser');
@@ -46,17 +47,14 @@ const runSingleTest = async () => {
     loading.value = true;
     try {
         const res = await compareAiIntents(testMessage.value);
-        const responseData = res.data || res;
+        singleResult.value = res.data || res;
         
-        // 🌟 這裡註解已經移除了！
-        singleResult.value = responseData;
-        singleCorrection.value = responseData.mix_ai.intent;
+        // 預設將 V2 的答案作為修正參考
+        singleCorrection.value = singleResult.value.v2_ai.intent;
         showSingleCorrection.value = true;
 
-        console.log("收到結果喵：", singleResult.value);
         ElMessage.success('對比完成喵！');
     } catch (err) {
-        console.error("對比失敗：", err);
         ElMessage.error('伺服器開小差了喵...');
     } finally {
         loading.value = false;
@@ -70,10 +68,8 @@ const saveSingleCorrection = async () => {
             ElMessage.warning('後端尚未回傳 review_id！');
             return;
         }
-
         await updateCorrectedIntent(singleResult.value.review_id, singleCorrection.value);
-        singleResult.value.mix_ai.intent = singleCorrection.value;
-        showSingleCorrection.value = false; // 存檔後收起介面
+        showSingleCorrection.value = false;
         ElMessage.success('✅ 已成功將修正寫入資料庫！');
     } catch (err) {
         ElMessage.error('修正失敗，請確認 API 是否正確。');
@@ -86,9 +82,8 @@ const runBatchTest = async () => {
     try {
         const res = await runAiBatchTest();
         batchReport.value = res.data || res;
-        ElMessage.success(`批次分析完成！目前準確率 ${(batchReport.value.accuracy * 100).toFixed(1)}%`);
+        ElMessage.success(`批次分析完成！V2 總得分率 ${(batchReport.value.v2_accuracy * 100).toFixed(1)}%`);
     } catch (err) {
-        console.error("批次失敗：", err);
         ElMessage.error('批次測試失敗：請檢查後端 temp/excel 資料夾');
     } finally {
         batchLoading.value = false;
@@ -99,14 +94,13 @@ const runBatchTest = async () => {
 const saveCorrection = async (item) => {
     try {
         await updateCorrectedIntent(item.review_id, item.correction);
-        item.is_correct = (item.correction === item.pred);
+        item.v2_score = 1.0; // 假裝修正後變滿分
         ElMessage.success('✅ 已成功將修正寫入資料庫！');
     } catch (err) {
-        ElMessage.error('修正失敗，請確認 API 是否正確。');
+        ElMessage.error('修正失敗。');
     }
 };
 
-// 上傳與清除檔案
 const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -118,7 +112,7 @@ const handleFileUpload = async (event) => {
         ElMessage.success('自定義題庫上傳成功');
     } catch (err) { ElMessage.error('上傳失敗'); }
 };
-//清除檔案
+
 const clearTempFile = async () => {
     try {
         await clearAiTestFile();
@@ -127,11 +121,19 @@ const clearTempFile = async () => {
         ElMessage.success('已清空並恢復預設');
     } catch (err) { ElMessage.error('清空失敗'); }
 };
-// 🎨 顏色邏輯
+
 const getConfidenceColor = (score) => {
     if (score > 0.9) return '#10b981';
     if (score > 0.7) return '#f59e0b';
     return '#ef4444';
+};
+
+// 視覺化加權分數
+const renderScore = (score) => {
+    if (score === 1.0) return '🎯 完美 (1.0)';
+    if (score === 0.5) return '🥈 懂一半 (0.5)';
+    if (score === 0.3) return '🥉 沾邊 (0.3)';
+    return '❌ 離譜 (0.0)';
 };
 </script>
 
@@ -143,8 +145,8 @@ const getConfidenceColor = (score) => {
                     <div class="brand-box">
                         <span class="sparkle">✨</span>
                         <div class="brand-text">
-                            <h1>🚀 邱比特大腦：意圖識別 A/B 測試擂台</h1>
-                            <p>比較「傳統關鍵字」與「ONNX + V10 攔截器」的差異</p>
+                            <h1>🚀 大腦競技場：V1 vs V2 對決</h1>
+                            <p>傳統關鍵字 vs 純 ONNX 模型 vs 語意路由器</p>
                         </div>
                     </div>
                     <div class="header-right">
@@ -153,8 +155,7 @@ const getConfidenceColor = (score) => {
                                 模式：{{ hasCustomFile ? '📁 自定義測試檔' : '🏆 預設黃金測試集' }}
                             </span>
                             <button class="mma-btn outline" @click="$refs.fileInput.click()">📤 上傳新題庫</button>
-                            <button v-if="hasCustomFile" class="mma-btn outline danger" @click="clearTempFile">🗑️
-                                恢復預設</button>
+                            <button v-if="hasCustomFile" class="mma-btn outline danger" @click="clearTempFile">🗑️ 恢復預設</button>
                             <input type="file" ref="fileInput" @change="handleFileUpload" accept=".xlsx" hidden />
                         </div>
                         <button class="mma-btn solid danger" @click="handleLogout">🚪 登出</button>
@@ -168,9 +169,14 @@ const getConfidenceColor = (score) => {
                     </div>
                     <div class="stat-sep"></div>
                     <div class="stat-unit">
-                        <span class="label">V2 準確率</span>
-                        <span class="val" :class="batchReport.accuracy >= 0.9 ? 'green' : 'orange'">
-                            {{ (batchReport.accuracy * 100).toFixed(1) }}%
+                        <span class="label">V1 舊版得分率</span>
+                        <span class="val orange">{{ (batchReport.v1_accuracy * 100).toFixed(1) }}%</span>
+                    </div>
+                    <div class="stat-sep"></div>
+                    <div class="stat-unit">
+                        <span class="label">V2 旗艦版得分率</span>
+                        <span class="val" :class="batchReport.v2_accuracy >= 0.9 ? 'green' : 'orange'">
+                            {{ (batchReport.v2_accuracy * 100).toFixed(1) }}%
                         </span>
                     </div>
                 </div>
@@ -180,61 +186,73 @@ const getConfidenceColor = (score) => {
                 <div class="search-group">
                     <input v-model="testMessage" placeholder="請輸入測試語句，按 Enter 發動進攻..." @keyup.enter="runSingleTest" />
                     <button class="mma-btn solid primary" @click="runSingleTest" :disabled="loading">
-                        {{ loading ? '掃描運算中... ⏳' : '發動對比 🐾' }}
+                        {{ loading ? '掃描運算中... ⏳' : '發動三方對比 🐾' }}
                     </button>
                 </div>
 
-                <div class="battle-arena" v-if="singleResult">
-                    <div class="arena-card legacy">
-                        <div class="card-title">🏠 傳統喵喵</div>
+                <div class="battle-arena" v-if="singleResult" style="display: flex; justify-content: space-between; align-items: stretch; gap: 20px;">
+                    
+                    <div class="arena-card legacy" style="flex: 1;">
+                        <div class="card-title">🏠 傳統喵喵 (Regex)</div>
                         <div class="result-box">{{ singleResult.legacy.intent }}</div>
-                        <div class="card-footer">純關鍵字匹配邏輯</div>
                         <div class="ai-reply-box">
-                            <span class="reply-label">💬 實際回覆：</span>
-                            <div class="reply-content">{{ singleResult.legacy.response }}</div>
+                            <span class="reply-label">💬 喵喵回覆：</span>
+                            <div class="reply-content">{{ singleResult.legacy.response || '（無回覆內容）' }}</div>
                         </div>
                     </div>
 
-                    <div class="vs-divider">VS</div>
+                    <div class="vs-divider" style="display: flex; align-items: center;">VS</div>
 
-                    <div class="arena-card mixai">
-                        <div class="card-title">✨ 邱比特大腦 (混合版)</div>
-                        <div class="result-box highlight">{{ singleResult.mix_ai.intent }}</div>
-                        <div class="conf-info" v-if="singleResult.mix_ai.intent !== 'BLOCKED'">
-                            信心度：<b :style="{ color: getConfidenceColor(singleResult.mix_ai.confidence) }">
-                                {{ (singleResult.mix_ai.confidence * 100).toFixed(2) }}%
-                            </b>
+                    <div class="arena-card legacy" style="flex: 1; border-top: 4px solid #f59e0b;">
+                        <div class="card-title">🧠 V1 舊大腦 (ONNX)</div>
+                        <div class="result-box">{{ singleResult.v1_ai.intent }}</div>
+                        <div class="conf-info">
+                            信心：<b>{{ (singleResult.v1_ai.confidence * 100).toFixed(1) }}%</b>
                         </div>
-                        <div class="card-footer">ONNX 模型 + V10 行為路由器</div>
+                        <div class="ai-reply-box">
+                            <span class="reply-label">💬 V1 模擬回覆：</span>
+                            <div class="reply-content">（V1 不產生對話回覆以節省資源）</div>
+                        </div>
+                    </div>
+
+                    <div class="vs-divider" style="display: flex; align-items: center;">VS</div>
+
+                    <div class="arena-card mixai" style="flex: 1;">
+                        <div class="card-title">✨ V2 旗艦大腦 (混合路由)</div>
+                        <div class="result-box highlight">{{ singleResult.v2_ai.intent }}</div>
+                        <div class="conf-info">
+                             <span v-if="singleResult.v2_ai.is_intercepted" style="color: #10b981; font-weight: 800;">🛡️ ChromaDB 攔截</span>
+                             <span v-else>信心：<b>{{ (singleResult.v2_ai.confidence * 100).toFixed(1) }}%</b></span>
+                        </div>
                         <div class="ai-reply-box mixai-reply">
-                            <span class="reply-label">💬 實際回覆：</span>
-                            <div class="reply-content">{{ singleResult.mix_ai.response }}</div>
+                            <span class="reply-label">💬 V2 真實說法：</span>
+                            <div class="reply-content">{{ singleResult.v2_ai.response || '（生成失敗）' }}</div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="single-correction-box" v-if="singleResult && showSingleCorrection">
-                    <span>🤖 邱比特大腦判斷得如何？</span>
-                    <button class="mma-btn outline" @click="showSingleCorrection = false">✅ 判斷完全正確</button>
+                    <span>🤖 邱比特大腦 V2 表現得如何？</span>
+                    <button class="mma-btn outline" @click="showSingleCorrection = false">✅ 判斷正確</button>
                     <span style="color: #cbd5e1;">|</span>
-                    <span>我要糾正它：</span>
+                    <span>強制糾正為：</span>
                     <select v-model="singleCorrection" class="mma-select">
                         <option v-for="opt in intentOptions" :key="opt" :value="opt">{{ opt }}</option>
                     </select>
-                    <button class="mma-btn solid primary" @click="saveSingleCorrection">儲存修正</button>
+                    <button class="mma-btn solid primary" @click="saveSingleCorrection">儲存修正入庫</button>
                 </div>
             </section>
 
             <section class="mma-card-shadow batch-section">
                 <div class="section-title-row">
-                    <h2>📊 批次自動測試報告</h2>
+                    <h2>📊 批次加權測試報告</h2>
                     <div class="title-actions">
                         <label class="mma-checkbox">
                             <input type="checkbox" v-model="onlyShowErrors" />
-                            <span class="box"></span> 僅顯示失敗項
+                            <span class="box"></span> 僅顯示 V2 未滿分項目
                         </label>
                         <button class="mma-btn solid secondary" @click="runBatchTest" :disabled="batchLoading">
-                            {{ batchLoading ? '掃描中...' : '🏃 執行全自動掃描' }}
+                            {{ batchLoading ? '掃描中...' : '🏃 執行全自動加權掃描' }}
                         </button>
                     </div>
                 </div>
@@ -244,29 +262,35 @@ const getConfidenceColor = (score) => {
                         <thead>
                             <tr>
                                 <th class="text-left">測試語句</th>
-                                <th>V1原始 判定</th>
-                                <th>V2新大腦 判定</th>
-                                <th>信心度</th>
-                                <th>狀態</th>
-                                <th>🛠️ 校正 (入資料庫)</th>
+                                <th>✅ 真實意圖</th>
+                                <th>🧠 V1 猜測 (得分)</th>
+                                <th>✨ V2 猜測 (得分)</th>
+                                <th>🛠️ 人類校正</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="item in filteredBatchDetails" :key="item.review_id"
-                                :class="{ 'error-row': !item.is_correct }">
+                                :class="{ 'error-row': item.v2_score < 1.0 }">
                                 <td class="text-left font-bold">{{ item.text }}</td>
-                                <td><span class="pill gray">{{ item.legacy_pred }}</span></td>
-                                <td><span class="pill blue">{{ item.pred }}</span></td>
-                                <td>{{ (item.conf * 100).toFixed(1) }}%</td>
-                                <td :class="item.is_correct ? 'ok-text' : 'err-text'">{{ item.is_correct ? '✅' : '❌' }}</td>
+                                <td><span class="pill gray">{{ item.true_intent }}</span></td>
+                                <td>
+                                    <span class="pill" style="background:#fef3c7; color:#b45309">{{ item.v1_pred }}</span><br>
+                                    <small>{{ renderScore(item.v1_score) }}</small>
+                                </td>
+                                <td>
+                                    <span class="pill blue">{{ item.v2_pred }}</span><br>
+                                    <small :class="item.v2_score === 1.0 ? 'ok-text' : 'err-text'">
+                                        {{ item.v2_is_intercepted ? '🛡️ ' : '' }}{{ renderScore(item.v2_score) }}
+                                    </small>
+                                </td>
                                 <td class="fix-cell">
-                                    <template v-if="!item.is_correct">
-                                        <select v-model="item.correction" class="mma-select">
+                                    <template v-if="item.v2_score < 1.0">
+                                        <select v-model="item.correction" class="mma-select" style="width:120px">
                                             <option v-for="opt in intentOptions" :key="opt" :value="opt">{{ opt }}</option>
                                         </select>
-                                        <button class="btn-save-mini" @click="saveCorrection(item)">儲存</button>
+                                        <button class="btn-save-mini" @click="saveCorrection(item)">存入</button>
                                     </template>
-                                    <span v-else class="ok-text" style="font-size: 16px;">👍 完美命中</span>
+                                    <span v-else class="ok-text">👍 免修正</span>
                                 </td>
                             </tr>
                         </tbody>
