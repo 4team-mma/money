@@ -6,13 +6,14 @@ import { ref, nextTick, watch, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/api'
 import { getLocalDate } from '@/utils/dateHelper'
-import { postAiRobotChat } from '@/api/robot'
+import { postAiRobotChat, postAiFeedback  } from '@/api/robot'
 import { useAccountStore } from '@/stores/useAccountStore'
-
+import { ElMessage } from 'element-plus'
 const route = useRoute()
 const messagesContainer = ref(null)
 const inputRef = ref(null)
 const accountStore = useAccountStore()
+
 
 // 🌟 帳戶與 Icon 處理
 const getAccountId = (accountName) => {
@@ -108,8 +109,18 @@ const connectWebSocket = () => {
     const data = JSON.parse(event.data);
     if (data.type === 'siri_sync') {
       isOpen.value = true;
-      messages.value.push({ id: Date.now(), text: `📱 (Siri 語音) \n${data.user_query}`, sender: 'user', timestamp: new Date().toISOString() });
-      messages.value.push({ id: Date.now() + 1, text: data.ai_reply, sender: 'bot', timestamp: new Date().toISOString(), duration: data.duration });
+      messages.value.push({ 
+        id: Date.now(), 
+        text: `📱 (Siri 語音) \n${data.user_query}`, 
+        sender: 'user', 
+        timestamp: new Date().toISOString()
+      });
+      messages.value.push({ 
+        id: Date.now() + 1, 
+        text: data.ai_reply, 
+        sender: 'bot', 
+        timestamp: new Date().toISOString(), 
+        duration: data.duration });
       scrollToBottom();
       accountStore.loadAccounts(true);
     }
@@ -164,10 +175,19 @@ const handleSend = async () => {
 
     // 確保帳戶資料同步，避免下拉選單空白
     if (response.is_command && accountStore.accounts.length === 0) await accountStore.loadAccounts(true);
-
+    // AI 回覆的那段
     messages.value.push({
-      id: Date.now() + 1, text: response.reply, sender: 'bot', timestamp: new Date().toISOString(),
-      duration: response.duration, provider: response.provider, is_command: response.is_command, action_data: actionData
+      id: Date.now() + 1, 
+      text: response.reply, 
+      sender: 'bot', 
+      timestamp: new Date().toISOString(),
+      duration: response.duration, 
+      provider: response.provider, 
+      is_command: response.is_command, 
+      action_data: actionData,
+      intent: response.intent,           // 🌟 儲存後端傳來的意圖
+      confidence: response.confidence    // 🌟 儲存後端傳來的信心度
+
     });
   } catch (error) {
     messages.value.push({ id: Date.now() + 1, text: "喵... 我斷線了喵！", sender: 'bot', timestamp: new Date().toISOString() });
@@ -252,11 +272,56 @@ const chatWindowStyle = computed(() => {
 });
 
 // 🧹 清空紀錄
+// 🧹 清空紀錄
 const clearChat = () => {
   if (confirm('喵？確定要清空嗎？')) {
     messages.value = [{ id: Date.now(), text: '紀錄已清空喵！', sender: 'bot', timestamp: new Date().toISOString() }];
+    
+    // 🌟 新增：3秒後自動變回預設打招呼，體驗更滑順
+    setTimeout(() => {
+      messages.value = [{ 
+        id: Date.now(), 
+        text: '嗨！我是 喵喵小助手 💰 有什麼能幫你的嗎喵？', 
+        sender: 'bot', 
+        timestamp: new Date().toISOString() 
+      }];
+    }, 3000);
   }
 };
+
+
+// ==========================================
+// 🌟 5. 用戶主動反饋機制 (Human Feedback)
+// ==========================================
+const handleFeedback = async (message, isGood) => {
+  // 標記這則訊息已經給過回饋，避免重複點擊
+  message.feedbackGiven = true;
+  
+  if (!isGood) {
+    try {
+      // 找出小主人的上一句話
+      const msgIndex = messages.value.findIndex(m => m.id === message.id);
+      const userMsg = msgIndex > 0 ? messages.value[msgIndex - 1].text : '未知問題';
+
+      // 🌟 使用 robot.js 封裝的 API
+      await postAiFeedback({
+        user_message: userMsg,
+        llm_response: message.text,
+        predicted_intent: message.intent || 'UNKNOWN',
+        confidence_score: message.confidence || 0.0
+      });
+      ElMessage.success('收到倒讚！已將這筆對話送交後台審核 📝');
+    } catch (error) {
+      console.error('反饋發送失敗', error);
+      ElMessage.error('糟糕，反饋傳送失敗了喵...');
+    }
+  } else {
+    ElMessage.success('謝謝小主人的稱讚喵！🥰');
+  }
+};
+
+
+
 
 onMounted(async () => {
   await accountStore.loadAccounts();
@@ -399,6 +464,16 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
                   <span class="provider-tag" v-if="message.provider">[{{ message.provider.toUpperCase() }}]</span>
                   <span class="duration-tag">⏱️{{ formatDuration(message.duration) }}</span>
                 </span>
+                
+                <span v-if="message.sender === 'bot'" class="feedback-actions">
+                    <template v-if="!message.feedbackGiven">
+                        <button class="feedback-btn" title="回答很棒" @click="handleFeedback(message, true)">👍</button>
+                        <button class="feedback-btn" title="回答有誤" @click="handleFeedback(message, false)">👎</button>
+                    </template>
+                    <template v-else>
+                        <span class="feedback-thanks">已回饋 ✓</span>
+                    </template>
+                </span>
               </span>
             </div>
           </div>
@@ -428,7 +503,7 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
   position: fixed;
   z-index: 9999;
   /* 禁止選取文字，避免拖曳時選到一堆藍字 */
-  user-select: none;
+  /* user-select: none; */
   overflow: visible !important;
 }
 
@@ -843,4 +918,36 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
 .ai-select:focus {
   border-color: var(--color-primary);
 }
+
+/* 🌟 新增的反饋按鈕樣式 */
+.feedback-actions {
+  margin-left: 8px;
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.feedback-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0.4;
+  transition: all 0.2s ease;
+  padding: 0 2px;
+}
+
+.feedback-btn:hover {
+  opacity: 1;
+  transform: scale(1.2) translateY(-2px);
+}
+
+.feedback-thanks {
+  font-size: 12px;
+  color: #10b981;
+  margin-left: 4px;
+  font-weight: bold;
+}
+
+
 </style>

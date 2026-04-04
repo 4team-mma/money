@@ -69,5 +69,8 @@ export const updateCorrectedIntent = (reviewId, correctedIntent) => {
   return api.put(`/v1/ai/ai_test/logs/${reviewId}`, { corrected_intent: correctedIntent });
 };
 
-
+// 🌟 新增：用戶主動反饋 (倒讚)
+export const postAiFeedback = (data) => {
+  return api.post("/v1/ai/ai_test/feedback", data);
+};
 
