@@ -26,7 +26,6 @@ const fetchLogs = async () => {
     loading.value = true
     try {
         const isReviewed = activeTab.value === 'resolved' ? 1 : 0
-        // 🌟 傳送分頁參數給後端
         const res = await api.get(`/v1/ai/ai_test/admin_logs`, {
             params: {
                 is_reviewed: isReviewed,
@@ -34,7 +33,9 @@ const fetchLogs = async () => {
                 size: pageSize.value
             }
         })
-        const data = res.data || {}
+        
+        // 🌟 修正：應對 Axios 攔截器，確保能正確拿到物件
+        const data = res.data || res || {}
         reviewLogs.value = data.details || []
         totalRows.value = data.total || 0
     } catch (error) {
@@ -50,20 +51,64 @@ const handlePageChange = (val) => {
     fetchLogs()
 }
 
-const saveReview = async (row) => {
-    if (!row.corrected_intent) {
-        ElMessage.warning('請選擇正確的意圖！')
-        return
-    }
+// 新增一個忽略函式
+const ignoreReview = async (row) => {
     try {
-        await updateCorrectedIntent(row.review_id, row.corrected_intent)
-        ElMessage.success(`✅ 已教育 AI！`)
-        // 審核完後重新整理目前頁面
-        fetchLogs()
+        // 呼叫 API，將這筆紀錄的 is_reviewed 設為 1，但 corrected_intent 設為原本的 predicted_intent
+        await updateCorrectedIntent(row.review_id, row.predicted_intent);
+        ElMessage.success(`✅ 已標記為判斷無誤，移出待處理區！`);
+        fetchLogs();
     } catch (error) {
-        ElMessage.error('儲存失敗')
+        ElMessage.error('操作失敗');
     }
 }
+
+const saveReview = async (row) => {
+    if (!row.corrected_intent) return;
+    try {
+        await updateCorrectedIntent(row.review_id, row.corrected_intent);
+        
+        // 🌟 這裡可以多加一隻 API：將 (user_message, corrected_intent) 寫入 ChromaDB 向量庫
+        // await addIntentToChromaDB(row.user_message, row.corrected_intent);
+        
+        ElMessage.success(`🧠 成功！已將「${row.user_message}」綁定為 ${row.corrected_intent} 並寫入大腦！`);
+        fetchLogs();
+    } catch (error) {
+        ElMessage.error('儲存失敗');
+    }
+}
+
+// 🌟 1. 對話內容排版魔術師
+const formatUserMessage = (rawMsg) => {
+    if (!rawMsg) return '';
+    // 去除 [台北時間 2026-xx-xx ...] 這種系統前綴
+    let text = rawMsg.replace(/\[台北時間.*?\]\s*/g, '');
+    
+    // 幫小主人跟喵喵的對話加上換行與 Emoji，讓排版更清晰
+    text = text.replace(/小主人：/g, '\n🧑 小主人：');
+    text = text.replace(/喵喵：/g, '\n🐱 喵喵：');
+    
+    // 清除開頭多餘的空白與換行
+    return text.trim();
+}
+
+// 🌟 2. 呼叫後端的一鍵清理 API
+const clearOldLogs = async () => {
+    if (!confirm('確定要清除 30 天前且未審核的無效紀錄嗎？這將釋放資料庫空間喵！')) return;
+    
+    loading.value = true;
+    try {
+        await api.delete('/v1/ai/ai_test/logs/cleanup');
+        ElMessage.success('✅ 清理完成！系統瘦身成功！');
+        fetchLogs();
+    } catch (error) {
+        ElMessage.error('清理失敗，請確認後端 API 狀態');
+    } finally {
+        loading.value = false;
+    }
+}
+
+
 
 onMounted(fetchLogs)
 </script>
@@ -84,9 +129,11 @@ onMounted(fetchLogs)
             <el-table :data="reviewLogs" v-loading="loading" stripe border height="100%">
                 <el-table-column prop="created_at" label="時間" width="160" sortable />
                 
-                <el-table-column label="小主人輸入" min-width="200">
+                <el-table-column label="對話還原 (自動過濾系統標籤)" min-width="320">
                     <template #default="scope">
-                        <span class="msg-text">{{ scope.row.user_message }}</span>
+                        <div style="white-space: pre-wrap; line-height: 1.6; font-size: 13px; color: #334155; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            {{ formatUserMessage(scope.row.user_message) }}
+                        </div>
                     </template>
                 </el-table-column>
 
@@ -113,15 +160,29 @@ onMounted(fetchLogs)
                     </template>
                 </el-table-column>
 
-                <el-table-column label="操作" width="120" align="center" v-if="activeTab === 'pending'">
+                <el-table-column label="操作" width="180" align="center" v-if="activeTab === 'pending'">
                     <template #default="scope">
-                        <el-button type="primary" size="small" @click="saveReview(scope.row)">學習</el-button>
+                        <el-button 
+                            type="primary" 
+                            size="small" 
+                            @click="saveReview(scope.row)"
+                            :disabled="!scope.row.corrected_intent">
+                            教導入庫
+                        </el-button>
+                        
+                        <el-button 
+                            type="success" 
+                            plain
+                            size="small" 
+                            @click="ignoreReview(scope.row)">
+                            判斷無誤
+                        </el-button>
                     </template>
                 </el-table-column>
             </el-table>
         </div>
 
-        <div class="pagination-section">
+        <div class="pagination-section" style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
             <el-pagination
                 background
                 layout="total, prev, pager, next"
@@ -130,6 +191,9 @@ onMounted(fetchLogs)
                 v-model:current-page="currentPage"
                 @current-change="handlePageChange"
             />
+            <el-button type="danger" plain size="small" @click="clearOldLogs" v-if="activeTab === 'pending'">
+                🧹 清理 30 天前無效紀錄
+            </el-button>
         </div>
     </div>
 </template>
