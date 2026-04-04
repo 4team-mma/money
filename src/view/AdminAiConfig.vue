@@ -1,11 +1,11 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted,computed } from 'vue'
 import { 
     ElMessage, ElTabs, ElTabPane, ElTable, ElTableColumn, 
     ElTag, ElSelect, ElOption, ElButton, vLoading, ElPagination, ElTooltip
 } from 'element-plus'
 import api from '@/api'
-import { updateCorrectedIntent } from '@/api/robot'
+import { updateCorrectedIntent, deleteAiReviewLog,clearAllPendingAiLogs } from '@/api/robot'
 
 const activeTab = ref('pending')
 const loading = ref(false)
@@ -22,6 +22,15 @@ const intentOptions = [
     'KNOWLEDGE', 'MULTI_KNOWLEDGE'
 ]
 
+const oldestPendingDate = ref(null)
+// 🌟 新增：計算距離今天有幾天
+const oldestDaysCount = computed(() => {
+    if (!oldestPendingDate.value) return 0;
+    const diffTime = Math.abs(new Date() - new Date(oldestPendingDate.value));
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+});
+
+
 const fetchLogs = async () => {
     loading.value = true
     try {
@@ -34,10 +43,14 @@ const fetchLogs = async () => {
             }
         })
         
-        // 🌟 修正：應對 Axios 攔截器，確保能正確拿到物件
+        //  修正：應對 Axios 攔截器，確保能正確拿到物件
         const data = res.data || res || {}
         reviewLogs.value = data.details || []
         totalRows.value = data.total || 0
+
+        // 🌟 接收最舊日期
+        oldestPendingDate.value = data.oldest_date || null
+
     } catch (error) {
         ElMessage.error('獲取資料失敗，請確認 API 是否已開啟')
     } finally {
@@ -77,6 +90,40 @@ const saveReview = async (row) => {
         ElMessage.error('儲存失敗');
     }
 }
+
+// 🌟 新增：單筆刪除函式
+const deleteReview = async (row) => {
+    if (!confirm('確定要刪除這筆無效紀錄嗎？刪除後無法恢復喔喵！')) return;
+    
+    try {
+        await deleteAiReviewLog(row.review_id);
+        ElMessage.success('🗑️ 紀錄已成功刪除！');
+        fetchLogs(); // 重新整理表格
+    } catch (error) {
+        ElMessage.error('刪除失敗，請檢查後端 API 狀態');
+    }
+}
+
+// 🌟 新增：一鍵清空所有待處理(未審核)紀錄
+const clearAllLogs = async () => {
+    // 雙重防呆，避免手滑
+    if (!confirm('🚨 警告：確定要【清空所有】待處理的紀錄嗎？\n這通常用來清除舊系統留下的髒資料，刪除後無法恢復喔！')) return;
+    if (!confirm('再次確認：真的要把目前 14 頁未審核的資料全部刪掉嗎？')) return;
+    
+    loading.value = true;
+    try {
+        await clearAllPendingAiLogs();
+        ElMessage.success('💣 轟！所有歷史髒資料已經灰飛煙滅了！');
+        fetchLogs(); // 重新整理表格
+    } catch (error) {
+        ElMessage.error('清理失敗，請確認後端 API 狀態');
+    } finally {
+        loading.value = false;
+    }
+}
+
+
+
 
 // 🌟 1. 對話內容排版魔術師
 const formatUserMessage = (rawMsg) => {
@@ -160,23 +207,36 @@ onMounted(fetchLogs)
                     </template>
                 </el-table-column>
 
-                <el-table-column label="操作" width="180" align="center" v-if="activeTab === 'pending'">
+                <el-table-column label="操作" width="220" align="center" v-if="activeTab === 'pending'">
                     <template #default="scope">
-                        <el-button 
-                            type="primary" 
-                            size="small" 
-                            @click="saveReview(scope.row)"
-                            :disabled="!scope.row.corrected_intent">
-                            教導入庫
-                        </el-button>
-                        
-                        <el-button 
-                            type="success" 
-                            plain
-                            size="small" 
-                            @click="ignoreReview(scope.row)">
-                            判斷無誤
-                        </el-button>
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;">
+                            <el-button 
+                                type="primary" 
+                                size="small" 
+                                style="margin: 0;"
+                                @click="saveReview(scope.row)"
+                                :disabled="!scope.row.corrected_intent">
+                                教導入庫
+                            </el-button>
+                            
+                            <el-button 
+                                type="success" 
+                                plain
+                                size="small" 
+                                style="margin: 0;"
+                                @click="ignoreReview(scope.row)">
+                                判斷無誤
+                            </el-button>
+
+                            <el-button 
+                                type="danger" 
+                                plain
+                                size="small" 
+                                style="margin: 0;"
+                                @click="deleteReview(scope.row)">
+                                刪除
+                            </el-button>
+                        </div>
                     </template>
                 </el-table-column>
             </el-table>
@@ -191,9 +251,19 @@ onMounted(fetchLogs)
                 v-model:current-page="currentPage"
                 @current-change="handlePageChange"
             />
-            <el-button type="danger" plain size="small" @click="clearOldLogs" v-if="activeTab === 'pending'">
-                🧹 清理 30 天前無效紀錄
-            </el-button>
+
+            <div style="display: flex; align-items: center; gap: 12px;" v-if="activeTab === 'pending'">
+                <span v-if="oldestDaysCount > 0" style="font-size: 13px; color: #94a3b8;">
+                    ⏳ 最早紀錄：{{ oldestDaysCount }} 天前
+                </span>
+                <el-button type="danger" plain size="small" @click="clearOldLogs">
+                    🧹 清理 30 天前無效紀錄
+                </el-button>
+                <el-button type="danger" size="small" @click="clearAllLogs">
+                    💣 一鍵清空所有未審核
+                </el-button>
+            </div>
+
         </div>
     </div>
 </template>
