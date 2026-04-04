@@ -428,7 +428,7 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
   position: fixed;
   z-index: 9999;
   /* 禁止選取文字，避免拖曳時選到一堆藍字 */
-  user-select: none;
+  /* user-select: none; */
   overflow: visible !important;
 }
 
