@@ -74,3 +74,12 @@ export const postAiFeedback = (data) => {
   return api.post("/v1/ai/ai_test/feedback", data);
 };
 
+// 🌟 新增：刪除單筆審核紀錄
+export const deleteAiReviewLog = (reviewId) => {
+  return api.delete(`/v1/ai/ai_test/logs/${reviewId}`);
+};
+
+// 🌟 新增：一鍵清空所有未審核紀錄
+export const clearAllPendingAiLogs = () => {
+  return api.delete("/v1/ai/ai_test/logs/clear_all_pending");
+};
