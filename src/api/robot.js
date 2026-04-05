@@ -83,3 +83,9 @@ export const deleteAiReviewLog = (reviewId) => {
 export const clearAllPendingAiLogs = () => {
   return api.delete("/v1/ai/ai_test/logs/clear_all_pending");
 };
+
+
+// 🌟 新增：工程師測試台專用，無 review_id 的直通雙重入庫
+export const saveEngineerCorrection = (data) => {
+  return api.post("/v1/ai/ai_test/logs/engineer_fix", data);
+};
