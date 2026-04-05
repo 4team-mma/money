@@ -5,8 +5,10 @@ import AccountAdd1 from '@/components/AccountAdd1.vue';
 import AccountEdit from '@/components/AccountEdit.vue';
 import { ElMessage } from 'element-plus';
 import { triggerMissionAction } from '@/api/gamification';
-const accounts = ref([])
+import { useAccountStore } from '@/stores/useAccountStore';
 
+const accounts = ref([])
+const accountStore = useAccountStore();
 const assetTypes = [
     { value: 'cash', label: '現金 (資產項)' },
     { value: 'bank', label: '銀行帳戶 (資產項)' },
@@ -117,6 +119,7 @@ const handleAddAccount = async (newAccountData) => {
     try {
         await accountApi.create(newAccountData);
         await fetchAccounts();
+        await accountStore.loadAccounts(true);
     } catch (err) {
         console.error('新增帳戶失敗', err);
     }
@@ -133,6 +136,7 @@ const handleDelete = async (id) => {
             type: 'success',
         });
         await fetchAccounts();
+        await accountStore.loadAccounts(true);
         if (activeId.value === id) {
             activeId.value = null;
         }
@@ -160,6 +164,7 @@ const handleSaveSuccess = () => {
     showModal.value = false;
     activeMenuIndex.value = null;
     fetchAccounts();
+    accountStore.loadAccounts(true);
 };
 
 

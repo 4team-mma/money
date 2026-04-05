@@ -24,7 +24,7 @@ const selectedCategory = ref(null)
 //  核心修改：判斷要顯示「過濾後的」還是「全部」
 const displayItems = computed(() => {
     // 如果爸爸有傳 accountsData 進來，就用爸爸的；否則用 Store 全部的
-    return props.accountsData || categoryItems.value
+    return props.accountsData ? props.accountsData : categoryItems.value
 })
 
 /* ---------- 新增帳戶的完整狀態 (參考 AccountAdd1) ---------- */
@@ -62,25 +62,28 @@ onMounted(async () => {
 })
 
 // 監聽外部傳入 (用於編輯)
-watch(() => props.account,async(newVal) => {
-    //當清空瀏覽紀錄時回傳什麼
+watch(() => props.account, async(newVal) => {
     if (!newVal) {
         selectedCategory.value = null;
         return;
     }
-    // 確保 Store 資料已經載入，否則 find 會失敗
+    
     if (categoryItems.value.length === 0) {
         await accountStore.loadAccounts();
     }
-    //取得目標 ID
+    
     const targetId = typeof newVal === 'object' ? newVal.account_id : newVal;
-    //從清單中找回完整物件
-    const found = categoryItems.value.find(acc => acc.account_id === targetId);
+    
+    // 🌟 關鍵修改：從「displayItems.value」裡面找，而不是全部的 categoryItems
+    const found = displayItems.value.find(acc => acc.account_id === targetId);
+    
     if (found) {
         selectedCategory.value = found;
     } else if (typeof newVal === 'object') {
-        // 防呆：如果 Store 裡真的找不到，但傳進來的是物件，就先直接用它
         selectedCategory.value = newVal;
+    } else {
+        // 如果在過濾後的清單找不到這個 ID，就清空選項 (防呆)
+        selectedCategory.value = null;
     }
 }, { immediate: true });
 
