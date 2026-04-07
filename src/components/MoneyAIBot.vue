@@ -6,7 +6,7 @@ import { ref, nextTick, watch, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/api'
 import { getLocalDate } from '@/utils/dateHelper'
-import { postAiRobotChat, postAiFeedback  } from '@/api/robot'
+import { postAiRobotChat, postAiFeedback } from '@/api/robot'
 import { useAccountStore } from '@/stores/useAccountStore'
 import { ElMessage } from 'element-plus'
 const route = useRoute()
@@ -101,7 +101,7 @@ const connectWebSocket = () => {
   const token = localStorage.getItem("user_token") || localStorage.getItem("token");
   if (!token) return;
   const apiBase = import.meta.env.VITE_API_BASE_URL;
-  const wsUrl = apiBase === '/api' 
+  const wsUrl = apiBase === '/api'
     ? `ws://localhost:8000/api/ws/chat?token=${token}`
     : `${apiBase.replace('https://', 'wss://').replace('http://', 'ws://')}/ws/chat?token=${token}`;
   ws = new WebSocket(wsUrl);
@@ -109,18 +109,19 @@ const connectWebSocket = () => {
     const data = JSON.parse(event.data);
     if (data.type === 'siri_sync') {
       isOpen.value = true;
-      messages.value.push({ 
-        id: Date.now(), 
-        text: `📱 (Siri 語音) \n${data.user_query}`, 
-        sender: 'user', 
+      messages.value.push({
+        id: Date.now(),
+        text: `📱 (Siri 語音) \n${data.user_query}`,
+        sender: 'user',
         timestamp: new Date().toISOString()
       });
-      messages.value.push({ 
-        id: Date.now() + 1, 
-        text: data.ai_reply, 
-        sender: 'bot', 
-        timestamp: new Date().toISOString(), 
-        duration: data.duration });
+      messages.value.push({
+        id: Date.now() + 1,
+        text: data.ai_reply,
+        sender: 'bot',
+        timestamp: new Date().toISOString(),
+        duration: data.duration
+      });
       scrollToBottom();
       accountStore.loadAccounts(true);
     }
@@ -177,13 +178,13 @@ const handleSend = async () => {
     if (response.is_command && accountStore.accounts.length === 0) await accountStore.loadAccounts(true);
     // AI 回覆的那段
     messages.value.push({
-      id: Date.now() + 1, 
-      text: response.reply, 
-      sender: 'bot', 
+      id: Date.now() + 1,
+      text: response.reply,
+      sender: 'bot',
       timestamp: new Date().toISOString(),
-      duration: response.duration, 
-      provider: response.provider, 
-      is_command: response.is_command, 
+      duration: response.duration,
+      provider: response.provider,
+      is_command: response.is_command,
       action_data: actionData,
       intent: response.intent,           // 🌟 儲存後端傳來的意圖
       confidence: response.confidence    // 🌟 儲存後端傳來的信心度
@@ -210,22 +211,25 @@ const confirmRecord = async (msgId, index, data) => {
     if (accountStore.accounts.length === 0) await accountStore.loadAccounts(true);
     const firstAccount = accountStore.accounts[0];
 
+    // 🌟 關鍵修改：優先取用 AI 推算出來的 record_date，如果 AI 沒給，才用今天的日期保底
+    const finalDate = data.record_date || todayStr;
+
     // 🔄 模式 1：轉帳模式
     if (data.record_type === 'transfer') {
       const payload = {
-        transaction_date: todayStr,
+        transaction_date: finalDate, // 👈 換成 finalDate
         from_account_id: getAccountId(data.from_account) || firstAccount.account_id,
         to_account_id: getAccountId(data.to_account) || (accountStore.accounts[1]?.account_id || firstAccount.account_id),
         transaction_note: data.add_note || 'AI轉帳',
         amount: parseFloat(data.add_amount || data.amount || 0)
       };
       await api.post('/transfers/', payload);
-    } 
+    }
     // 📝 模式 2：一般收支模式
     else {
       const isIncome = data.record_type === 'income' || data.add_type === true;
       const payload = {
-        add_date: todayStr,
+        add_date: finalDate, // 👈 換成 finalDate
         add_amount: parseFloat(data.add_amount || data.amount || 0),
         add_type: isIncome,
         add_class: data.add_class || '其他',
@@ -276,14 +280,14 @@ const chatWindowStyle = computed(() => {
 const clearChat = () => {
   if (confirm('喵？確定要清空嗎？')) {
     messages.value = [{ id: Date.now(), text: '紀錄已清空喵！', sender: 'bot', timestamp: new Date().toISOString() }];
-    
+
     // 🌟 新增：3秒後自動變回預設打招呼，體驗更滑順
     setTimeout(() => {
-      messages.value = [{ 
-        id: Date.now(), 
-        text: '嗨！我是 喵喵小助手 💰 有什麼能幫你的嗎喵？', 
-        sender: 'bot', 
-        timestamp: new Date().toISOString() 
+      messages.value = [{
+        id: Date.now(),
+        text: '嗨！我是 喵喵小助手 💰 有什麼能幫你的嗎喵？',
+        sender: 'bot',
+        timestamp: new Date().toISOString()
       }];
     }, 3000);
   }
@@ -296,7 +300,7 @@ const clearChat = () => {
 const handleFeedback = async (message, isGood) => {
   // 標記這則訊息已經給過回饋，避免重複點擊
   message.feedbackGiven = true;
-  
+
   if (!isGood) {
     try {
       // 找出小主人的上一句話
@@ -397,10 +401,16 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
                   <div class="card-header">
                     {{ actionItem.record_type === 'transfer' ? '🔄 轉帳確認' : '📝 收支確認' }}
                     <span style="font-size: 12px; color: #94a3b8; font-weight: normal; margin-left: auto;">({{ idx + 1
-                      }}/{{ message.action_data.length }})</span>
+                    }}/{{ message.action_data.length }})</span>
                   </div>
 
                   <div class="card-body">
+                    <div class="data-row">
+                      <span class="label">日期：</span>
+                      <input type="date" v-model="actionItem.record_date" class="value ai-select"
+                        style="max-width: 130px;" />
+                    </div>
+
                     <div class="data-row">
                       <span class="label">金額：</span>
                       <span class="value amount"
@@ -412,9 +422,9 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
 
                     <template v-if="actionItem.record_type !== 'transfer'">
                       <div class="data-row"><span class="label">類別：</span><span class="value">{{ actionItem.add_class
-                          }}</span></div>
+                      }}</span></div>
                       <div class="data-row"><span class="label">項目：</span><span class="value">{{ actionItem.add_note
-                          }}</span></div>
+                      }}</span></div>
 
                       <div class="data-row">
                         <span class="label">帳戶：</span>
@@ -426,7 +436,7 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
                       </div>
 
                       <div class="data-row"><span class="label">標籤：</span><span class="value tag-text">{{
-                          actionItem.add_member }} / {{ actionItem.add_tag }}</span></div>
+                        actionItem.add_member }} / {{ actionItem.add_tag }}</span></div>
                     </template>
 
                     <template v-else>
@@ -447,7 +457,7 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
                       </div>
 
                       <div class="data-row"><span class="label">備註：</span><span class="value">{{ actionItem.add_note
-                          }}</span></div>
+                      }}</span></div>
                     </template>
                   </div>
 
@@ -464,15 +474,15 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
                   <span class="provider-tag" v-if="message.provider">[{{ message.provider.toUpperCase() }}]</span>
                   <span class="duration-tag">⏱️{{ formatDuration(message.duration) }}</span>
                 </span>
-                
+
                 <span v-if="message.sender === 'bot'" class="feedback-actions">
-                    <template v-if="!message.feedbackGiven">
-                        <button class="feedback-btn" title="回答很棒" @click="handleFeedback(message, true)">👍</button>
-                        <button class="feedback-btn" title="回答有誤" @click="handleFeedback(message, false)">👎</button>
-                    </template>
-                    <template v-else>
-                        <span class="feedback-thanks">已回饋 ✓</span>
-                    </template>
+                  <template v-if="!message.feedbackGiven">
+                    <button class="feedback-btn" title="回答很棒" @click="handleFeedback(message, true)">👍</button>
+                    <button class="feedback-btn" title="回答有誤" @click="handleFeedback(message, false)">👎</button>
+                  </template>
+                  <template v-else>
+                    <span class="feedback-thanks">已回饋 ✓</span>
+                  </template>
                 </span>
               </span>
             </div>
@@ -948,6 +958,4 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
   margin-left: 4px;
   font-weight: bold;
 }
-
-
 </style>
