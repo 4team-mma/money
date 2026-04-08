@@ -43,59 +43,74 @@ const getClassIcon = (className) => {
 };
 
 // === 🚀 拖拽功能邏輯 ===
-const position = ref({ x: window.innerWidth - 120, y: window.innerHeight - 120 })
+const position = ref({ x: 92, y: 85 })
 const isDragging = ref(false)
 const dragOffset = ref({ x: 0, y: 0 })
 const startPos = ref({ x: 0, y: 0 })
+
+const pixelPosition = computed(() => ({
+  x: (position.value.x / 100) * window.innerWidth,
+  y: (position.value.y / 100) * window.innerHeight
+}))
+
 // 開始拖拽
 const startDrag = (e) => {
-  isDragging.value = true
-  // 記錄點擊時的原始座標
-  startPos.value = { x: e.clientX, y: e.clientY }
+  isDragging.value = true;
+  startPos.value = { x: e.clientX, y: e.clientY };
   
+  // 計算點擊位置相對於目前「像素位置」的偏移
   dragOffset.value = {
-    x: e.clientX - position.value.x,
-    y: e.clientY - position.value.y
-  }
-  window.addEventListener('mousemove', onDragging)
-  window.addEventListener('mouseup', stopDrag)
-}
+    x: e.clientX - pixelPosition.value.x,
+    y: e.clientY - pixelPosition.value.y
+  };
+  
+  window.addEventListener('mousemove', onDragging);
+  window.addEventListener('mouseup', stopDrag);
+};
 
 const onDragging = (e) => {
-  if (!isDragging.value) return
+  if (!isDragging.value) return;
   
-  // 計算新座標並加上簡易邊界檢查（預留 10px 邊距）
-  let newX = e.clientX - dragOffset.value.x
-  let newY = e.clientY - dragOffset.value.y
+  // 1. 計算新的像素座標
+  let newX = e.clientX - dragOffset.value.x;
+  let newY = e.clientY - dragOffset.value.y;
   
-  const maxX = window.innerWidth - 100
-  const maxY = window.innerHeight - 100
-  
-  position.value.x = Math.max(10, Math.min(newX, maxX))
-  position.value.y = Math.max(10, Math.min(newY, maxY))
-}
+  // 2. 邊界檢查 (預留 100px 寬度給貓咪)
+  const safeX = Math.max(10, Math.min(newX, window.innerWidth - 90))
+  const safeY = Math.max(10, Math.min(newY, window.innerHeight - 90))
+
+  // 3. ⚡️ 存回百分比：這樣畫面縮放時，比例才會維持
+  position.value.x = (safeX / window.innerWidth) * 100;
+  position.value.y = (safeY / window.innerHeight) * 100;
+};
 
 const stopDrag = (e) => {
   if (!isDragging.value) return;
-
-  // 1. 停止拖拽狀態
   isDragging.value = false;
-  
-  // 2. 移除全域監聽
+
+  // 移除全域監聽
   window.removeEventListener('mousemove', onDragging);
   window.removeEventListener('mouseup', stopDrag);
 
-  // 3. 關鍵判定：如果滑鼠放開時，位移極小，代表使用者只是想「點一下」
+  // 判定是否為單純點擊
   const moveDistance = Math.sqrt(
     Math.pow(e.clientX - startPos.value.x, 2) + 
     Math.pow(e.clientY - startPos.value.y, 2)
   );
 
   if (moveDistance < 5) {
-    // 只有位移小於 5px 才觸發開啟視窗
     isOpen.value = true;
+    return; // 如果是點擊，就不要執行後面的自動吸附
   }
-}
+
+  // 🤖 自動吸附邊緣邏輯 (讓喵喵永遠靠邊)
+  // 如果 X 超過螢幕一半(50%) 就吸到右邊，否則吸到左邊
+  if (position.value.x > 50) {
+      position.value.x = 92  // 靠右但不超出
+  } else {
+      position.value.x = 2   // 靠左
+  }
+};
 
 // 讀取狀態與紀錄：localStorage 確保換頁不消失
 const isOpen = ref(localStorage.getItem('isMeowChatOpen') === 'true')
@@ -256,19 +271,24 @@ const connectWebSocket = () => {
 
 // 🌟 乾淨整合版的 onMounted
 onMounted(async () => { 
-  // 1. 確保元件掛載時立即同步帳戶資料
   await accountStore.loadAccounts(); 
-  
-  // 2. 檢查是否需要發送問候語
   if (isOpen.value) checkAndGreet();
   
-  // 3. 視窗縮放邊界判定
+  // 視窗縮放時，強迫重新渲染 (Vue Computed 會自動處理比例)
   window.addEventListener('resize', () => {
-    position.value.x = Math.min(position.value.x, window.innerWidth - 100);
-    position.value.y = Math.min(position.value.y, window.innerHeight - 100);
-  });
+      // 視窗縮小時，強制把貓咪推回安全範圍內
+      // x 只允許在 2% ~ 88% 之間（保留貓咪本身寬度）
+      position.value.x = Math.min(Math.max(2, position.value.x), 88)
+      position.value.y = Math.min(Math.max(2, position.value.y), 88)
 
-  // 4. 啟動 WebSocket 連線 (取代了原本的 setInterval)
+      // 自動吸附：縮小後重新判斷靠左或靠右
+      if (position.value.x > 50) {
+          position.value.x = 88
+      } else {
+          position.value.x = 2
+      }
+  })
+
   connectWebSocket();
 });
 
@@ -527,61 +547,51 @@ const cancelRecord = (msgId) => {
 
 // ⚡️ 修正視窗位置：確保對話窗展開時位置正確
 const chatWindowStyle = computed(() => {
-  // 檢查貓咪是否在螢幕上半部或下半部
-  const isInBottomHalf = position.value.y > window.innerHeight / 2;
-  const isInRightHalf = position.value.x > window.innerWidth / 2;
+  const isInRightHalf = position.value.x > 50;
+  
+  // 取得目前貓咪的中心點 Y 座標 (Pixel)
+  const catY = pixelPosition.value.y;
+  const windowHeight = window.innerHeight;
+  const chatHeight = 520; // 你的對話框高度
 
-  const winW = 360;
-  const winH = 520;
-  const padding = 20;
-
-
-  let style = {
+  const style = {
     position: 'absolute',
     zIndex: 10000,
+    width: '360px',
   };
-  if (isInBottomHalf) {
-    // 預計向上彈出
-    style.bottom = '10px';
-    // 檢查視窗頂部是否會超出螢幕
-    if (position.value.y - winH < padding) {
-      // 如果會超出頂部，改為貼著螢幕頂部
-      style.bottom = 'auto';
-      style.top = `-${position.value.y - padding}px`;
-    }
-  } else {
-    // 預計向下彈出
-    style.top = '10px';
-    // 檢查視窗底部是否會超過螢幕
-    if (position.value.y + winH + 100 > window.innerHeight - padding) {
-      style.top = 'auto';
-      style.bottom = `-${window.innerHeight - position.value.y - padding}px`;
-    }
-  }
 
-  // 3. 水平位置修正
+  // 1. 水平定位：維持原有的左右吸附邏輯
   if (isInRightHalf) {
-    // 預計向左彈出 (右對齊)
     style.right = '0px';
-    // 檢查左側是否會超出螢幕 (貓咪 x 座標小於視窗寬度)
-    if (position.value.x < winW + padding) {
-      // 強制往右偏移，讓視窗左側剛好留在螢幕內
-      style.right = 'auto';
-      style.left = `-${position.value.x - padding}px`;
-    }
+    style.left = 'auto';
   } else {
-    // 預計向右彈出 (左對齊)
     style.left = '0px';
-    // 檢查右側是否會超出螢幕
-    const spaceRight = window.innerWidth - position.value.x;
-    if (spaceRight < winW + padding) {
-      style.left = 'auto';
-      style.right = `-${spaceRight - padding}px`;
-    }
+    style.right = 'auto';
   }
 
-// 4. 設定動畫起點 (讓縮放從貓咪中心開始)
-  style.transformOrigin = `${isInRightHalf ? 'right' : 'left'} ${isInBottomHalf ? 'bottom' : 'top'}`;
+  // 2. 垂直定位 (智慧防溢出)：
+  // 我們不使用 top 或 bottom，而是讓對話框相對於貓咪垂直置中
+  // 然後用 transform 來確保它不會超出螢幕邊界
+  style.top = '45px'; // 從貓咪的中間開始計算
+  
+  // 計算偏移量：
+  // 如果貓咪在頂部，對話框會往下滑一點；如果在底部，往上滑一點
+  // 這裡使用百分比位移，讓它根據貓咪位置自動調整 y 軸
+  let translateY = -50; // 預設垂直置中
+  
+  // 額外安全檢查：如果貓咪太靠近頂部 (小於 260px)
+  if (catY < chatHeight / 2 + 20) {
+    translateY = - (catY / chatHeight) * 100 + 5; // 往下拉
+  } 
+  // 如果貓咪太靠近底部
+  else if (windowHeight - catY < chatHeight / 2 + 20) {
+    translateY = -100 + ((windowHeight - catY) / chatHeight) * 100 - 5; // 往上推
+  }
+
+  style.transform = `translateY(${translateY}%)`;
+  
+  // 3. 動畫原點：根據水平位置決定
+  style.transformOrigin = isInRightHalf ? 'right center' : 'left center';
 
   return style;
 });
@@ -593,15 +603,17 @@ onMounted(async () => {
   if (isOpen.value) checkAndGreet();
   
   window.addEventListener('resize', () => {
-    position.value.x = Math.min(position.value.x, window.innerWidth - 100);
-    position.value.y = Math.min(position.value.y, window.innerHeight - 100);
+    position.value.x = position.value.x > 50 ? 88 : 2
+    position.value.y = Math.min(Math.max(2, position.value.y), 88)
+    // 強制觸發 pixelPosition 重新計算
+    position.value = { ...position.value }
   });
 });
 </script>
 
 <template>
   <div class="money-ai-bot"
-  :style="{ left: position.x + 'px', top: position.y + 'px' }">
+  :style="{ left: pixelPosition.x + 'px', top: pixelPosition.y + 'px' }">
     <button v-if="!isOpen" class="bot-toggle-transparent" @mousedown="startDrag">
       <img :src="catImg" class="floating-cat" alt="cat" draggable="false"/>
       <div class="stars-container">
@@ -710,6 +722,8 @@ onMounted(async () => {
 .money-ai-bot {
   position: fixed;
   z-index: 9999;
+  width: 90px;
+  height: 90px;
   /* 禁止選取文字，避免拖曳時選到一堆藍字 */
   user-select: none; 
   overflow: visible !important;
@@ -724,6 +738,7 @@ onMounted(async () => {
   width: 90px;
   height: 90px;
   display: flex;
+  pointer-events: auto;
 }
 
 .floating-cat {
@@ -806,6 +821,7 @@ onMounted(async () => {
   overflow: hidden;
   border: 1px solid #f0f0f0;
   z-index: 10000;
+  pointer-events: auto;
 }
 
 .chat-header-custom {
@@ -1078,6 +1094,11 @@ onMounted(async () => {
   background: #eff6ff;
   padding: 2px 6px;
   border-radius: 4px;
+}
+
+.chat-window-custom {
+  max-height: 80vh; /* 限制最高不超過螢幕 80% */
+  overflow-y: auto; /* 內容過長時顯示捲軸 */
 }
 
 </style>
