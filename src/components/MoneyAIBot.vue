@@ -97,6 +97,9 @@ const sprayPaint = (e, isDraggingFlag) => {
 
 // 🔗 WebSocket 連線
 let ws = null;
+let wsRetryCount = 0; // 記錄重試次數
+const MAX_WS_RETRIES = 3; // 最多只允許重試 3 次
+
 const connectWebSocket = () => {
   const token = localStorage.getItem("user_token") || localStorage.getItem("token");
   if (!token) return;
@@ -105,6 +108,10 @@ const connectWebSocket = () => {
     ? `ws://localhost:8000/api/ws/chat?token=${token}`
     : `${apiBase.replace('https://', 'wss://').replace('http://', 'ws://')}/ws/chat?token=${token}`;
   ws = new WebSocket(wsUrl);
+  // 一旦成功連上，就把失敗計數器歸零
+  ws.onopen = () => {
+    wsRetryCount = 0;
+  };
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
     if (data.type === 'siri_sync') {
@@ -126,7 +133,28 @@ const connectWebSocket = () => {
       accountStore.loadAccounts(true);
     }
   };
-  ws.onclose = () => setTimeout(connectWebSocket, 3000);
+  // 🌟 修改：加入重試上限的判斷邏輯
+  ws.onclose = () => {
+    if (wsRetryCount < MAX_WS_RETRIES) {
+      wsRetryCount++;
+      console.warn(`[WebSocket] 連線中斷，3秒後進行第 ${wsRetryCount} 次重連...`);
+      setTimeout(connectWebSocket, 3000);
+    } else {
+      console.error("[WebSocket] 重連失敗次數過多，停止重連。可能是 Token 已過期。");
+      
+      // 在畫面上溫柔地提醒小主人
+      messages.value.push({
+        id: Date.now(),
+        text: "喵... 連線一直失敗，可能是登入憑證過期了。請小主人「重新整理網頁」或「重新登入」試試看喵！",
+        sender: 'bot',
+        timestamp: new Date().toISOString()
+      });
+      scrollToBottom();
+      
+      // 彈出右上角錯誤提示
+      ElMessage.error('連線中斷，請重新登入！');
+    }
+  };
 };
 // ==========================================
 // 3. AI 對話邏輯 (Chat & AI Response)
