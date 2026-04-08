@@ -51,6 +51,7 @@ const currentLimit = computed(() => {
 });
 
 const ollamaModels = [
+    { label: 'Gemma 4 E4B ( 💡最新/本地最強大腦)', value: 'gemma4:e4b', locked: false },
     { label: 'Llama 3.2 3B (🏆 JSON 穩定首選)', value: 'llama3.2', locked: false },
     { label: 'Gemma 3 4B (🚀 速度與精準平衡)', value: 'gemma3:4b', locked: false },
     { label: 'DeepSeek R1 8B (🤔 邏輯推理/稍微慢)', value: 'deepseek-r1:8b', locked: false },

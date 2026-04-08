@@ -9,7 +9,8 @@ import {
     runAiBatchTest,
     uploadAiTestExcel,
     clearAiTestFile,
-    updateCorrectedIntent
+    updateCorrectedIntent,
+    saveEngineerCorrection
 } from '@/api/robot';
 import { ElMessage } from 'element-plus';
 
@@ -48,7 +49,7 @@ const runSingleTest = async () => {
     try {
         const res = await compareAiIntents(testMessage.value);
         singleResult.value = res.data || res;
-        
+
         // 預設將 V2 的答案作為修正參考
         singleCorrection.value = singleResult.value.v2_ai.intent;
         showSingleCorrection.value = true;
@@ -90,14 +91,26 @@ const runBatchTest = async () => {
     }
 };
 
-// 儲存批次修正
+// 儲存批次修正 (使用工程師直通車 API)
 const saveCorrection = async (item) => {
+    if (!item.correction) {
+        ElMessage.warning('請先選擇修正後的意圖！');
+        return;
+    }
+
     try {
-        await updateCorrectedIntent(item.review_id, item.correction);
-        item.v2_score = 1.0; // 假裝修正後變滿分
-        ElMessage.success('✅ 已成功將修正寫入資料庫！');
+        // 打包送給直通車 API
+        await saveEngineerCorrection({
+            user_message: item.text,
+            predicted_intent: item.v2_pred,
+            corrected_intent: item.correction,
+            confidence_score: item.v2_score
+        });
+
+        item.v2_score = true;
+        ElMessage.success('✅ 已成功將修正寫入 MySQL 與語意資料庫！');
     } catch (err) {
-        ElMessage.error('修正失敗。');
+        ElMessage.error('修正入庫失敗。');
     }
 };
 
@@ -150,14 +163,6 @@ const renderScore = (score) => {
                         </div>
                     </div>
                     <div class="header-right">
-                        <div class="mode-info">
-                            <span class="mode-tag" :class="{ 'is-custom': hasCustomFile }">
-                                模式：{{ hasCustomFile ? '📁 自定義測試檔' : '🏆 預設黃金測試集' }}
-                            </span>
-                            <button class="mma-btn outline" @click="$refs.fileInput.click()">📤 上傳新題庫</button>
-                            <button v-if="hasCustomFile" class="mma-btn outline danger" @click="clearTempFile">🗑️ 恢復預設</button>
-                            <input type="file" ref="fileInput" @change="handleFileUpload" accept=".xlsx" hidden />
-                        </div>
                         <button class="mma-btn solid danger" @click="handleLogout">🚪 登出</button>
                     </div>
                 </div>
@@ -190,8 +195,9 @@ const renderScore = (score) => {
                     </button>
                 </div>
 
-                <div class="battle-arena" v-if="singleResult" style="display: flex; justify-content: space-between; align-items: stretch; gap: 20px;">
-                    
+                <div class="battle-arena" v-if="singleResult"
+                    style="display: flex; justify-content: space-between; align-items: stretch; gap: 20px;">
+
                     <div class="arena-card legacy" style="flex: 1;">
                         <div class="card-title">🏠 傳統喵喵 (Regex)</div>
                         <div class="result-box">{{ singleResult.legacy.intent }}</div>
@@ -221,8 +227,9 @@ const renderScore = (score) => {
                         <div class="card-title">✨ V2 旗艦大腦 (混合路由)</div>
                         <div class="result-box highlight">{{ singleResult.v2_ai.intent }}</div>
                         <div class="conf-info">
-                             <span v-if="singleResult.v2_ai.is_intercepted" style="color: #10b981; font-weight: 800;">🛡️ ChromaDB 攔截</span>
-                             <span v-else>信心：<b>{{ (singleResult.v2_ai.confidence * 100).toFixed(1) }}%</b></span>
+                            <span v-if="singleResult.v2_ai.is_intercepted" style="color: #10b981; font-weight: 800;">🛡️
+                                ChromaDB 攔截</span>
+                            <span v-else>信心：<b>{{ (singleResult.v2_ai.confidence * 100).toFixed(1) }}%</b></span>
                         </div>
                         <div class="ai-reply-box mixai-reply">
                             <span class="reply-label">💬 V2 真實說法：</span>
@@ -230,7 +237,7 @@ const renderScore = (score) => {
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="single-correction-box" v-if="singleResult && showSingleCorrection">
                     <span>🤖 邱比特大腦 V2 表現得如何？</span>
                     <button class="mma-btn outline" @click="showSingleCorrection = false">✅ 判斷正確</button>
@@ -245,12 +252,25 @@ const renderScore = (score) => {
 
             <section class="mma-card-shadow batch-section">
                 <div class="section-title-row">
-                    <h2>📊 批次加權測試報告</h2>
-                    <div class="title-actions">
+                    <h2>📊 批次盲測與加權報告</h2>
+                    <div class="title-actions" style="display: flex; gap: 15px; align-items: center;">
+
+                        <div style="display: flex; gap: 8px; border-right: 2px solid #e2e8f0; padding-right: 15px;">
+                            <span v-if="hasCustomFile"
+                                style="font-size: 13px; color: #10b981; font-weight: bold; line-height: 40px;">
+                                📁 已載入自定義題庫
+                            </span>
+                            <button class="mma-btn outline" @click="$refs.fileInput.click()">📤 上傳盲測題庫</button>
+                            <button v-if="hasCustomFile" class="mma-btn outline danger" @click="clearTempFile">🗑️
+                                清空</button>
+                            <input type="file" ref="fileInput" @change="handleFileUpload" accept=".xlsx, .csv" hidden />
+                        </div>
+
                         <label class="mma-checkbox">
                             <input type="checkbox" v-model="onlyShowErrors" />
                             <span class="box"></span> 僅顯示 V2 未滿分項目
                         </label>
+
                         <button class="mma-btn solid secondary" @click="runBatchTest" :disabled="batchLoading">
                             {{ batchLoading ? '掃描中...' : '🏃 執行全自動加權掃描' }}
                         </button>
@@ -269,12 +289,13 @@ const renderScore = (score) => {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="item in filteredBatchDetails" :key="item.review_id"
+                            <tr v-for="item in filteredBatchDetails" :key="item.text"
                                 :class="{ 'error-row': item.v2_score < 1.0 }">
                                 <td class="text-left font-bold">{{ item.text }}</td>
                                 <td><span class="pill gray">{{ item.true_intent }}</span></td>
                                 <td>
-                                    <span class="pill" style="background:#fef3c7; color:#b45309">{{ item.v1_pred }}</span><br>
+                                    <span class="pill" style="background:#fef3c7; color:#b45309">{{ item.v1_pred
+                                        }}</span><br>
                                     <small>{{ renderScore(item.v1_score) }}</small>
                                 </td>
                                 <td>
@@ -284,12 +305,18 @@ const renderScore = (score) => {
                                     </small>
                                 </td>
                                 <td class="fix-cell">
-                                    <template v-if="item.v2_score < 1.0">
+                                    <template v-if="item.v2_score < 1.0 && !item.is_saved">
                                         <select v-model="item.correction" class="mma-select" style="width:120px">
-                                            <option v-for="opt in intentOptions" :key="opt" :value="opt">{{ opt }}</option>
+                                            <option v-for="opt in intentOptions" :key="opt" :value="opt">{{ opt }}
+                                            </option>
                                         </select>
                                         <button class="btn-save-mini" @click="saveCorrection(item)">存入</button>
                                     </template>
+
+                                    <span v-else-if="item.is_saved" style="color: #10b981; font-weight: bold;">
+                                        ✅ 已入庫學習
+                                    </span>
+
                                     <span v-else class="ok-text">👍 免修正</span>
                                 </td>
                             </tr>
@@ -672,7 +699,8 @@ const renderScore = (score) => {
 }
 
 .ai-reply-box.mixai-reply {
-    background: #f0fdf4; /* 給新大腦一點淺綠色背景區分 */
+    background: #f0fdf4;
+    /* 給新大腦一點淺綠色背景區分 */
     border-color: #bbf7d0;
 }
 
@@ -685,7 +713,7 @@ const renderScore = (score) => {
 }
 
 .reply-content {
-    white-space: pre-wrap; /* 讓 AI 的換行能正常顯示 */
+    white-space: pre-wrap;
+    /* 讓 AI 的換行能正常顯示 */
 }
-
 </style>
