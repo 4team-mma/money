@@ -6,7 +6,7 @@ import Add_member from '@/components/AddMember.vue'
 import Add_tag from '@/components/AddTag.vue'
 import { useAddRecord } from '@/composables/useAddRecord'
 import { useAccountStore } from '@/stores/useAccountStore'
-import { onMounted, computed } from 'vue';
+import { onMounted, computed, ref } from 'vue';
 
 // 月曆與通知套件
 import { DatePicker } from 'v-calendar';
@@ -54,6 +54,120 @@ const currentCurrency = computed(() => {
     return '金額';
 })
 
+// ───────────────────────────────────────────
+// 發票掃描相關狀態
+// ───────────────────────────────────────────
+
+// 控制掃描結果預覽框是否顯示
+const showScanResult = ref(false)
+
+// 掃描中的 loading 狀態
+const isScanning = ref(false)
+
+// 掃描錯誤訊息
+const scanError = ref('')
+
+// 儲存掃描結果（給預覽框顯示用）
+const scanResult = ref(null)
+
+// 隱藏的 file input 的 ref（用來觸發拍照）
+const fileInputRef = ref(null)
+
+// 點擊相機圖示時，觸發隱藏的 file input
+function triggerCamera() {
+    scanError.value = ''
+    fileInputRef.value.click()
+}
+
+// 使用者選完圖片後，送到後端辨識
+async function handleFileSelected(event) {
+    const file = event.target.files[0]
+    if (!file) return
+
+    // 重置狀態
+    isScanning.value = true
+    scanError.value = ''
+    showScanResult.value = false
+
+    try {
+        // 準備 FormData，把圖片包起來送給後端
+        const formData = new FormData()
+        formData.append('file', file)
+
+        // 取得 JWT token（你的專案存在 localStorage）
+        const token = localStorage.getItem('token') || 
+                            localStorage.getItem('user_token') || ''
+
+        const response = await fetch('/api/v1/ai/invoice/analyze', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+            throw new Error(data?.detail?.message || '辨識失敗，請重試')
+        }
+
+        // 辨識成功，把結果存起來
+        scanResult.value = data.data
+        showScanResult.value = true
+
+    } catch (err) {
+        scanError.value = err.message || '發生錯誤，請重試'
+    } finally {
+        isScanning.value = false
+        // 清空 file input，讓使用者可以重複選同一張圖
+        event.target.value = ''
+    }
+}
+
+// 使用者點「套用」時，把掃描結果填入表單
+function applyScanResult() {
+    if (!scanResult.value) return
+
+    const r = scanResult.value
+
+    // 填入金額
+    if (r.total_amount) {
+        form.add_amount = r.total_amount
+    }
+
+    // 組合備註文字
+    const lines = []
+
+    if (r.seller_name) lines.push(`店家：${r.seller_name}`)
+    if (r.invoice_number) lines.push(`發票：${r.invoice_number}`)
+    if (r.receipt_type) lines.push(`類型：${r.receipt_type}`)
+
+    // 如果有商品明細，把每一項列出來
+    if (r.items && r.items.length > 0) {
+        lines.push('─────────────')
+        r.items.forEach(item => {
+            const qty = item.quantity ? `x${item.quantity}` : ''
+            const price = item.subtotal ? ` NT$${item.subtotal}` : ''
+            lines.push(`${item.name} ${qty}${price}`.trim())
+        })
+    }
+
+    form.add_note = lines.join('\n')
+
+    // 關閉預覽框
+    showScanResult.value = false
+    scanResult.value = null
+}
+
+// 關閉預覽框（不套用）
+function closeScanResult() {
+    showScanResult.value = false
+    scanResult.value = null
+    scanError.value = ''
+}
+
+
 onMounted(async () => {
     await accountStore.loadAccounts()
 
@@ -75,18 +189,90 @@ onMounted(async () => {
 
             <div class="card">
                 <div class="header">
-                    <h2>新增支出</h2>
-                    <DatePicker v-model="form.add_date" mode="date" :popover="{ visibility: 'click' }"
-                        :masks="{ title: 'YYYY年 MMM' }" :transition="'none'">
-                        <template #default="{ togglePopover, inputValue, inputEvents }">
-                            <div class="date-input-container">
-                                <button type="button" @click="togglePopover"
-                                    style="border:0; cursor:pointer">🗓</button>
-                                <input :value="inputValue || ''" v-on="inputEvents" readonly
-                                    class="date-display-input" />
+                    <div class="header-left">
+                        <h2>新增支出</h2>
+                        <DatePicker v-model="form.add_date" mode="date" :popover="{ visibility: 'click' }"
+                            :masks="{ title: 'YYYY年 MMM' }" :transition="'none'">
+                            <template #default="{ togglePopover, inputValue, inputEvents }">
+                                <div class="date-input-container">
+                                    <button type="button" @click="togglePopover"
+                                        style="border:0; cursor:pointer">🗓</button>
+                                    <input :value="inputValue || ''" v-on="inputEvents" readonly
+                                        class="date-display-input" />
+                                </div>
+                            </template>
+                        </DatePicker>
+                    </div>
+
+                    <button 
+                        class="scan-btn" 
+                        @click="triggerCamera"
+                        :disabled="isScanning"
+                        title="掃描發票"
+                    >
+                        <span v-if="isScanning" class="scanning-text">辨識中...</span>
+                        <span v-else>📷 掃描發票</span>
+                    </button>
+
+                    <!-- 隱藏的 file input，accept 限制只能選圖片，capture 會優先開相機 -->
+                    <input
+                        ref="fileInputRef"
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        style="display: none"
+                        @change="handleFileSelected"
+                    />
+                </div>
+
+                <!-- 掃描錯誤提示 -->
+                <div v-if="scanError" class="scan-error">
+                    ⚠️ {{ scanError }}
+                </div>
+
+                <!-- 掃描結果預覽框 -->
+                <div v-if="showScanResult && scanResult" class="scan-result-card">
+                    <div class="scan-result-header">
+                        <span>📄 辨識結果</span>
+                        <button class="close-btn" @click="closeScanResult">✕</button>
+                    </div>
+
+                    <div class="scan-result-body">
+                        <div class="result-row">
+                            <span class="result-label">店家</span>
+                            <span>{{ scanResult.seller_name || '未辨識' }}</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">發票號碼</span>
+                            <span>{{ scanResult.invoice_number }}</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">日期</span>
+                            <span>{{ scanResult.invoice_date }}</span>
+                        </div>
+                        <div class="result-row highlight">
+                            <span class="result-label">總金額</span>
+                            <span>NT$ {{ scanResult.total_amount }}</span>
+                        </div>
+
+                        <!-- 商品明細（有的話才顯示） -->
+                        <div v-if="scanResult.items && scanResult.items.length > 0" class="items-section">
+                            <div class="items-title">商品明細</div>
+                            <div 
+                                v-for="item in scanResult.items" 
+                                :key="item.name" 
+                                class="item-row"
+                            >
+                                <span>{{ item.name }}</span>
+                                <span>NT$ {{ item.subtotal ?? '-' }}</span>
                             </div>
-                        </template>
-                    </DatePicker>
+                        </div>
+                    </div>
+
+                    <div class="scan-result-actions">
+                        <button class="btn-apply" @click="applyScanResult">套用到表單</button>
+                        <button class="btn-cancel" @click="closeScanResult">取消</button>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -154,7 +340,16 @@ onMounted(async () => {
 
 /* 2. 標題與日期 */
 .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
     margin-bottom: 24px;
+}
+
+.header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .header h2 {
@@ -175,6 +370,160 @@ onMounted(async () => {
     color: var(--text-secondary);
     width: 120px;
     cursor: pointer;
+}
+
+/* 相機按鈕 */
+.scan-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 2px dashed var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.scan-btn:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.scan-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.scanning-text {
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+/* 錯誤提示 */
+.scan-error {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+}
+
+/* 掃描結果預覽卡片 */
+.scan-result-card {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    background: var(--bg-input);
+}
+
+.scan-result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bg-hover);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.close-btn:hover {
+    background: var(--border-color);
+}
+
+.scan-result-body {
+    padding: 12px 16px;
+}
+
+.result-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.result-row:last-child {
+    border-bottom: none;
+}
+
+.result-row.highlight {
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.result-label {
+    color: var(--text-secondary);
+    min-width: 80px;
+}
+
+.items-section {
+    margin-top: 10px;
+}
+
+.items-title {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.item-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    padding: 4px 0;
+    color: var(--text-primary);
+}
+
+.scan-result-actions {
+    display: flex;
+    gap: 10px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-color);
+    justify-content: flex-end;
+}
+
+.btn-apply {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.btn-cancel {
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
 }
 
 /* 3. 標籤 */

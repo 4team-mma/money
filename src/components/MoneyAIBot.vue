@@ -30,50 +30,78 @@ const getClassIcon = (className) => {
   return iconMap[className] || '📌';
 };
 
-// 🌟 格式化工具
-const formatTime = (isoStr) => isoStr ? new Date(isoStr).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) : '';
-const formatDuration = (seconds) => {
-  if (!seconds) return '';
-  if (seconds < 60) return `${seconds}s`;
-  const mins = Math.floor(seconds / 60);
-  const secs = (seconds % 60).toFixed(1);
-  return `${mins}m ${secs}s`;
-};
-const scrollToBottom = () => {
-  nextTick(() => { if (messagesContainer.value) messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight });
-};
+// === 🚀 拖拽功能邏輯 ===
+const position = ref({ x: 92, y: 85 })
 // ==========================================
 // 2. 互動功能 (Drag, Paint Game & WebSocket)
 // ==========================================
-const position = ref({ x: window.innerWidth - 120, y: window.innerHeight - 120 })
 const isDragging = ref(false)
 const dragOffset = ref({ x: 0, y: 0 })
 const startPos = ref({ x: 0, y: 0 })
 
+const pixelPosition = computed(() => ({
+  x: (position.value.x / 100) * window.innerWidth,
+  y: (position.value.y / 100) * window.innerHeight
+}))
+
+// 開始拖拽
 const startDrag = (e) => {
-  isDragging.value = true
-  startPos.value = { x: e.clientX, y: e.clientY }
-  dragOffset.value = { x: e.clientX - position.value.x, y: e.clientY - position.value.y }
+  isDragging.value = true;
+  startPos.value = { x: e.clientX, y: e.clientY };
+  
+  // 計算點擊位置相對於目前「像素位置」的偏移
+  dragOffset.value = {
+    x: e.clientX - pixelPosition.value.x,
+    y: e.clientY - pixelPosition.value.y
+  };
+  
   window.addEventListener('mousemove', onDragging);
   window.addEventListener('mouseup', stopDrag);
-}
+};
+
 const onDragging = (e) => {
-  if (!isDragging.value) return
-  let newX = e.clientX - dragOffset.value.x
-  let newY = e.clientY - dragOffset.value.y
-  const maxX = window.innerWidth - 100
-  const maxY = window.innerHeight - 100
-  position.value.x = Math.max(10, Math.min(newX, maxX))
-  position.value.y = Math.max(10, Math.min(newY, maxY))
-}
+  if (!isDragging.value) return;
+  
+  // 1. 計算新的像素座標
+  let newX = e.clientX - dragOffset.value.x;
+  let newY = e.clientY - dragOffset.value.y;
+  
+  // 2. 邊界檢查 (預留 100px 寬度給貓咪)
+  const safeX = Math.max(10, Math.min(newX, window.innerWidth - 90))
+  const safeY = Math.max(10, Math.min(newY, window.innerHeight - 90))
+
+  // 3. ⚡️ 存回百分比：這樣畫面縮放時，比例才會維持
+  position.value.x = (safeX / window.innerWidth) * 100;
+  position.value.y = (safeY / window.innerHeight) * 100;
+};
+
 const stopDrag = (e) => {
-  if (!isDragging.value) return
-  isDragging.value = false
+  if (!isDragging.value) return;
+  isDragging.value = false;
+
+  // 移除全域監聽
   window.removeEventListener('mousemove', onDragging);
   window.removeEventListener('mouseup', stopDrag);
-  const moveDistance = Math.sqrt(Math.pow(e.clientX - startPos.value.x, 2) + Math.pow(e.clientY - startPos.value.y, 2));
-  if (moveDistance < 5) isOpen.value = true;
-}
+
+  // 判定是否為單純點擊
+  const moveDistance = Math.sqrt(
+    Math.pow(e.clientX - startPos.value.x, 2) + 
+    Math.pow(e.clientY - startPos.value.y, 2)
+  );
+
+  if (moveDistance < 5) {
+    isOpen.value = true;
+    return; // 如果是點擊，就不要執行後面的自動吸附
+  }
+
+  // 🤖 自動吸附邊緣邏輯 (讓喵喵永遠靠邊)
+  // 如果 X 超過螢幕一半(50%) 就吸到右邊，否則吸到左邊
+  if (position.value.x > 50) {
+      position.value.x = 92  // 靠右但不超出
+  } else {
+      position.value.x = 2   // 靠左
+  }
+};
 
 // 🎨 噴漆畫圖功能
 const paintDrops = ref([]);
@@ -171,6 +199,82 @@ const catImg = new URL('@/assets/AI_cat.png', import.meta.url).href
 const selectedPersona = ref(localStorage.getItem('meowPersona') || 'cute');
 const waitingJokes = ["喵喵正在翻閱帳本... 📖", "正在計算罐罐的匯率... 🐟", "數據量大，喵喵努力消化中... 🐾"];
 
+// 🌟 乾淨整合版的 onMounted
+onMounted(async () => { 
+  await accountStore.loadAccounts(); 
+  if (isOpen.value) checkAndGreet();
+  
+  // 視窗縮放時，強迫重新渲染 (Vue Computed 會自動處理比例)
+  window.addEventListener('resize', () => {
+      // 視窗縮小時，強制把貓咪推回安全範圍內
+      // x 只允許在 2% ~ 88% 之間（保留貓咪本身寬度）
+      position.value.x = Math.min(Math.max(2, position.value.x), 88)
+      position.value.y = Math.min(Math.max(2, position.value.y), 88)
+
+      // 自動吸附：縮小後重新判斷靠左或靠右
+      if (position.value.x > 50) {
+          position.value.x = 88
+      } else {
+          position.value.x = 2
+      }
+  })
+
+  connectWebSocket();
+});
+
+// 🌟 乾淨整合版的 onUnmounted
+onUnmounted(() => {
+  // 離開網頁時，優雅地關閉電話線
+  if (ws) {
+    ws.onclose = null; // 防止觸發自動重連
+    ws.close();
+  }
+});
+
+// 監聽狀態變化並儲存
+watch(isOpen, (newVal) => localStorage.setItem('isMeowChatOpen', newVal))
+watch(messages, (newVal) => {
+  localStorage.setItem('meowChatHistory', JSON.stringify(newVal))
+}, { deep: true })
+
+watch(() => route.path, () => { if (isOpen.value) checkAndGreet() })
+
+const checkAndGreet = () => {
+  const customText = greetingsMap[route.path]
+  if (customText && !messages.value.some(m => m.text === customText)) {
+    messages.value.push({
+      id: Date.now(),
+      text: customText,
+      sender: 'bot',
+      timestamp: new Date().toISOString(),
+      duration: null
+    })
+    scrollToBottom()
+  }
+}
+
+
+const formatTime = (isoStr) => new Date(isoStr).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
+
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (messagesContainer.value) messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+  })
+}
+
+// ⚡️ 新增一個 helper 函式來格式化秒數
+const formatDuration = (seconds) => {
+  if (!seconds) return '';
+  if (seconds < 60) {
+    return `${seconds}s`;
+  } else {
+    const mins = Math.floor(seconds / 60);
+    const secs = (seconds % 60).toFixed(1);
+    return `${mins}m ${secs}s`;
+  }
+}
+
+// 🚀 發送邏輯
 const personasList = [
   { value: 'cute', label: '😽 可愛喵喵' }, { value: 'gentle', label: '🐈 溫柔管家喵' },
   { value: 'professional', label: '🦁 嚴肅顧問' }, { value: 'tsundere', label: '😼 傲嬌喵' },
@@ -292,18 +396,6 @@ const cancelRecord = (msgId, index) => {
   }
 };
 
-const chatWindowStyle = computed(() => {
-  const isInBottomHalf = position.value.y > window.innerHeight / 2;
-  const isInRightHalf = position.value.x > window.innerWidth / 2;
-  return {
-    position: 'absolute', zIndex: 10000,
-    bottom: isInBottomHalf ? '10px' : 'auto', top: isInBottomHalf ? 'auto' : '10px',
-    right: isInRightHalf ? '0px' : 'auto', left: isInRightHalf ? 'auto' : '0px',
-    transformOrigin: `${isInRightHalf ? 'right' : 'left'} ${isInBottomHalf ? 'bottom' : 'top'}`
-  };
-});
-
-// 🧹 清空紀錄
 // 🧹 清空紀錄
 const clearChat = () => {
   if (confirm('喵？確定要清空嗎？')) {
@@ -321,6 +413,56 @@ const clearChat = () => {
   }
 };
 
+
+// ⚡️ 修正視窗位置：確保對話窗展開時位置正確
+const chatWindowStyle = computed(() => {
+  const isInRightHalf = position.value.x > 50;
+  
+  // 取得目前貓咪的中心點 Y 座標 (Pixel)
+  const catY = pixelPosition.value.y;
+  const windowHeight = window.innerHeight;
+  const chatHeight = 520; // 你的對話框高度
+
+  const style = {
+    position: 'absolute',
+    zIndex: 10000,
+    width: '360px',
+  };
+
+  // 1. 水平定位：維持原有的左右吸附邏輯
+  if (isInRightHalf) {
+    style.right = '0px';
+    style.left = 'auto';
+  } else {
+    style.left = '0px';
+    style.right = 'auto';
+  }
+
+  // 2. 垂直定位 (智慧防溢出)：
+  // 我們不使用 top 或 bottom，而是讓對話框相對於貓咪垂直置中
+  // 然後用 transform 來確保它不會超出螢幕邊界
+  style.top = '45px'; // 從貓咪的中間開始計算
+  
+  // 計算偏移量：
+  // 如果貓咪在頂部，對話框會往下滑一點；如果在底部，往上滑一點
+  // 這裡使用百分比位移，讓它根據貓咪位置自動調整 y 軸
+  let translateY = -50; // 預設垂直置中
+  
+  // 額外安全檢查：如果貓咪太靠近頂部 (小於 260px)
+  if (catY < chatHeight / 2 + 20) {
+    translateY = - (catY / chatHeight) * 100 + 5; // 往下拉
+  } 
+  // 如果貓咪太靠近底部
+  else if (windowHeight - catY < chatHeight / 2 + 20) {
+    translateY = -100 + ((windowHeight - catY) / chatHeight) * 100 - 5; // 往上推
+  }
+
+  style.transform = `translateY(${translateY}%)`;
+  
+  // 3. 動畫原點：根據水平位置決定
+  style.transformOrigin = isInRightHalf ? 'right center' : 'left center';
+  return style;
+});
 
 // ==========================================
 // 🌟 5. 用戶主動反饋機制 (Human Feedback)
@@ -359,8 +501,10 @@ onMounted(async () => {
   await accountStore.loadAccounts();
   connectWebSocket();
   window.addEventListener('resize', () => {
-    position.value.x = Math.min(position.value.x, window.innerWidth - 100);
-    position.value.y = Math.min(position.value.y, window.innerHeight - 100);
+    position.value.x = position.value.x > 50 ? 88 : 2
+    position.value.y = Math.min(Math.max(2, position.value.y), 88)
+    // 強制觸發 pixelPosition 重新計算
+    position.value = { ...position.value }
   });
 });
 onUnmounted(() => { if (ws) { ws.onclose = null; ws.close(); } });
@@ -375,7 +519,8 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
 </script>
 
 <template>
-  <div class="money-ai-bot" :style="{ left: position.x + 'px', top: position.y + 'px' }">
+  <div class="money-ai-bot"
+  :style="{ left: pixelPosition.x + 'px', top: pixelPosition.y + 'px' }">
     <button v-if="!isOpen" class="bot-toggle-transparent" @mousedown="startDrag">
       <img :src="catImg" class="floating-cat" alt="cat" draggable="false" />
       <div class="stars-container">
@@ -540,6 +685,8 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
 .money-ai-bot {
   position: fixed;
   z-index: 9999;
+  width: 90px;
+  height: 90px;
   /* 禁止選取文字，避免拖曳時選到一堆藍字 */
   /* user-select: none; */
   overflow: visible !important;
@@ -555,6 +702,7 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
   width: 90px;
   height: 90px;
   display: flex;
+  pointer-events: auto;
 }
 
 .floating-cat {
@@ -642,6 +790,7 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
   overflow: hidden;
   border: 1px solid #f0f0f0;
   z-index: 10000;
+  pointer-events: auto;
 }
 
 .chat-header-custom {
@@ -916,6 +1065,11 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
   background: #eff6ff;
   padding: 2px 6px;
   border-radius: 4px;
+}
+
+.chat-window-custom {
+  max-height: 80vh; /* 限制最高不超過螢幕 80% */
+  overflow-y: auto; /* 內容過長時顯示捲軸 */
 }
 
 /* 🌟 下拉選單樣式 */
