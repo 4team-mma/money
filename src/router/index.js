@@ -34,6 +34,7 @@ import AdminData from "@/view/AdminData.vue";
 import AdminSetting from "@/view/AdminSetting.vue";
 import TestAI from "@/view/TestAI.vue";
 import AdminAiConfig from "@/view/AdminAiConfig.vue";
+import AdminAiDevTools from "@/view/AdminAiDevTools.vue";
 
 const routes = [
   {
@@ -250,6 +251,12 @@ const routes = [
     path: "/AdminAiConfig",
     component: AdminAiConfig,
     name: "AdminAiConfig",
+    meta: { requiresAuth: true, hideNav: true }
+  },
+    {
+    path: "/AdminAiDevTools",
+    component: AdminAiDevTools,
+    name: "AdminAiDevTools",
     meta: { requiresAuth: true, hideNav: true }
   }
 
