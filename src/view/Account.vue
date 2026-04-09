@@ -1,12 +1,14 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, onUnmounted } from 'vue';
 import { accountApi } from '@/api/account';
 import AccountAdd1 from '@/components/AccountAdd1.vue';
 import AccountEdit from '@/components/AccountEdit.vue';
 import { ElMessage } from 'element-plus';
 import { triggerMissionAction } from '@/api/gamification';
-const accounts = ref([])
+import { useAccountStore } from '@/stores/useAccountStore';
 
+const accounts = ref([])
+const accountStore = useAccountStore();
 const assetTypes = [
     { value: 'cash', label: '現金 (資產項)' },
     { value: 'bank', label: '銀行帳戶 (資產項)' },
@@ -89,6 +91,15 @@ onMounted(() => {
     window.addEventListener('click', closeMenu);
     fetchAccounts();
     triggerMissionAction('view_accounts');
+    //裡負責抓取帳戶清單的函數叫做 fetchAccounts
+    window.addEventListener('sync-money-data', fetchAccounts);
+});
+
+onUnmounted(() => {
+    // 離開時，把剛才裝的全部拆掉
+    window.removeEventListener('click', closeMenu);
+    window.removeEventListener('sync-money-data', fetchAccounts);
+    
 });
 
 // API 操作
@@ -108,6 +119,7 @@ const handleAddAccount = async (newAccountData) => {
     try {
         await accountApi.create(newAccountData);
         await fetchAccounts();
+        await accountStore.loadAccounts(true);
     } catch (err) {
         console.error('新增帳戶失敗', err);
     }
@@ -124,6 +136,7 @@ const handleDelete = async (id) => {
             type: 'success',
         });
         await fetchAccounts();
+        await accountStore.loadAccounts(true);
         if (activeId.value === id) {
             activeId.value = null;
         }
@@ -151,6 +164,7 @@ const handleSaveSuccess = () => {
     showModal.value = false;
     activeMenuIndex.value = null;
     fetchAccounts();
+    accountStore.loadAccounts(true);
 };
 
 

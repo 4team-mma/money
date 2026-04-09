@@ -32,6 +32,8 @@ import LoadingView from "@/view/LoadingView.vue";
 import Notifications from "@/view/Notifications.vue";
 import AdminData from "@/view/AdminData.vue";
 import AdminSetting from "@/view/AdminSetting.vue";
+import TestAI from "@/view/TestAI.vue";
+import AdminAiConfig from "@/view/AdminAiConfig.vue";
 
 const routes = [
   {
@@ -237,6 +239,18 @@ const routes = [
     component: AdminSetting,
     name: "AdminSetting",
     meta: { requiresAuth: true, hideNav: true }
+  } ,
+    {
+    path: "/TestAI",
+    component: TestAI,
+    name: "TestAI",
+    meta: { requiresAuth: true, hideNav: true }
+  },
+    {
+    path: "/AdminAiConfig",
+    component: AdminAiConfig,
+    name: "AdminAiConfig",
+    meta: { requiresAuth: true, hideNav: true }
   }
 
 
@@ -255,28 +269,57 @@ router.beforeEach((to, from, next) => {
   const userJson = localStorage.getItem('currentUser');
   const user = userJson ? JSON.parse(userJson) : null;
 
-  // 1. 定義公開頁面 (不需登入即可進入)
+  // 1. 定義頁面群組
   const publicPages = ['/', '/Register', '/ForgetPassword'];
-  const isPublicPage = publicPages.includes(to.path);
-
-  // 2. 定義管理員專屬頁面 (路徑包含 Admin 或 Admins)
-  const adminPages = ['/Admins', '/AdminMain', '/AdminModel', '/AdminsComments', '/AdminData', '/AdminSetting'];
-  const isAdminPage = adminPages.some(path => to.path.startsWith(path));
+  const isAdminPage = ['/Admins', '/AdminMain', '/AdminModel', '/AdminsComments', '/AdminData', '/AdminSetting'].some(path => to.path.startsWith(path));
+  
+  // 🌟 新增：定義 AI 測試員專屬頁面
+  const isTestAIPage = to.path === '/TestAI';
+  
+  // 🌟 新增：定義一般使用者頁面 (排除掉首頁、載入頁與測試頁)
+  const isUserPage = !publicPages.includes(to.path) && !isAdminPage && !isTestAIPage && to.path !== '/loading';
 
   // 🛡️ 防護 A：未登入者存取私有頁面
-  if (!isPublicPage && !token) {
+  if (!publicPages.includes(to.path) && !token) {
     console.warn('🔒 未登入，攔截請求');
     return next('/');
   }
 
-  // 🛡️ 防護 B：已登入者存取管理員頁面 (但角色不對)
-  if (isAdminPage && user?.role !== 'admin') {
-    console.warn('🚫 非管理員，拒絕存取');
-    return next('/book'); 
+  // 🛡️ 防護 B：已登入者的分流邏輯 (根據 Role 限制去處)
+  if (token && user) {
+    
+    // 1. 如果是 AI 測試員 (ai_test)
+    if (user.role === 'ai_test') {
+      // 測試員只能待在 /TestAI 或 /loading，想去別的地方就抓回來
+      if (!isTestAIPage && to.path !== '/loading' && !publicPages.includes(to.path)) {
+        console.warn('🧪 測試員請回實驗室');
+        return next('/TestAI');
+      }
+    }
+    
+    // 2. 如果是管理員 (admin)
+    else if (user.role === 'admin') {
+      // 管理員通常有最高權限，但如果你想讓他專注在管理後台：
+      // if (isUserPage) return next('/AdminMain');
+    }
+    
+    // 3. 如果是一般使用者 (user)
+    else {
+      // 一般使用者不准進管理員頁面
+      if (isAdminPage) {
+        console.warn('🚫 非管理員，拒絕存取');
+        return next('/book');
+      }
+      // 一般使用者不准進 AI 測試頁面
+      if (isTestAIPage) {
+        console.warn('🚫 非測試員，拒絕存取');
+        return next('/book');
+      }
+    }
   }
 
-  // 🛡️ 防護 C：已登入者嘗試回首頁 (導向中轉頁重新初始化)
-  if (isPublicPage && token && to.path === '/') {
+  // 🛡️ 防護 C：已登入者嘗試回首頁
+  if (publicPages.includes(to.path) && token && to.path === '/') {
     return next('/loading');
   }
 

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AchievementsMission from '@/components/AchievementsMission.vue'
 import AchievementsCards from '@/components/AchievementsCards.vue'
@@ -171,9 +171,27 @@ const checkInDays = computed(() => {
     });
 });
 
+// 在 script setup 裡定義一個同步用的函數
+const handleGlobalSync = () => {
+    console.log("📢 成就頁面收到同步訊號，準備更新任務與 XP...");
+    fetchUserLevelSummary(); // 更新等級/XP
+
+    // 🌟 關鍵：手動去叫 Missions 組件更新
+    if (missionRef.value && missionRef.value.fetchMissions) {
+        missionRef.value.fetchMissions();
+        console.log("🔄 任務清單已指令更新");
+    }
+};
+
 onMounted(() => {
     fetchUserLevelSummary(); 
-    fetchMyCheckinStatus();  
+    fetchMyCheckinStatus(); 
+    window.addEventListener('sync-money-data', handleGlobalSync);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('sync-money-data', handleGlobalSync);
+
 });
 </script>
 

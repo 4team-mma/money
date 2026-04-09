@@ -15,6 +15,16 @@ export default defineConfig({
   },
   server: {
     allowedHosts: true,
+
+    // 給google行事曆串接用
+    // 👇 把這裡換成這兩行終極解藥 👇
+    headers: {
+      'Cross-Origin-Opener-Policy': 'unsafe-none',
+      'Cross-Origin-Embedder-Policy': 'unsafe-none'
+    },
+    // 👆 替換結束 👆
+
+
     proxy: {
       '/api': {
         target: 'http://localhost:8000',

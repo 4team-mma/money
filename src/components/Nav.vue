@@ -20,20 +20,21 @@ const currentStyle = computed(() => {
   return { primary: 'var(--color-primary)' } 
 })
 
-// === 1. 使用者資訊 (響應式 Computed) ===
-// 優先從 Pinia 拿 (API 同步後的最新資料)，備援則從 localStorage 拿 (登入時的快取)
+// 取得當前環境的 API 網址 (如果是開發環境，就用 localhost，否則用 Vercel 裡的環境變數)
+const apiBase = import.meta.env.VITE_API_BASE_URL === '/api' 
+                ? 'http://localhost:8000' 
+                : import.meta.env.VITE_API_BASE_URL.replace('/api', '');
+
 const userData = computed(() => {
   const localUser = JSON.parse(localStorage.getItem('currentUser') || '{}')
-
-  // ✅ 確保先定義 current，再使用它
   const current = userStore.users.find(u => u.username === localUser.username) || localUser
 
   return {
     name: current.name || '用戶',
     email: current.email || '',
     role: current.role || 'user',
-    // ✅ 新增 avatar_url，並加上後端位址
-    avatar: localUser.avatar_url ? `http://localhost:8000${localUser.avatar_url}` : null
+    // ✅ 讓頭像網址動態變化！
+    avatar: localUser.avatar_url ? `${apiBase}${localUser.avatar_url}` : null
   }
 })
 
