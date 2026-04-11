@@ -1,3 +1,85 @@
+<script setup>
+import { ref, computed } from 'vue'
+import { generateDevCode } from '@/api/admin_helper'
+
+
+
+const currentTab = ref('stage1')
+const currentTabName = computed(() => {
+    if (currentTab.value === 'stage1') return '自動測試腳本生成'
+    if (currentTab.value === 'stage2') return '程式碼 Bug 檢修'
+    return '全專案關聯查詢 (B1 機房)'
+})
+
+const stage1Input = ref('')
+const stage2Code = ref('')
+const stage2Log = ref('')
+const stage3Input = ref('')
+
+const isGenerating = ref(false)
+const aiResponse = ref('')
+
+// 🌟 2. 改寫為真實的 API 呼叫
+const executeTask = async () => {
+    // 簡單的防呆檢查
+    if (currentTab.value === 'stage1' && !stage1Input.value.trim()) {
+        alert('請先輸入測試情境喵！')
+        return
+    }
+    if (currentTab.value === 'stage2' && !stage2Code.value.trim() && !stage2Log.value.trim()) {
+        alert('程式碼跟錯誤日誌至少要填一個喵！')
+        return
+    }
+    // 🌟 新增：Stage 3 的防呆
+    if (currentTab.value === 'stage3' && !stage3Input.value.trim()) {
+        alert('請輸入你想詢問的專案問題喵！')
+        return
+    }
+
+    isGenerating.value = true
+    aiResponse.value = ''
+
+    try {
+        let payload = {
+            mode: '',
+            context: ''
+        }
+
+        if (currentTab.value === 'stage1') {
+            payload.mode = 'test_script'
+            payload.context = stage1Input.value
+        } else if (currentTab.value === 'stage2') {
+            payload.mode = 'bug_fix'
+            payload.context = `[有問題的程式碼]:\n${stage2Code.value}\n\n[錯誤日誌]:\n${stage2Log.value}`
+        } else if (currentTab.value === 'stage3') {
+            // 🌟 新增：將 Stage 3 的問題打包送出
+            payload.mode = 'stage3'
+            payload.context = stage3Input.value
+        }
+
+        const res = await generateDevCode(payload)
+
+        if (res.status === 'success' || res.data?.status === 'success') {
+            aiResponse.value = res.code || res.data.code
+        } else {
+            aiResponse.value = `發生錯誤喵：${res.message || res.data?.message}`
+        }
+
+    } catch (error) {
+        console.error("AI 輔助生成失敗:", error)
+        aiResponse.value = "喵... 連線到後端或 Ollama 失敗了，請按 F12 檢查 Network 喵！"
+    } finally {
+        isGenerating.value = false
+    }
+}
+
+const copyCode = () => {
+    navigator.clipboard.writeText(aiResponse.value)
+    alert('已複製到剪貼簿喵！')
+}
+
+</script>
+
 <template>
     <div class="model-management-container">
         <div class="glass-header">
@@ -18,57 +100,48 @@
                 <div class="nav-item" :class="{ active: currentTab === 'stage2' }" @click="currentTab = 'stage2'">
                     🐾 Bug 檢修站
                 </div>
-                <div class="nav-item" :class="{ active: currentTab === 'stage3' }" @click="currentTab = 'stage3'" style="opacity: 0.6;">
-                    🔒 全專案顧問 (B1)
+                <div class="nav-item" :class="{ active: currentTab === 'stage3' }" @click="currentTab = 'stage3'">
+                    🐾 全專案顧問 (B1)
                 </div>
             </div>
 
             <div class="config-pane">
-                
+
                 <div class="card personality">
                     <div class="card-title">🐈 {{ currentTabName }} 設定</div>
-                    
+
                     <div v-show="currentTab === 'stage1'" class="animate-fade">
                         <div class="form-group">
                             <label>請描述您想生成的測試情境喵：</label>
-                            <textarea 
-                                v-model="stage1Input" 
-                                class="prompt-area" 
-                                placeholder="例如：請幫我寫一個 Locust 壓力測試，模擬 100 人同時呼叫 /api/login 且隨機帶入過期 Token..."
-                            ></textarea>
+                            <textarea v-model="stage1Input" class="prompt-area"
+                                placeholder="例如：請幫我寫一個 Locust 壓力測試，模擬 100 人同時呼叫 /api/login 且隨機帶入過期 Token..."></textarea>
                         </div>
                     </div>
 
                     <div v-show="currentTab === 'stage2'" class="animate-fade">
                         <div class="form-group">
                             <label>1. 有問題的程式碼片段 (Function / Component)：</label>
-                            <textarea 
-                                v-model="stage2Code" 
-                                class="prompt-area code-font" 
-                                style="min-height: 120px;" 
-                                placeholder="def some_broken_function(): ..."
-                            ></textarea>
+                            <textarea v-model="stage2Code" class="prompt-area code-font" style="min-height: 120px;"
+                                placeholder="def some_broken_function(): ..."></textarea>
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
                             <label>2. 錯誤日誌 (Error Log)：</label>
-                            <textarea 
-                                v-model="stage2Log" 
-                                class="prompt-area code-font error-bg" 
-                                style="min-height: 100px;" 
-                                placeholder="Traceback (most recent call last): ..."
-                            ></textarea>
+                            <textarea v-model="stage2Log" class="prompt-area code-font error-bg"
+                                style="min-height: 100px;"
+                                placeholder="Traceback (most recent call last): ..."></textarea>
                         </div>
                     </div>
 
-                    <div v-show="currentTab === 'stage3'" class="animate-fade locked-state">
+                    <div v-show="currentTab === 'stage3'" class="animate-fade">
                         <div class="form-group">
-                            <label>詢問專案架構或連動問題 (B1 機房建置中)：</label>
-                            <textarea disabled class="prompt-area readonly" placeholder="等待 codebase_vector_db 實作完成喵..."></textarea>
+                            <label>詢問專案架構或連動問題 (已連線至 B1 機房)：</label>
+                            <textarea v-model="stage3Input" class="prompt-area" style="min-height: 120px;"
+                                placeholder="例如：我想要修改登入邏輯，請幫我尋找 auth.py 跟 UserStore 相關的程式碼並提供修改建議喵..."></textarea>
                         </div>
                     </div>
                 </div>
 
-                <button @click="executeTask" class="btn-save-master" :disabled="isGenerating || currentTab === 'stage3'">
+                <button @click="executeTask" class="btn-save-master" :disabled="isGenerating">
                     {{ isGenerating ? '⏳ 喵喵正在思考與撰寫中...' : '🐈 讓喵喵幫你寫' }}
                 </button>
 
@@ -77,7 +150,7 @@
                         <span>📝 喵喵的解答</span>
                         <button v-if="aiResponse" @click="copyCode" class="btn-edit">📋 複製程式碼</button>
                     </div>
-                    
+
                     <div class="output-container" :class="{ 'thinking': isGenerating }">
                         <div v-if="!aiResponse && !isGenerating" class="empty-state">
                             <span style="font-size: 2rem;">🐈</span>
@@ -96,67 +169,6 @@
     </div>
 </template>
 
-<script setup>
-import { ref, computed } from 'vue'
-
-const currentTab = ref('stage1')
-
-const currentTabName = computed(() => {
-    if (currentTab.value === 'stage1') return '自動測試腳本生成'
-    if (currentTab.value === 'stage2') return '程式碼 Bug 檢修'
-    return '全專案關聯查詢 (開發中)'
-})
-
-const stage1Input = ref('')
-const stage2Code = ref('')
-const stage2Log = ref('')
-
-const isGenerating = ref(false)
-const aiResponse = ref('')
-
-const executeTask = async () => {
-    isGenerating.value = true
-    aiResponse.value = ''
-    
-    // 模擬 API 呼叫延遲
-    setTimeout(() => {
-        if (currentTab.value === 'stage1') {
-            aiResponse.value = `# 🐈 喵喵幫你寫好的 Locust 測試腳本
-from locust import HttpUser, task, between
-
-class LoginTestUser(HttpUser):
-    wait_time = between(1, 3)
-
-    @task
-    def test_login_with_expired_token(self):
-        # 模擬帶入過期 token 測試 slowapi 防護
-        headers = {"Authorization": "Bearer expired_token_xyz"}
-        with self.client.get("/api/login", headers=headers, catch_response=True) as response:
-            if response.status_code == 401:
-                response.success()
-            else:
-                response.failure(f"預期 401，但得到 {response.status_code} 喵！")
-`
-        } else if (currentTab.value === 'stage2') {
-            aiResponse.value = `[🐈 喵喵診斷結果]
-這個錯誤通常是因為在非同步 (async) 環境中直接呼叫了阻擋式 (blocking) 的 I/O 函式喵。
-
-[🔧 修正後的程式碼]
-async def my_endpoint():
-    # 記得加上 await 來解決協程阻塞問題喵！
-    result = await db.execute("SELECT * FROM users")
-    return result
-`
-        }
-        isGenerating.value = false
-    }, 1500)
-}
-
-const copyCode = () => {
-    navigator.clipboard.writeText(aiResponse.value)
-    alert('已複製到剪貼簿喵！')
-}
-</script>
 
 <style scoped>
 /* 1. 基礎容器配置 (完美置中) */
@@ -171,7 +183,9 @@ const copyCode = () => {
     color: var(--admin-text);
 }
 
-h3, span, label {
+h3,
+span,
+label {
     color: var(--admin-text);
 }
 
@@ -225,7 +239,8 @@ h3, span, label {
 
 .nav-item.active {
     background: var(--admin-primary);
-    color: #fff; /* 確保 active 狀態文字可見 */
+    color: #fff;
+    /* 確保 active 狀態文字可見 */
     border-color: var(--admin-primary);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
@@ -385,9 +400,17 @@ h3, span, label {
 .animate-fade {
     animation: fadeIn 0.3s ease-in-out;
 }
+
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .spin-icon {
@@ -395,21 +418,27 @@ h3, span, label {
     display: inline-block;
     animation: spin 1.5s linear infinite;
 }
+
 @keyframes spin {
-    100% { transform: rotate(360deg); }
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* 捲軸美化 */
 ::-webkit-scrollbar {
     width: 8px;
 }
+
 ::-webkit-scrollbar-track {
     background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
     background: #cbd5e1;
     border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
 }
