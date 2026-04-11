@@ -495,6 +495,66 @@ const handleFeedback = async (message, isGood) => {
 };
 
 
+// ==========================================
+// 🌟 6. 語音辨識功能 (Web Speech API)
+// ==========================================
+const isRecording = ref(false);
+let recognition = null;
+let originalInput = ''; // 用來暫存錄音前已經輸入的文字
+
+const toggleRecording = () => {
+  // 如果正在錄音，就停止
+  if (isRecording.value && recognition) {
+    recognition.stop();
+    return;
+  }
+
+  // 檢查瀏覽器是否支援 Web Speech API
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    ElMessage.warning('小主人的瀏覽器不支援語音辨識喵...請用 Chrome 或 Edge 瀏覽器！');
+    return;
+  }
+
+  // 初始化語音辨識引擎
+  if (!recognition) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'zh-TW'; // 設定為台灣中文
+    recognition.interimResults = true; // 🌟 開啟即時辨識 (邊講邊上字)
+    recognition.continuous = false; // 講完一句話自動停止
+
+    recognition.onstart = () => {
+      isRecording.value = true;
+      originalInput = input.value; // 記住講話前輸入框原本就有的字
+    };
+
+    // 處理辨識結果
+    recognition.onresult = (event) => {
+      let currentTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        currentTranscript += event.results[i][0].transcript;
+      }
+      // 把原本的字 加上 正在講的字
+      input.value = originalInput + currentTranscript;
+    };
+
+    recognition.onerror = (event) => {
+      console.error("語音辨識發生錯誤:", event.error);
+      isRecording.value = false;
+      if (event.error === 'not-allowed') {
+        ElMessage.error('需要麥克風權限才能用語音喵！');
+      }
+    };
+
+    recognition.onend = () => {
+      isRecording.value = false;
+    };
+  }
+
+  // 開始錄音！
+  recognition.start();
+};
+
 
 
 onMounted(async () => {
@@ -671,6 +731,17 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
         <div class="input-area">
           <input ref="inputRef" v-model="input" placeholder="輸入訊息..." @keyup.enter.prevent="handleSend"
             :disabled="isTyping" />
+          
+          <button 
+            class="mic-btn" 
+            :class="{ 'is-recording': isRecording }" 
+            @click="toggleRecording" 
+            :disabled="isTyping"
+            :title="isRecording ? '點擊停止錄音' : '語音輸入'"
+          >
+            {{ isRecording ? '🎙️' : '🎤' }}
+          </button>
+
           <button class="send-btn" @click="handleSend" :disabled="isTyping">🐾</button>
         </div>
       </div>
@@ -1140,4 +1211,42 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
   margin-left: 4px;
   font-weight: bold;
 }
+
+
+/* 🌟 麥克風按鈕專屬樣式 */
+.mic-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 8px;
+  margin-right: 5px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mic-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.mic-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 錄音時的紅色呼吸燈特效 */
+.mic-btn.is-recording {
+  animation: pulse-red 1.5s infinite;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+@keyframes pulse-red {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
 </style>
