@@ -12,3 +12,33 @@ export const generateDevCode = (data) => {
     timeout: 120000 
   })
 }
+
+// 🌟 關鍵新增：專門處理「打字機串流」的封裝函式
+// onChunk 是一個回呼函式，用來把接收到的字傳回給 Vue
+export const generateDevCodeStream = async (data, token, onChunk) => {
+  const response = await fetch('/api/admin_helper/generate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}` 
+    },
+    body: JSON.stringify(data)
+  })
+
+  if (!response.ok) {
+    throw new Error(`伺服器發生錯誤 (狀態碼: ${response.status})`)
+  }
+
+  // 開啟串流閱讀器
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder('utf-8')
+
+  // 不斷讀取資料，直到結束
+  while (true) {
+    const { value, done } = await reader.read()
+    if (done) break
+    
+    // 將解碼後的文字，透過回呼函式傳回給 Vue
+    onChunk(decoder.decode(value, { stream: true }))
+  }
+}
