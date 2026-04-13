@@ -1,9 +1,20 @@
 <script setup>
+import { ref } from 'vue'
+
 const props = defineProps({
     themes: Object,
     currentTheme: String
 })
 const emit = defineEmits(['set-theme'])
+
+// 🌟 新增：控制 AI 糾錯引擎狀態的變數
+const isAiCorrectionEnabled = ref(false)
+
+const toggleAiCorrection = () => {
+    isAiCorrectionEnabled.value = !isAiCorrectionEnabled.value
+    // 未來這裡可以發 API 告訴後端是否要啟用，或存在 localStorage
+    console.log("AI 語音糾錯狀態：", isAiCorrectionEnabled.value ? 'ON' : 'OFF')
+}
 </script>
 
 <template>
@@ -20,32 +31,55 @@ const emit = defineEmits(['set-theme'])
                 </span>
             </button>
         </div>
+
+        <hr class="section-divider">
+
+        <h3>🧠 AI 語音處理引擎 (本地端專用)</h3>
+        <div class="setting-row ai-engine-card">
+            <div class="ai-info">
+                <strong>啟用 Qwen 深度糾錯</strong>
+                <p class="ai-desc">開啟後，將使用本地 RTX 4060 Ti 顯卡修正台灣口音錯字 (例如: 溜溜卡 → 悠遊卡)。</p>
+            </div>
+            
+            <button class="toggle-btn" :class="{ active: isAiCorrectionEnabled }" @click="toggleAiCorrection">
+                <span class="status-dot"></span>
+                {{ isAiCorrectionEnabled ? '已啟用 (ON)' : '已停用 (OFF)' }}
+            </button>
+        </div>
+
     </div>
 </template>
 
 <style scoped>
 .content-glass-card {
-    padding: 24px;
-    background: var(--cardBg); /* 使用主題定義的卡片背景 */
+    padding: 32px; /* 稍微加大一點 padding 讓呼吸感更好 */
+    background: var(--cardBg);
     border-radius: 20px;
     border: 1px solid var(--border);
-    backdrop-filter: blur(10px); /* 增加磨砂玻璃質感 */
+    backdrop-filter: blur(10px);
+}
+
+h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 1.2rem;
+    font-weight: 600;
 }
 
 .theme-grid { 
     display: grid; 
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); 
     gap: 20px; 
-    margin-top: 24px; 
 }
 
+/* ... (你原本的 theme-card 等樣式保留) ... */
 .theme-card { 
     position: relative;
     border: 2px solid transparent; 
     padding: 12px; 
     border-radius: 16px; 
     cursor: pointer; 
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* 平滑過渡 */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -60,7 +94,7 @@ const emit = defineEmits(['set-theme'])
 .theme-card.active { 
     border-color: #3b82f6; 
     box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
-    background: rgba(59, 130, 246, 0.1) !important; /* 選中時稍微染上主色調 */
+    background: rgba(59, 130, 246, 0.1) !important;
 }
 
 .theme-card.active::after {
@@ -85,7 +119,7 @@ const emit = defineEmits(['set-theme'])
     height: 70px; 
     border-radius: 10px; 
     margin-bottom: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.1); /* 給預覽圖一個細邊框區分邊界 */
+    border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
 }
 
@@ -95,4 +129,78 @@ const emit = defineEmits(['set-theme'])
     letter-spacing: 0.5px;
 }
 
+/* 🌟 新增的 AI 區塊專屬樣式 */
+.section-divider {
+    margin: 40px 0 30px 0;
+    border: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(150, 150, 150, 0.3), transparent);
+}
+
+.ai-engine-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    background: rgba(0, 0, 0, 0.03); /* 輕微的底色區分 */
+    border-radius: 16px;
+    border: 1px solid rgba(200, 200, 200, 0.2);
+    transition: all 0.3s ease;
+}
+
+.ai-engine-card:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.ai-info strong {
+    font-size: 1.1rem;
+    color: var(--text-main);
+    display: block;
+    margin-bottom: 6px;
+}
+
+.ai-desc {
+    font-size: 0.85rem;
+    color: #888;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* 質感的切換按鈕 */
+.toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    border-radius: 30px;
+    border: 1px solid #ccc;
+    background: #f0f0f0;
+    color: #666;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 140px;
+    justify-content: center;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ccc;
+    transition: all 0.3s ease;
+}
+
+/* 啟動狀態的按鈕 */
+.toggle-btn.active {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: #3b82f6;
+    color: #3b82f6;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+}
+
+.toggle-btn.active .status-dot {
+    background: #10b981; /* 亮綠色代表啟動 */
+    box-shadow: 0 0 8px #10b981;
+}
 </style>
