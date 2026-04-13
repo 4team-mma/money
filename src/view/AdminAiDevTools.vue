@@ -112,7 +112,7 @@ const copyCode = () => {
                 <div class="nav-item" :class="{ active: currentTab === 'stage3' }" @click="currentTab = 'stage3'">🐾
                     全專案顧問 (B1)</div>
                 <div class="nav-item" :class="{ active: currentTab === 'dataset_gen' }"
-                    @click="currentTab = 'dataset_gen'">🐾 資料生成專家</div>
+                    @click="currentTab = 'dataset_gen'">🐾 Json資料生成</div>
             </div>
 
             <div class="config-pane">
