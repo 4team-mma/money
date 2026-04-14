@@ -10,10 +10,17 @@ import { postAiRobotChat, postAiFeedback } from '@/api/robot'
 import { useAccountStore } from '@/stores/useAccountStore'
 import { ElMessage } from 'element-plus'
 const route = useRoute()
+
+const greetingsMap = {
+  '/': '嗨！我是 喵喵小助手 💰',
+  '/admins': '歡迎來到控制中心喵！',
+  '/user': '小主人歡迎回來，今天想記點什麼喵？'
+};
+
 const messagesContainer = ref(null)
 const inputRef = ref(null)
 const accountStore = useAccountStore()
-
+import { processSpeechCorrection } from '@/api/speech'
 
 // 🌟 帳戶與 Icon 處理
 const getAccountId = (accountName) => {
@@ -48,24 +55,24 @@ const pixelPosition = computed(() => ({
 const startDrag = (e) => {
   isDragging.value = true;
   startPos.value = { x: e.clientX, y: e.clientY };
-  
+
   // 計算點擊位置相對於目前「像素位置」的偏移
   dragOffset.value = {
     x: e.clientX - pixelPosition.value.x,
     y: e.clientY - pixelPosition.value.y
   };
-  
+
   window.addEventListener('mousemove', onDragging);
   window.addEventListener('mouseup', stopDrag);
 };
 
 const onDragging = (e) => {
   if (!isDragging.value) return;
-  
+
   // 1. 計算新的像素座標
   let newX = e.clientX - dragOffset.value.x;
   let newY = e.clientY - dragOffset.value.y;
-  
+
   // 2. 邊界檢查 (預留 100px 寬度給貓咪)
   const safeX = Math.max(10, Math.min(newX, window.innerWidth - 90))
   const safeY = Math.max(10, Math.min(newY, window.innerHeight - 90))
@@ -85,7 +92,7 @@ const stopDrag = (e) => {
 
   // 判定是否為單純點擊
   const moveDistance = Math.sqrt(
-    Math.pow(e.clientX - startPos.value.x, 2) + 
+    Math.pow(e.clientX - startPos.value.x, 2) +
     Math.pow(e.clientY - startPos.value.y, 2)
   );
 
@@ -97,9 +104,9 @@ const stopDrag = (e) => {
   // 🤖 自動吸附邊緣邏輯 (讓喵喵永遠靠邊)
   // 如果 X 超過螢幕一半(50%) 就吸到右邊，否則吸到左邊
   if (position.value.x > 50) {
-      position.value.x = 92  // 靠右但不超出
+    position.value.x = 92  // 靠右但不超出
   } else {
-      position.value.x = 2   // 靠左
+    position.value.x = 2   // 靠左
   }
 };
 
@@ -169,7 +176,7 @@ const connectWebSocket = () => {
       setTimeout(connectWebSocket, 3000);
     } else {
       console.error("[WebSocket] 重連失敗次數過多，停止重連。可能是 Token 已過期。");
-      
+
       // 在畫面上溫柔地提醒小主人
       messages.value.push({
         id: Date.now(),
@@ -178,7 +185,7 @@ const connectWebSocket = () => {
         timestamp: new Date().toISOString()
       });
       scrollToBottom();
-      
+
       // 彈出右上角錯誤提示
       ElMessage.error('連線中斷，請重新登入！');
     }
@@ -200,23 +207,23 @@ const selectedPersona = ref(localStorage.getItem('meowPersona') || 'cute');
 const waitingJokes = ["喵喵正在翻閱帳本... 📖", "正在計算罐罐的匯率... 🐟", "數據量大，喵喵努力消化中... 🐾"];
 
 // 🌟 乾淨整合版的 onMounted
-onMounted(async () => { 
-  await accountStore.loadAccounts(); 
+onMounted(async () => {
+  await accountStore.loadAccounts();
   if (isOpen.value) checkAndGreet();
-  
+
   // 視窗縮放時，強迫重新渲染 (Vue Computed 會自動處理比例)
   window.addEventListener('resize', () => {
-      // 視窗縮小時，強制把貓咪推回安全範圍內
-      // x 只允許在 2% ~ 88% 之間（保留貓咪本身寬度）
-      position.value.x = Math.min(Math.max(2, position.value.x), 88)
-      position.value.y = Math.min(Math.max(2, position.value.y), 88)
+    // 視窗縮小時，強制把貓咪推回安全範圍內
+    // x 只允許在 2% ~ 88% 之間（保留貓咪本身寬度）
+    position.value.x = Math.min(Math.max(2, position.value.x), 88)
+    position.value.y = Math.min(Math.max(2, position.value.y), 88)
 
-      // 自動吸附：縮小後重新判斷靠左或靠右
-      if (position.value.x > 50) {
-          position.value.x = 88
-      } else {
-          position.value.x = 2
-      }
+    // 自動吸附：縮小後重新判斷靠左或靠右
+    if (position.value.x > 50) {
+      position.value.x = 88
+    } else {
+      position.value.x = 2
+    }
   })
 
   connectWebSocket();
@@ -287,7 +294,10 @@ const handleSend = async () => {
   const now = new Date();
   const exactTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
-  messages.value.push({ id: Date.now(), text: query, sender: 'user', timestamp: new Date().toISOString() });
+  // 🌟 修正 1：統一使用 userMsgId，這樣等一下 AI 改錯字才找得到這個泡泡
+  const userMsgId = Date.now();
+  messages.value.push({ id: userMsgId, text: query, sender: 'user', timestamp: new Date().toISOString() });
+  
   input.value = '';
   paintDrops.value = [];
   isTyping.value = true;
@@ -297,17 +307,60 @@ const handleSend = async () => {
     loadingText.value = waitingJokes[Math.floor(Math.random() * waitingJokes.length)];
   }, 1500);
 
+
+// ==========================================
+  // 🚀 核心防呆機制：本地端 GPU 糾錯攔截
+  // ==========================================
+  let finalQuery = query; // 預設使用原句
+  if (wasSpoken.value) {
+    loadingText.value = "啟動 RTX 4060 Ti 糾錯中喵... 🐾";
+    console.log(`🎤 [耳朵聽寫] 收到語音原始草稿：【${query}】`);
+    
+    try {
+      // 送給後端
+      const correctRes = await processSpeechCorrection(query);
+      const responseData = correctRes?.data || correctRes;
+
+      if (responseData && responseData.corrected_text) {
+        finalQuery = responseData.corrected_text;
+        console.log("🔍 [Debug] 後端原始回傳：", correctRes);
+
+        // 如果 AI 真的發現錯字並改掉了
+        if (finalQuery !== query) {
+          console.log(`✨ [大腦 LoRA 發功] 發現錯字並成功修正！\n❌ 原句：${query}\n✅ 修正：${finalQuery}`);
+          const msgIndex = messages.value.findIndex(m => m.id === userMsgId);
+          if (msgIndex !== -1) {
+              
+              // ✅ 請改成這行：保留原始草稿，並加上 AI 修正結果！
+              messages.value[msgIndex].text = `🎤 原始：${query}\n✨ 修正：${finalQuery}`;
+          }
+        } else {
+          console.log(`🛡️ [大腦 LoRA 判定] 原句已經很完美，無需修正！保持原樣：【${finalQuery}】`);
+        }
+      }
+    } catch (err) {
+      // 🌟 修正 2：如果 GPU 沒開 (404) 或失敗，不要跳斷線！直接印出警告，然後用原句繼續記帳！
+      console.warn("⚠️ [大腦休眠] GPU 糾錯引擎未開啟或連線失敗，直接使用原句記帳！", err);
+    } finally {
+      wasSpoken.value = false; // 處理完畢，重置標記
+      loadingText.value = waitingJokes[0]; // 切回原本的等待文字
+    }
+  }
+  // ==========================================
+
   try {
     const historyText = messages.value.slice(-5, -1).map(m => `${m.sender === 'user' ? '小主人' : '喵喵'}：${m.text.substring(0, 30)}`).join('\n');
-    const finalPrompt = `[台北時間 ${exactTime}]\n${historyText}\n小主人：${query}`;
+    const finalPrompt = `[台北時間 ${exactTime}]\n${historyText}\n小主人：${finalQuery}`;
+
     const rawRes = await postAiRobotChat({ message: finalPrompt, persona: selectedPersona.value });
     const response = rawRes?.data || rawRes;
 
     let actionData = response.action_data || null;
     if (actionData && !Array.isArray(actionData)) actionData = [actionData];
 
-    // 確保帳戶資料同步，避免下拉選單空白
+    // 確保帳戶資料同步
     if (response.is_command && accountStore.accounts.length === 0) await accountStore.loadAccounts(true);
+    
     // AI 回覆的那段
     messages.value.push({
       id: Date.now() + 1,
@@ -318,12 +371,13 @@ const handleSend = async () => {
       provider: response.provider,
       is_command: response.is_command,
       action_data: actionData,
-      intent: response.intent,           // 🌟 儲存後端傳來的意圖
-      confidence: response.confidence    // 🌟 儲存後端傳來的信心度
-
+      intent: response.intent,           
+      confidence: response.confidence    
     });
   } catch (error) {
-    messages.value.push({ id: Date.now() + 1, text: "喵... 我斷線了喵！", sender: 'bot', timestamp: new Date().toISOString() });
+    // 🌟 修正 3：這才是真正的 Ollama (記帳大腦) 斷線錯誤處理！
+    console.error("❌ 聊天大腦發生錯誤：", error); 
+    messages.value.push({ id: Date.now() + 1, text: "喵... 我斷線了喵！請檢查後端終端機或 Ollama 狀態！", sender: 'bot', timestamp: new Date().toISOString() });
   } finally {
     isTyping.value = false;
     if (loadingInterval) clearInterval(loadingInterval);
@@ -414,53 +468,44 @@ const clearChat = () => {
 };
 
 
-// ⚡️ 修正視窗位置：確保對話窗展開時位置正確
+// ⚡️ 修正視窗位置：Teleport 到 body 後的絕對座標計算
 const chatWindowStyle = computed(() => {
   const isInRightHalf = position.value.x > 50;
-  
-  // 取得目前貓咪的中心點 Y 座標 (Pixel)
+  const catX = pixelPosition.value.x;
   const catY = pixelPosition.value.y;
   const windowHeight = window.innerHeight;
-  const chatHeight = 520; // 你的對話框高度
+  const chatHeight = 520; 
 
   const style = {
-    position: 'absolute',
+    position: 'fixed', // 確保浮動在最上層
     zIndex: 10000,
     width: '360px',
   };
 
-  // 1. 水平定位：維持原有的左右吸附邏輯
+  // 1. 水平定位：確保對話框出現在貓咪的旁邊，不會擋到貓
   if (isInRightHalf) {
-    style.right = '0px';
+    style.right = `${window.innerWidth - catX + 10}px`; // 貓咪在右，對話框靠左一點
     style.left = 'auto';
+    style.transformOrigin = 'right center';
   } else {
-    style.left = '0px';
+    style.left = `${catX + 100}px`; // 貓咪在左，對話框靠右一點
     style.right = 'auto';
+    style.transformOrigin = 'left center';
   }
 
-  // 2. 垂直定位 (智慧防溢出)：
-  // 我們不使用 top 或 bottom，而是讓對話框相對於貓咪垂直置中
-  // 然後用 transform 來確保它不會超出螢幕邊界
-  style.top = '45px'; // 從貓咪的中間開始計算
+  // 2. 垂直定位：讓對話框中心對齊貓咪中心
+  let topPosition = catY + 45; // 預設對齊貓咪中心點
   
-  // 計算偏移量：
-  // 如果貓咪在頂部，對話框會往下滑一點；如果在底部，往上滑一點
-  // 這裡使用百分比位移，讓它根據貓咪位置自動調整 y 軸
-  let translateY = -50; // 預設垂直置中
-  
-  // 額外安全檢查：如果貓咪太靠近頂部 (小於 260px)
-  if (catY < chatHeight / 2 + 20) {
-    translateY = - (catY / chatHeight) * 100 + 5; // 往下拉
-  } 
-  // 如果貓咪太靠近底部
-  else if (windowHeight - catY < chatHeight / 2 + 20) {
-    translateY = -100 + ((windowHeight - catY) / chatHeight) * 100 - 5; // 往上推
+  // 智慧防溢出：如果貓太靠上面或下面，強制把對話框推回安全範圍內
+  if (topPosition - (chatHeight / 2) < 20) {
+    topPosition = (chatHeight / 2) + 20; // 防止撞到天花板
+  } else if (topPosition + (chatHeight / 2) > windowHeight - 20) {
+    topPosition = windowHeight - (chatHeight / 2) - 20; // 防止撞到地板
   }
 
-  style.transform = `translateY(${translateY}%)`;
-  
-  // 3. 動畫原點：根據水平位置決定
-  style.transformOrigin = isInRightHalf ? 'right center' : 'left center';
+  style.top = `${topPosition}px`;
+  style.transform = `translateY(-50%)`;
+
   return style;
 });
 
@@ -499,6 +544,7 @@ const handleFeedback = async (message, isGood) => {
 // 🌟 6. 語音辨識功能 (Web Speech API)
 // ==========================================
 const isRecording = ref(false);
+const wasSpoken = ref(false); // 🌟 新增：用來記錄這句話是不是用語音輸入的
 let recognition = null;
 let originalInput = ''; // 用來暫存錄音前已經輸入的文字
 
@@ -536,6 +582,7 @@ const toggleRecording = () => {
       }
       // 把原本的字 加上 正在講的字
       input.value = originalInput + currentTranscript;
+      wasSpoken.value = true; // 🌟 標記：這句話含有語音輸入！
     };
 
     recognition.onerror = (event) => {
@@ -573,14 +620,10 @@ watch(isOpen, (newVal) => localStorage.setItem('isMeowChatOpen', newVal));
 watch(messages, (newVal) => localStorage.setItem('meowChatHistory', JSON.stringify(newVal)), { deep: true });
 watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
 
-
-
-
 </script>
 
 <template>
-  <div class="money-ai-bot"
-  :style="{ left: pixelPosition.x + 'px', top: pixelPosition.y + 'px' }">
+  <div class="money-ai-bot" :style="{ left: pixelPosition.x + 'px', top: pixelPosition.y + 'px' }">
     <button v-if="!isOpen" class="bot-toggle-transparent" @mousedown="startDrag">
       <img :src="catImg" class="floating-cat" alt="cat" draggable="false" />
       <div class="stars-container">
@@ -595,7 +638,7 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
         <div class="spray-hint">AI 思考中... 點擊畫面亂噴發或按住滑鼠畫圖，發洩一下吧喵！🎨</div>
       </div>
     </Teleport>
-
+    <Teleport to="body">
     <Transition>
       <div v-if="isOpen" class="chat-window-custom" @mousedown.stop :style="chatWindowStyle">
         <div class="chat-header-custom" @mousedown="startDrag" style="cursor: move;">
@@ -634,7 +677,7 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
                   <div class="card-header">
                     {{ actionItem.record_type === 'transfer' ? '🔄 轉帳確認' : '📝 收支確認' }}
                     <span style="font-size: 12px; color: #94a3b8; font-weight: normal; margin-left: auto;">({{ idx + 1
-                    }}/{{ message.action_data.length }})</span>
+                      }}/{{ message.action_data.length }})</span>
                   </div>
 
                   <div class="card-body">
@@ -655,9 +698,9 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
 
                     <template v-if="actionItem.record_type !== 'transfer'">
                       <div class="data-row"><span class="label">類別：</span><span class="value">{{ actionItem.add_class
-                      }}</span></div>
+                          }}</span></div>
                       <div class="data-row"><span class="label">項目：</span><span class="value">{{ actionItem.add_note
-                      }}</span></div>
+                          }}</span></div>
 
                       <div class="data-row">
                         <span class="label">帳戶：</span>
@@ -690,7 +733,7 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
                       </div>
 
                       <div class="data-row"><span class="label">備註：</span><span class="value">{{ actionItem.add_note
-                      }}</span></div>
+                          }}</span></div>
                     </template>
                   </div>
 
@@ -729,16 +772,13 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
         </div>
 
         <div class="input-area">
-          <input ref="inputRef" v-model="input" placeholder="輸入訊息..." @keyup.enter.prevent="handleSend"
+          <input ref="inputRef" v-model="input" placeholder="輸入訊息..." 
+          @keyup.enter.prevent="handleSend"
+          @input="wasSpoken = false"
             :disabled="isTyping" />
-          
-          <button 
-            class="mic-btn" 
-            :class="{ 'is-recording': isRecording }" 
-            @click="toggleRecording" 
-            :disabled="isTyping"
-            :title="isRecording ? '點擊停止錄音' : '語音輸入'"
-          >
+
+          <button class="mic-btn" :class="{ 'is-recording': isRecording }" @click="toggleRecording" :disabled="isTyping"
+            :title="isRecording ? '點擊停止錄音' : '語音輸入'">
             {{ isRecording ? '🎙️' : '🎤' }}
           </button>
 
@@ -746,6 +786,7 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
         </div>
       </div>
     </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -848,7 +889,7 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
 
 /* 對話窗與頭像防變形處理 */
 .chat-window-custom {
-  position: absolute;
+  position: fixed;
   /* 相對於 .money-ai-bot 定位 */
   max-width: 90vw;
   width: 360px;
@@ -1139,8 +1180,10 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
 }
 
 .chat-window-custom {
-  max-height: 80vh; /* 限制最高不超過螢幕 80% */
-  overflow-y: auto; /* 內容過長時顯示捲軸 */
+  max-height: 80vh;
+  /* 限制最高不超過螢幕 80% */
+  overflow-y: auto;
+  /* 內容過長時顯示捲軸 */
 }
 
 /* 🌟 下拉選單樣式 */
@@ -1244,9 +1287,16 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
 }
 
 @keyframes pulse-red {
-  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-  70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-}
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
 
+  70% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
 </style>
