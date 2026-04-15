@@ -163,108 +163,135 @@ onMounted(() => {
 </script>
 
 <template>
-        <div class="page-container">
-            <header class="header-section">
-                <div>
-                    <h1 class="page-title">💲 薪資分析</h1>
-                    <p class="subtitle">針對不同行業進行薪資水平與通膨比對</p>
-                </div>
-                <div class="controls-group">
-                    <select v-model="selectedIndustry" class="industry-select">
-                        <option v-for="job in INDUSTRIES" :key="job" :value="job">{{ job }}</option>
-                    </select>
-                    <div class="date-controls">
-                        <select v-model="currentYear" class="date-select">
-                            <option v-for="y in [2024, 2025, 2026]" :key="y" :value="y">{{ y }}年</option>
-                        </select>
-                        <select v-model="currentMonth" class="date-select">
-                            <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
-                        </select>
-                    </div>
-                </div>
-            </header>
-
-            <div v-if="loading" class="loading-state">
-                <div class="spinner"></div>正在分析數據...
+    <div class="page-container">
+        <header class="header-section">
+            <div>
+                <h1 class="page-title">💲 薪資分析</h1>
+                <p class="subtitle">針對不同行業進行薪資水平與通膨比對</p>
             </div>
-            <div v-else-if="errorMsg" class="error-state">⚠️ {{ errorMsg }}</div>
+            <div class="controls-group">
+                <select v-model="selectedIndustry" class="industry-select">
+                    <option v-for="job in INDUSTRIES" :key="job" :value="job">{{ job }}</option>
+                </select>
+                <div class="date-controls">
+                    <select v-model="currentYear" class="date-select">
+                        <option v-for="y in [2024, 2025, 2026]" :key="y" :value="y">{{ y }}年</option>
+                    </select>
+                    <select v-model="currentMonth" class="date-select">
+                        <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
+                    </select>
+                </div>
+            </div>
+        </header>
 
-            <div v-else class="content-grid">
-                <div class="stats-cards">
-                    <div class="card stat-card">
-                        <div class="stat-icon">💰</div>
-                        <div class="stat-info">
-                            <h3>個人月收入</h3>
-                            <p class="stat-value">${{ salaryData.user_income.toLocaleString() }}</p>
-                            <span :class="['trend-tag', performanceRatio >= 0 ? 'up' : 'down']">
-                                {{ performanceRatio >= 0 ? '領先' : '落後' }}行業平均 {{ Math.abs(performanceRatio) }}%
-                            </span>
-                        </div>
-                    </div>
-                    <div class="card stat-card">
-                        <div class="stat-icon">📊</div>
-                        <div class="stat-info">
-                            <h3>{{ selectedIndustry }} 平均</h3>
-                            <p class="stat-value">${{ industryBenchmark.toLocaleString() }}</p>
+        <div v-if="!loading && salaryData" class="status-banner" style="margin-bottom: 1rem;">
+                <span :class="['badge', salaryData.is_fallback ? 'fallback' : 'fresh']">
+                    {{ salaryData.note }}
+                </span>
+            </div>
+
+        <div v-if="loading" class="loading-state">
+            <div class="spinner"></div>正在分析數據...
+        </div>
+        <div v-else-if="errorMsg" class="error-state">⚠️ {{ errorMsg }}</div>
+
+        <div v-else class="content-grid">
+            <div class="stats-cards">
+                <div class="card stat-card">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-info">
+                        <h3>{{ selectedIndustry }} 平均</h3>
+                        <p class="stat-value">${{ industryBenchmark.toLocaleString() }}</p>
+                        <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
                             <span class="trend-tag neutral">名目薪資基準</span>
+                            <span v-if="salaryData && salaryData.period" style="font-size: 0.8rem; color: #6b7280;">
+                                (資料來源: {{ salaryData.period }})
+                            </span>
                         </div>
                     </div>
                 </div>
-
-                <div class="card chart-section">
-                    <div class="chart-header">
-                        <h3>📉 實質薪資趨勢 ({{ selectedIndustry }})</h3>
-                        <div class="legend">
-                            <span class="dot nominal"></span> 名目薪資
-                            <span class="dot real"></span> 實質薪資 (扣除通膨)
-                        </div>
+                <div class="card stat-card">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-info">
+                        <h3>{{ selectedIndustry }} 平均</h3>
+                        <p class="stat-value">${{ industryBenchmark.toLocaleString() }}</p>
+                        <span class="trend-tag neutral">名目薪資基準</span>
                     </div>
-                    <div class="chart-container"><canvas ref="trendChartCanvas"></canvas></div>
                 </div>
-                <br>
-                <div class="card ai-section">
-                    <div class="ai-header">🚁 <h3>理財建議:</h3>
+            </div>
+
+            <div class="card chart-section">
+                <div class="chart-header">
+                    <h3>📉 最新 12 個月實質薪資趨勢 ({{ selectedIndustry }})</h3>
+                    <div class="legend">
+                        <span class="dot nominal"></span> 名目薪資
+                        <span class="dot real"></span> 實質薪資 (扣除通膨)
                     </div>
-                    <div class="ai-content">
-                        <h4 :class="performanceRatio >= 0 ? 'text-success' : 'text-danger'">
-                            {{ performanceRatio >= 0 ? ' 財務表現優於同業🎉' : ' 購買力面臨挑戰⚠️' }}
-                        </h4>
+                </div>
+                <div class="chart-container"><canvas ref="trendChartCanvas"></canvas></div>
+            </div>
+            <br>
+            <div class="card ai-section">
+                <div class="ai-header">🚁 <h3>理財建議:</h3>
+                </div>
+                <div class="ai-content">
+                    <h4 :class="performanceRatio >= 0 ? 'text-success' : 'text-danger'">
+                        {{ performanceRatio >= 0 ? ' 財務表現優於同業🎉' : ' 購買力面臨挑戰⚠️' }}
+                    </h4>
 
-                        <p>
-                            您的實質購買力為 <strong>${{ Math.round(myRealSalary).toLocaleString() }}</strong>。
-                            雖然通膨率為 {{ ((1 - (currentRealSalary / industryBenchmark)) * 100).toFixed(1) }}%，
-                            但因為您的薪資高出平均 <strong>{{ performanceRatio }}%</strong>，
-                            這抵消了大部分的物價漲幅。
-                        </p>
+                    <p>
+                        您的實質購買力為 <strong>${{ Math.round(myRealSalary).toLocaleString() }}</strong>。
+                        雖然通膨率為 {{ ((1 - (currentRealSalary / industryBenchmark)) * 100).toFixed(1) }}%，
+                        但因為您的薪資高出平均 <strong>{{ performanceRatio }}%</strong>，
+                        這抵消了大部分的物價漲幅。
+                    </p>
 
-                        <div class="strategy-box" >
-                            <strong style="color: var(--text-secondary)">🚀 專屬策略：</strong>
-                            <span v-if="performanceRatio > 20" style="color: var(--text-secondary);">
-                                您的收入增長已跑贏通膨！建議將薪資的 20% 投入抗通膨資產（如美股 ETF 或房地產 REITs），發揮複利效應。
-                            </span>
-                            <span v-else-if="performanceRatio >= 0" style="color: var(--text-secondary);">
-                                目前處於穩健階段。建議維持記帳習慣，確保實質薪資的增長不被隨之擴張的慾望抵銷。
-                            </span>
-                            <span v-else style="color: var(--text-secondary);">
-                                目前的薪資增長跟不上物價。建議重新審視訂閱服務或餐飲支出，並規劃轉職或技能進修以突破薪資天花板。
-                            </span>
-                        </div>
+                    <div class="strategy-box">
+                        <strong style="color: var(--text-secondary)">🚀 專屬策略：</strong>
+                        <span v-if="performanceRatio > 20" style="color: var(--text-secondary);">
+                            您的收入增長已跑贏通膨！建議將薪資的 20% 投入抗通膨資產（如美股 ETF 或房地產 REITs），發揮複利效應。
+                        </span>
+                        <span v-else-if="performanceRatio >= 0" style="color: var(--text-secondary);">
+                            目前處於穩健階段。建議維持記帳習慣，確保實質薪資的增長不被隨之擴張的慾望抵銷。
+                        </span>
+                        <span v-else style="color: var(--text-secondary);">
+                            目前的薪資增長跟不上物價。建議重新審視訂閱服務或餐飲支出，並規劃轉職或技能進修以突破薪資天花板。
+                        </span>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 </template>
 
 <style scoped>
-.legend{color: var(--text-primary);}
-p{color: var(--text-primary);}
-h3{color: var(--text-primary);}
-.subtitle{color: var(--text-primary);}
-.page-title{
+
+.status-banner { margin-bottom: 20px; }
+.fresh { background: #dcfce7; color: #166534; }
+.fallback { background: #fef3c7; color: #92400e; }
+
+
+.legend {
     color: var(--text-primary);
 }
 
-.stat-info{
+p {
+    color: var(--text-primary);
+}
+
+h3 {
+    color: var(--text-primary);
+}
+
+.subtitle {
+    color: var(--text-primary);
+}
+
+.page-title {
+    color: var(--text-primary);
+}
+
+.stat-info {
     text-align: center;
 }
 
@@ -315,7 +342,8 @@ h3{color: var(--text-primary);}
 }
 
 .card {
-    background-color: var(--bg-card);;
+    background-color: var(--bg-card);
+    ;
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -349,7 +377,7 @@ h3{color: var(--text-primary);}
     border-radius: 4px;
     display: inline-block;
     margin-top: 8px;
-    
+
 }
 
 .up {
