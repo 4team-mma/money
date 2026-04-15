@@ -131,6 +131,17 @@ function applyScanResult() {
 
     const r = scanResult.value
 
+// 同步日期到行事曆 (form.add_date)
+    if (r.invoice_date) {
+        // 假設後端回傳格式為 "2026-04-15" 或 "2026/04/15"
+        const parsedDate = new Date(r.invoice_date);
+        
+        // 檢查日期是否有效 (防止後端回傳奇怪的字串導致 Invalid Date)
+        if (!isNaN(parsedDate.getTime())) {
+            form.add_date = parsedDate;
+        }
+    }
+
     // 填入金額
     if (r.total_amount) {
         form.add_amount = r.total_amount
