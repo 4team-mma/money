@@ -89,3 +89,32 @@ export const clearAllPendingAiLogs = () => {
 export const saveEngineerCorrection = (data) => {
   return api.post("/v1/ai/ai_test/logs/engineer_fix", data);
 };
+
+
+/**
+ * 6. 邱比特大腦：語音糾錯擂台
+ */
+
+// 1. 取得語音模型狀態 (管理員專用)
+export const getAiSpeechStatus = () => {
+  return api.get("/v1/ai/speech/status"); 
+};
+
+// 2. 開關語音模型 (管理員專用)
+export const toggleAiSpeechModel = (enable) => {
+  return api.post("/v1/ai/speech/toggle", { enable });
+};
+
+// 3. 處理語音草稿糾錯 (一般會員可用)
+export const processSpeechCorrection = (rawText) => {
+  // ⚠️ 注意：這裡欄位改成 raw_text 才能對應後端 CorrectionRequest
+  // 路徑改成 /process
+  return api.post("/v1/ai/speech/process", { raw_text: rawText }, {
+    timeout: 30000 
+  });
+};
+
+// 4. 用戶手動確認/修改最終結果 (Human-in-the-loop)
+export const updateFinalCorrectedText = (logId, finalText) => {
+  return api.put(`/v1/ai/speech/logs/${logId}`, { final_text: finalText });
+};

@@ -23,14 +23,18 @@ const formData = ref({
 onMounted(async () => {
     // 1. 初始化 LIFF
     try {
-        await liff.init({ liffId: LIFF_ID })
-        if (liff.isLoggedIn()) {
-            const profile = await liff.getProfile()
-            lineUserId.value = profile.userId
-            console.log("LINE ID 載入成功:", lineUserId.value)
+        if (!LIFF_ID) {
+            console.warn("未設定 LIFF_ID，跳過 LINE 初始化");
+        } else {
+            await liff.init({ liffId: LIFF_ID });
+            if (liff.isLoggedIn()) {
+                const profile = await liff.getProfile();
+                lineUserId.value = profile.userId;
+                console.log("LINE ID 載入成功:", lineUserId.value);
+            }
         }
     } catch (err) {
-        console.log("非 LINE 環境或 LIFF 初始化失敗", err)
+        console.log("非 LINE 環境或 LIFF 初始化失敗", err);
     }
 
     // 2. Google 登入按鈕渲染
