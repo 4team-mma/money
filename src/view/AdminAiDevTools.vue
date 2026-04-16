@@ -249,7 +249,7 @@ label {
 
 .nav-item.active {
     background: var(--admin-primary);
-    color: #fff;
+    color: #f10f0f;
     border-color: var(--admin-primary);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }

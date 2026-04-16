@@ -1,6 +1,8 @@
 // src/api/robot.js
 import api from '@/api'; // 引用你的 index.js (已包含攔截器)
 
+
+
 // 1. 取得 AI 設定
 // 對應後端: GET /api/ai_models/config
 export const getAiRobotConfig = (provider = null) => {
@@ -109,12 +111,15 @@ export const toggleAiSpeechModel = (enable) => {
 export const processSpeechCorrection = (rawText) => {
   // ⚠️ 注意：這裡欄位改成 raw_text 才能對應後端 CorrectionRequest
   // 路徑改成 /process
-  return api.post("/v1/ai/speech/process", { raw_text: rawText }, {
+  return api.post("/v1/ai/correct/process", { raw_text: rawText }, {
     timeout: 30000 
   });
 };
 
 // 4. 用戶手動確認/修改最終結果 (Human-in-the-loop)
-export const updateFinalCorrectedText = (logId, finalText) => {
-  return api.put(`/v1/ai/speech/logs/${logId}`, { final_text: finalText });
+export const updateFinalCorrectedText = (logId, finalUserText) => {
+    // ⚠ 路徑再次確認：/api/v1/ai/correct/logs/
+    return api.put(`/v1/ai/correct/logs/${logId}`, {
+        final_user_text: finalUserText
+    });
 };
