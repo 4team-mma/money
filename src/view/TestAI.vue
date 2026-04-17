@@ -153,53 +153,59 @@ const renderScore = (score) => {
 <template>
     <div class="mma-lab-page">
         <div class="mma-lab-content">
-            <header class="mma-lab-header mma-card-shadow">
+            <header class="mma-lab-header">
                 <div class="header-main">
                     <div class="brand-box">
-                        <span class="sparkle">✨</span>
+                        <div class="icon-wrapper purple-glow-icon">
+                            <span class="sparkle">🧠</span>
+                        </div>
                         <div class="brand-text">
-                            <h1>🚀 大腦競技場：V1 vs V2 對決</h1>
-                            <p>傳統關鍵字 vs 純 ONNX 模型 vs 語意路由器</p>
+                            <h1>大腦競技場：V1 vs V2 對決</h1>
+                            <p>傳統 Regex vs 純 ONNX 模型 vs <strong>混合語意路由器</strong></p>
                         </div>
                     </div>
                     <div class="header-right">
-                        <button class="mma-btn solid danger" @click="handleLogout">🚪 登出</button>
+                        <button class="nav-btn" @click="router.push('/LabDashboard')">
+                            <span class="btn-icon">🔙</span> 返回大廳
+                        </button>
+                        <button class="nav-btn danger-hover" @click="handleLogout">
+                            🚪 登出
+                        </button>
                     </div>
                 </div>
 
-                <div class="header-stats" v-if="batchReport">
+                <div class="header-stats glass-panel" v-if="batchReport">
                     <div class="stat-unit">
                         <span class="label">樣本總數</span>
-                        <span class="val">{{ batchReport.total }}</span>
+                        <span class="val cyan-text">{{ batchReport.total }}</span>
                     </div>
                     <div class="stat-sep"></div>
                     <div class="stat-unit">
                         <span class="label">V1 舊版得分率</span>
-                        <span class="val orange">{{ (batchReport.v1_accuracy * 100).toFixed(1) }}%</span>
+                        <span class="val orange-text">{{ (batchReport.v1_accuracy * 100).toFixed(1) }}%</span>
                     </div>
                     <div class="stat-sep"></div>
                     <div class="stat-unit">
                         <span class="label">V2 旗艦版得分率</span>
-                        <span class="val" :class="batchReport.v2_accuracy >= 0.9 ? 'green' : 'orange'">
+                        <span class="val" :class="batchReport.v2_accuracy >= 0.9 ? 'green-text' : 'orange-text'">
                             {{ (batchReport.v2_accuracy * 100).toFixed(1) }}%
                         </span>
                     </div>
                 </div>
             </header>
 
-            <section class="mma-card-shadow arena-section">
-                <div class="search-group">
-                    <input v-model="testMessage" placeholder="請輸入測試語句，按 Enter 發動進攻..." @keyup.enter="runSingleTest" />
-                    <button class="mma-btn solid primary" @click="runSingleTest" :disabled="loading">
-                        {{ loading ? '掃描運算中... ⏳' : '發動三方對比 🐾' }}
+            <section class="arena-section">
+                <div class="search-group glass-panel">
+                    <input class="dark-input" v-model="testMessage" placeholder="請輸入測試語句，按 Enter 發動進攻..." @keyup.enter="runSingleTest" />
+                    <button class="tech-btn primary-btn" @click="runSingleTest" :disabled="loading">
+                        {{ loading ? '掃描運算中... ⏳' : '發動三方對比 ⚡' }}
                     </button>
                 </div>
 
-                <div class="battle-arena" v-if="singleResult"
-                    style="display: flex; justify-content: space-between; align-items: stretch; gap: 20px;">
-
-                    <div class="arena-card legacy" style="flex: 1;">
-                        <div class="card-title">🏠 傳統喵喵 (Regex)</div>
+                <div class="battle-arena" v-if="singleResult">
+                    
+                    <div class="arena-card legacy-card">
+                        <div class="card-title"><span class="icon">🏠</span> 傳統喵喵 (Regex)</div>
                         <div class="result-box">{{ singleResult.legacy.intent }}</div>
                         <div class="ai-reply-box">
                             <span class="reply-label">💬 喵喵回覆：</span>
@@ -207,13 +213,13 @@ const renderScore = (score) => {
                         </div>
                     </div>
 
-                    <div class="vs-divider" style="display: flex; align-items: center;">VS</div>
+                    <div class="vs-divider">VS</div>
 
-                    <div class="arena-card legacy" style="flex: 1; border-top: 4px solid #f59e0b;">
-                        <div class="card-title">🧠 V1 舊大腦 (ONNX)</div>
+                    <div class="arena-card v1-card">
+                        <div class="card-title"><span class="icon">🧠</span> V1 舊大腦 (ONNX)</div>
                         <div class="result-box">{{ singleResult.v1_ai.intent }}</div>
                         <div class="conf-info">
-                            信心：<b>{{ (singleResult.v1_ai.confidence * 100).toFixed(1) }}%</b>
+                            信心：<b class="orange-text">{{ (singleResult.v1_ai.confidence * 100).toFixed(1) }}%</b>
                         </div>
                         <div class="ai-reply-box">
                             <span class="reply-label">💬 V1 模擬回覆：</span>
@@ -221,64 +227,61 @@ const renderScore = (score) => {
                         </div>
                     </div>
 
-                    <div class="vs-divider" style="display: flex; align-items: center;">VS</div>
+                    <div class="vs-divider">VS</div>
 
-                    <div class="arena-card mixai" style="flex: 1;">
-                        <div class="card-title">✨ V2 旗艦大腦 (混合路由)</div>
-                        <div class="result-box highlight">{{ singleResult.v2_ai.intent }}</div>
-                        <div class="conf-info">
-                            <span v-if="singleResult.v2_ai.is_intercepted" style="color: #10b981; font-weight: 800;">🛡️
-                                ChromaDB 攔截</span>
-                            <span v-else>信心：<b>{{ (singleResult.v2_ai.confidence * 100).toFixed(1) }}%</b></span>
+                    <div class="arena-card v2-card">
+                        <div class="card-glow"></div>
+                        <div class="card-title relative-z"><span class="icon">✨</span> V2 旗艦大腦 (混合路由)</div>
+                        <div class="result-box highlight relative-z">{{ singleResult.v2_ai.intent }}</div>
+                        <div class="conf-info relative-z">
+                            <span v-if="singleResult.v2_ai.is_intercepted" class="intercept-text">
+                                🛡️ ChromaDB 攔截
+                            </span>
+                            <span v-else>信心：<b class="blue-text">{{ (singleResult.v2_ai.confidence * 100).toFixed(1) }}%</b></span>
                         </div>
-                        <div class="ai-reply-box mixai-reply">
+                        <div class="ai-reply-box mixai-reply relative-z">
                             <span class="reply-label">💬 V2 真實說法：</span>
                             <div class="reply-content">{{ singleResult.v2_ai.response || '（生成失敗）' }}</div>
                         </div>
                     </div>
                 </div>
 
-                <div class="single-correction-box" v-if="singleResult && showSingleCorrection">
+                <div class="single-correction-box glass-panel" v-if="singleResult && showSingleCorrection">
                     <span>🤖 邱比特大腦 V2 表現得如何？</span>
-                    <button class="mma-btn outline" @click="showSingleCorrection = false">✅ 判斷正確</button>
-                    <span style="color: #cbd5e1;">|</span>
+                    <button class="tech-btn outline-btn" @click="showSingleCorrection = false">✅ 判斷正確</button>
+                    <span class="divider-line">|</span>
                     <span>強制糾正為：</span>
-                    <select v-model="singleCorrection" class="mma-select">
+                    <select v-model="singleCorrection" class="dark-select">
                         <option v-for="opt in intentOptions" :key="opt" :value="opt">{{ opt }}</option>
                     </select>
-                    <button class="mma-btn solid primary" @click="saveSingleCorrection">儲存修正入庫</button>
+                    <button class="tech-btn purple-btn" @click="saveSingleCorrection">💾 儲存修正入庫</button>
                 </div>
             </section>
 
-            <section class="mma-card-shadow batch-section">
+            <section class="batch-section glass-panel">
                 <div class="section-title-row">
                     <h2>📊 批次盲測與加權報告</h2>
-                    <div class="title-actions" style="display: flex; gap: 15px; align-items: center;">
-
-                        <div style="display: flex; gap: 8px; border-right: 2px solid #e2e8f0; padding-right: 15px;">
-                            <span v-if="hasCustomFile"
-                                style="font-size: 13px; color: #10b981; font-weight: bold; line-height: 40px;">
-                                📁 已載入自定義題庫
-                            </span>
-                            <button class="mma-btn outline" @click="$refs.fileInput.click()">📤 上傳盲測題庫</button>
-                            <button v-if="hasCustomFile" class="mma-btn outline danger" @click="clearTempFile">🗑️
-                                清空</button>
+                    <div class="title-actions">
+                        <div class="action-group">
+                            <span v-if="hasCustomFile" class="custom-file-badge">📁 已載入自定義題庫</span>
+                            <button class="tech-btn outline-btn" @click="$refs.fileInput.click()">📤 上傳盲測題庫</button>
+                            <button v-if="hasCustomFile" class="tech-btn danger-outline-btn" @click="clearTempFile">🗑️ 清空</button>
                             <input type="file" ref="fileInput" @change="handleFileUpload" accept=".xlsx, .csv" hidden />
                         </div>
 
                         <label class="mma-checkbox">
                             <input type="checkbox" v-model="onlyShowErrors" />
-                            <span class="box"></span> 僅顯示 V2 未滿分項目
+                            <span class="custom-box"></span> 僅顯示 V2 未滿分項目
                         </label>
 
-                        <button class="mma-btn solid secondary" @click="runBatchTest" :disabled="batchLoading">
+                        <button class="tech-btn secondary-btn" @click="runBatchTest" :disabled="batchLoading">
                             {{ batchLoading ? '掃描中...' : '🏃 執行全自動加權掃描' }}
                         </button>
                     </div>
                 </div>
 
                 <div class="table-container" v-if="batchReport">
-                    <table class="mma-table">
+                    <table class="dark-table">
                         <thead>
                             <tr>
                                 <th class="text-left">測試語句</th>
@@ -289,34 +292,29 @@ const renderScore = (score) => {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="item in filteredBatchDetails" :key="item.text"
-                                :class="{ 'error-row': item.v2_score < 1.0 }">
-                                <td class="text-left font-bold">{{ item.text }}</td>
-                                <td><span class="pill gray">{{ item.true_intent }}</span></td>
+                            <tr v-for="item in filteredBatchDetails" :key="item.text" :class="{ 'error-row': item.v2_score < 1.0 }">
+                                <td class="text-left text-light">{{ item.text }}</td>
+                                <td><span class="pill gray-pill">{{ item.true_intent }}</span></td>
                                 <td>
-                                    <span class="pill" style="background:#fef3c7; color:#b45309">{{ item.v1_pred
-                                        }}</span><br>
-                                    <small>{{ renderScore(item.v1_score) }}</small>
+                                    <span class="pill orange-pill">{{ item.v1_pred }}</span><br>
+                                    <small class="score-text">{{ renderScore(item.v1_score) }}</small>
                                 </td>
                                 <td>
-                                    <span class="pill blue">{{ item.v2_pred }}</span><br>
+                                    <span class="pill blue-pill">{{ item.v2_pred }}</span><br>
                                     <small :class="item.v2_score === 1.0 ? 'ok-text' : 'err-text'">
                                         {{ item.v2_is_intercepted ? '🛡️ ' : '' }}{{ renderScore(item.v2_score) }}
                                     </small>
                                 </td>
                                 <td class="fix-cell">
                                     <template v-if="item.v2_score < 1.0 && !item.is_saved">
-                                        <select v-model="item.correction" class="mma-select" style="width:120px">
-                                            <option v-for="opt in intentOptions" :key="opt" :value="opt">{{ opt }}
-                                            </option>
-                                        </select>
-                                        <button class="btn-save-mini" @click="saveCorrection(item)">存入</button>
+                                        <div class="correction-controls">
+                                            <select v-model="item.correction" class="dark-select mini-select">
+                                                <option v-for="opt in intentOptions" :key="opt" :value="opt">{{ opt }}</option>
+                                            </select>
+                                            <button class="btn-save-mini" @click="saveCorrection(item)">存入</button>
+                                        </div>
                                     </template>
-
-                                    <span v-else-if="item.is_saved" style="color: #10b981; font-weight: bold;">
-                                        ✅ 已入庫學習
-                                    </span>
-
+                                    <span v-else-if="item.is_saved" class="saved-text">✅ 已入庫學習</span>
                                     <span v-else class="ok-text">👍 免修正</span>
                                 </td>
                             </tr>
@@ -329,12 +327,13 @@ const renderScore = (score) => {
 </template>
 
 <style scoped>
-/* 核心樣式：置中排版、間距寬敞 */
+/* 整體深色實驗室背景 */
 .mma-lab-page {
-    background-color: #f1f5f9;
     min-height: 100vh;
-    padding: 50px 20px;
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: radial-gradient(circle at top center, #1e293b 0%, #0f172a 100%);
+    color: #f8fafc;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 40px 20px;
 }
 
 .mma-lab-content {
@@ -342,26 +341,28 @@ const renderScore = (score) => {
     margin: 0 auto;
 }
 
-.mma-card-shadow {
-    background: white;
-    border-radius: 24px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
-    margin-bottom: 30px;
-    padding: 35px;
-    border: 1px solid #f1f5f9;
+/* 玻璃透視面板 */
+.glass-panel {
+    background: rgba(30, 41, 59, 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 25px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
-/* Header */
+/* Header 設計 */
 .mma-lab-header {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+    margin-bottom: 30px;
 }
 
 .header-main {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .brand-box {
@@ -370,350 +371,246 @@ const renderScore = (score) => {
     gap: 20px;
 }
 
-.sparkle {
-    font-size: 32px;
-    background: #eff6ff;
-    padding: 12px;
+.icon-wrapper {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(168, 85, 247, 0.3);
     border-radius: 16px;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
 }
 
 .brand-text h1 {
-    margin: 0;
-    font-size: 26px;
-    color: #1e293b;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0 0 5px 0;
+    color: #ffffff;
 }
 
 .brand-text p {
-    margin: 5px 0 0 0;
-    color: #64748b;
-    font-size: 15px;
+    margin: 0;
+    color: #94a3b8;
+    font-size: 0.95rem;
 }
+.brand-text strong { color: #c084fc; }
 
 .header-right {
     display: flex;
-    gap: 20px;
-    align-items: center;
+    gap: 15px;
 }
 
-.mode-info {
+/* 導航按鈕 */
+.nav-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
+.nav-btn:hover { background: rgba(255, 255, 255, 0.1); transform: translateY(-2px); }
+.nav-btn.danger-hover:hover { background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.5); color: #fca5a5; }
 
-.mode-tag {
-    font-size: 12px;
-    font-weight: 800;
-    padding: 6px 15px;
-    border-radius: 20px;
-    background: #f8fafc;
-    color: #64748b;
-    border: 1px solid #e2e8f0;
-}
-
-.mode-tag.is-custom {
-    background: #dcfce7;
-    color: #166534;
-    border-color: #bbf7d0;
-}
-
-/* 統計數字欄 */
+/* 頂部數據統計 */
 .header-stats {
     display: flex;
+    justify-content: space-around;
     align-items: center;
-    justify-content: center;
-    gap: 50px;
-    background: #f8fafc;
-    padding: 15px;
-    border-radius: 16px;
-    border: 1px solid #e2e8f0;
+    padding: 20px;
 }
+.stat-unit { text-align: center; }
+.stat-unit .label { display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 8px; font-weight: 600;}
+.stat-unit .val { font-size: 1.8rem; font-weight: 800; text-shadow: 0 0 10px rgba(255,255,255,0.1); }
+.stat-sep { width: 1px; height: 40px; background: rgba(255, 255, 255, 0.1); }
+.cyan-text { color: #22d3ee; }
+.orange-text { color: #fbbf24; }
+.green-text { color: #34d399; }
+.blue-text { color: #60a5fa; }
 
-.stat-unit {
-    text-align: center;
-}
-
-.stat-unit .label {
-    display: block;
-    font-size: 12px;
-    color: #94a3b8;
-    font-weight: bold;
-    margin-bottom: 5px;
-}
-
-.stat-unit .val {
-    font-size: 24px;
-    font-weight: 900;
-    color: #1e293b;
-}
-
-.stat-sep {
-    width: 1px;
-    height: 35px;
-    background: #e2e8f0;
-}
-
-/* 搜尋框與擂台 */
+/* 搜尋群組 */
 .search-group {
     display: flex;
     gap: 15px;
-    background: #f8fafc;
-    padding: 10px;
-    border-radius: 20px;
-    border: 1px solid #e2e8f0;
-    margin-bottom: 50px;
+    margin-bottom: 40px;
+    padding: 15px;
 }
 
-.search-group input {
+.dark-input {
     flex: 1;
-    border: none;
-    background: transparent;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
     padding: 0 20px;
-    font-size: 18px;
-    outline: none;
+    color: #f8fafc;
+    font-size: 1.1rem;
+    transition: border-color 0.3s;
 }
+.dark-input:focus { outline: none; border-color: #3b82f6; }
 
+/* 按鈕系列 */
+.tech-btn {
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.3s ease;
+    color: white;
+}
+.primary-btn { background: linear-gradient(135deg, #2563eb, #3b82f6); box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }
+.primary-btn:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5); transform: translateY(-2px); }
+.primary-btn:disabled { background: #475569; cursor: not-allowed; box-shadow: none; }
+
+.purple-btn { background: linear-gradient(135deg, #7e22ce, #a855f7); box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3); }
+.purple-btn:hover { box-shadow: 0 6px 20px rgba(168, 85, 247, 0.5); transform: translateY(-2px); }
+
+.secondary-btn { background: linear-gradient(135deg, #059669, #10b981); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); }
+.secondary-btn:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5); transform: translateY(-2px); }
+
+.outline-btn { background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: #e2e8f0; }
+.outline-btn:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.4); }
+
+.danger-outline-btn { background: transparent; border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; }
+.danger-outline-btn:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.8); }
+
+/* 擂台對決卡片 */
 .battle-arena {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 40px;
+    gap: 20px;
+    align-items: stretch;
+    margin-bottom: 30px;
 }
 
 .arena-card {
     flex: 1;
-    padding: 40px 30px;
-    border-radius: 24px;
-    background: #fff;
-    border: 1px solid #f1f5f9;
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 20px;
+    padding: 30px 20px;
     text-align: center;
+    position: relative;
+    overflow: hidden;
 }
 
-.arena-card.mixai {
-    border: 2px solid #3b82f6;
-    background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
-}
+.legacy-card { border: 1px solid rgba(148, 163, 184, 0.2); }
+.v1-card { border: 1px solid rgba(245, 158, 11, 0.3); }
+.v2-card { border: 1px solid rgba(59, 130, 246, 0.4); box-shadow: 0 10px 30px rgba(59, 130, 246, 0.15); }
 
-.arena-card .card-title {
-    font-size: 13px;
-    font-weight: 800;
-    color: #94a3b8;
-    text-transform: uppercase;
-    margin-bottom: 20px;
+/* V2 卡片發光特效 */
+.card-glow {
+    position: absolute;
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 200px;
+    background: #3b82f6;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.25;
+    z-index: 0;
 }
+.relative-z { position: relative; z-index: 1; }
 
-.arena-card .result-box {
-    font-size: 44px;
-    font-weight: 900;
-    margin-bottom: 20px;
-    letter-spacing: 1px;
+.card-title { font-size: 0.95rem; font-weight: 600; color: #cbd5e1; margin-bottom: 20px; }
+.result-box { font-size: 2.2rem; font-weight: 800; margin-bottom: 15px; letter-spacing: 1px; color: #e2e8f0; }
+.result-box.highlight { color: #60a5fa; text-shadow: 0 0 15px rgba(96, 165, 250, 0.4); }
+
+.conf-info { font-size: 0.9rem; color: #94a3b8; margin-bottom: 15px; }
+.intercept-text { color: #34d399; font-weight: 800; text-shadow: 0 0 10px rgba(52, 211, 153, 0.3); }
+
+.vs-divider { display: flex; align-items: center; font-size: 1.5rem; font-weight: 900; color: #475569; }
+
+/* AI 對話框 */
+.ai-reply-box {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    text-align: left;
 }
+.mixai-reply { background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.2); }
 
-.arena-card .result-box.highlight {
-    color: #3b82f6;
+.reply-label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 8px; font-weight: 600; }
+.reply-content { font-size: 0.9rem; color: #cbd5e1; line-height: 1.5; white-space: pre-wrap; }
+
+/* 單句修正區塊 */
+.single-correction-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    padding: 15px 25px;
+    border: 1px dashed rgba(168, 85, 247, 0.4);
+    animation: fadeIn 0.4s ease-out;
 }
+.divider-line { color: #475569; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-.arena-card .card-footer {
-    font-size: 13px;
-    color: #94a3b8;
-}
+/* 表格區塊 */
+.batch-section { margin-top: 40px; }
 
-.vs-divider {
-    font-size: 26px;
-    font-weight: 900;
-    color: #cbd5e1;
-}
-
-/* 表格 */
 .section-title-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px;
+    margin-bottom: 25px;
 }
+.section-title-row h2 { font-size: 1.4rem; font-weight: 600; margin: 0; }
 
-.mma-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    cursor: pointer;
-    font-weight: bold;
-    color: #475569;
-}
+.title-actions { display: flex; align-items: center; gap: 20px; }
+.action-group { display: flex; align-items: center; gap: 10px; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 20px; }
+.custom-file-badge { font-size: 0.85rem; color: #34d399; font-weight: 600; background: rgba(52,211,153,0.1); padding: 5px 10px; border-radius: 6px; }
 
-.table-container {
-    border-radius: 20px;
-    overflow: hidden;
-    border: 1px solid #e2e8f0;
-}
+/* 自訂 Checkbox */
+.mma-checkbox { display: flex; align-items: center; gap: 10px; cursor: pointer; color: #cbd5e1; font-size: 0.95rem; user-select: none; }
+.mma-checkbox input { display: none; }
+.custom-box { width: 18px; height: 18px; border: 2px solid #64748b; border-radius: 4px; display: inline-block; position: relative; transition: all 0.2s; }
+.mma-checkbox input:checked + .custom-box { background: #3b82f6; border-color: #3b82f6; }
+.mma-checkbox input:checked + .custom-box::after { content: '✔'; color: white; position: absolute; font-size: 12px; left: 2px; top: -1px; }
 
-.mma-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-}
+/* 深色資料表 */
+.table-container { border-radius: 12px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.1); }
+.dark-table { width: 100%; border-collapse: collapse; background: rgba(15, 23, 42, 0.4); }
+.dark-table th { background: rgba(0, 0, 0, 0.3); padding: 15px; font-size: 0.9rem; color: #94a3b8; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-weight: 600; }
+.dark-table td { padding: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); text-align: center; font-size: 0.95rem; }
+.error-row { background: rgba(239, 68, 68, 0.08); }
 
-.mma-table th {
-    background: #f8fafc;
-    padding: 20px;
-    font-size: 14px;
-    color: #64748b;
-    border-bottom: 2px solid #f1f5f9;
-}
+.text-left { text-align: left !important; }
+.text-light { color: #f8fafc; font-weight: 500; }
 
-.mma-table td {
-    padding: 20px;
-    border-bottom: 1px solid #f1f5f9;
-    text-align: center;
-}
+/* Pills 標籤 */
+.pill { padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-block; margin-bottom: 5px; }
+.gray-pill { background: rgba(255, 255, 255, 0.1); color: #cbd5e1; }
+.orange-pill { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+.blue-pill { background: rgba(59, 130, 246, 0.15); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.2); }
 
-.error-row {
-    background: #fff1f2;
-}
+.score-text { color: #94a3b8; font-size: 0.8rem; }
+.ok-text { color: #34d399; font-weight: 600; }
+.err-text { color: #f87171; font-weight: 600; }
+.saved-text { color: #60a5fa; font-weight: 600; }
 
-/* 標籤小方塊 */
-.pill {
-    padding: 5px 12px;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: bold;
-}
+/* 表格內的控制元件 */
+.correction-controls { display: flex; gap: 8px; justify-content: center; align-items: center; }
+.dark-select { background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.2); color: #f8fafc; padding: 8px 12px; border-radius: 8px; outline: none; }
+.mini-select { width: 130px; font-size: 0.85rem; padding: 6px 8px; }
+.btn-save-mini { background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+.btn-save-mini:hover { background: #059669; }
 
-.pill.blue {
-    background: #dbeafe;
-    color: #1e40af;
-}
-
-.pill.gray {
-    background: #f1f5f9;
-    color: #475569;
-}
-
-/* 按鈕系列 */
-.mma-btn {
-    padding: 12px 24px;
-    border-radius: 12px;
-    font-weight: bold;
-    cursor: pointer;
-    border: none;
-    transition: 0.2s;
-}
-
-.mma-btn.solid.primary {
-    background: #1e293b;
-    color: white;
-}
-
-.mma-btn.solid.secondary {
-    background: #3b82f6;
-    color: white;
-}
-
-.mma-btn.solid.danger {
-    background: #ef4444;
-    color: white;
-}
-
-.mma-btn.outline {
-    background: white;
-    border: 1px solid #e2e8f0;
-    color: #475569;
-}
-
-.btn-save-mini {
-    background: #10b981;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 10px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.mma-select {
-    padding: 8px;
-    border-radius: 10px;
-    border: 1px solid #cbd5e1;
-    outline: none;
-    font-weight: bold;
-    margin-right: 10px;
-}
-
-.ok-text {
-    color: #10b981;
-    font-weight: 900;
-}
-
-.err-text {
-    color: #ef4444;
-    font-weight: 900;
-}
-
-.text-left {
-    text-align: left !important;
-}
-
-.font-bold {
-    font-weight: bold;
-}
-
-/* 🌟 新增：單句校正工具列樣式 */
-.single-correction-box {
-    margin-top: 30px;
-    padding: 20px;
-    background: #f8fafc;
-    border: 2px dashed #cbd5e1;
-    border-radius: 16px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 15px;
-    color: #475569;
-    font-weight: bold;
-    animation: fadeIn 0.5s ease-in-out;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* 🌟 AI 實際回覆對話框樣式 */
-.ai-reply-box {
-    margin-top: 25px;
-    padding: 15px;
-    background: #f8fafc;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    text-align: left;
-    font-size: 14px;
-    color: #334155;
-    line-height: 1.6;
-}
-
-.ai-reply-box.mixai-reply {
-    background: #f0fdf4;
-    /* 給新大腦一點淺綠色背景區分 */
-    border-color: #bbf7d0;
-}
-
-.reply-label {
-    display: block;
-    font-weight: 800;
-    color: #64748b;
-    margin-bottom: 8px;
-    font-size: 12px;
-}
-
-.reply-content {
-    white-space: pre-wrap;
-    /* 讓 AI 的換行能正常顯示 */
+/* 響應式 */
+@media (max-width: 1024px) {
+    .battle-arena { flex-direction: column; }
+    .vs-divider { display: none; }
+    .title-actions { flex-direction: column; align-items: flex-start; gap: 15px; }
+    .action-group { border-right: none; padding-right: 0; flex-wrap: wrap; }
 }
 </style>

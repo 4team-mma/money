@@ -35,6 +35,8 @@ import AdminSetting from "@/view/AdminSetting.vue";
 import TestAI from "@/view/TestAI.vue";
 import AdminAiConfig from "@/view/AdminAiConfig.vue";
 import AdminAiDevTools from "@/view/AdminAiDevTools.vue";
+import LabDashboard from "@/view/LabDashboard.vue";
+import SpeechCorrectionLab from "@/view/SpeechCorrectionLab.vue";
 
 const routes = [
   {
@@ -258,8 +260,20 @@ const routes = [
     component: AdminAiDevTools,
     name: "AdminAiDevTools",
     meta: { requiresAuth: true, hideNav: true }
-  }
-
+  },
+  {
+    path: '/lab',
+    name: 'Lab',
+    component: LabDashboard,
+    meta: { requiresAuth: true, hideNav: true }
+  },
+  // 🌟 新增：註冊語音測試頁面的路由
+  {
+    path: '/SpeechCorrectionLab',
+    name: 'SpeechCorrectionLab',
+    component: SpeechCorrectionLab,
+    meta: { requiresAuth: true, hideNav: true }
+  },
 
 
 ];
@@ -271,6 +285,7 @@ const router = createRouter({
 });
 
 // 路由守衛 (Router Guard)
+// 路由守衛 (Router Guard)
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('user_token');
   const userJson = localStorage.getItem('currentUser');
@@ -280,11 +295,11 @@ router.beforeEach((to, from, next) => {
   const publicPages = ['/', '/Register', '/ForgetPassword'];
   const isAdminPage = ['/Admins', '/AdminMain', '/AdminModel', '/AdminsComments', '/AdminData', '/AdminSetting'].some(path => to.path.startsWith(path));
   
-  // 🌟 新增：定義 AI 測試員專屬頁面
-  const isTestAIPage = to.path === '/TestAI';
+  // 🌟 AI 測試員專屬頁面陣列
+  const aiTestPages = ['/lab', '/TestAI', '/SpeechCorrectionLab'];
   
-  // 🌟 新增：定義一般使用者頁面 (排除掉首頁、載入頁與測試頁)
-  const isUserPage = !publicPages.includes(to.path) && !isAdminPage && !isTestAIPage && to.path !== '/loading';
+  // 一般使用者頁面
+  const isUserPage = !publicPages.includes(to.path) && !isAdminPage && !aiTestPages.includes(to.path) && to.path !== '/loading';
 
   // 🛡️ 防護 A：未登入者存取私有頁面
   if (!publicPages.includes(to.path) && !token) {
@@ -292,33 +307,31 @@ router.beforeEach((to, from, next) => {
     return next('/');
   }
 
-  // 🛡️ 防護 B：已登入者的分流邏輯 (根據 Role 限制去處)
+  // 🛡️ 防護 B：已登入者的分流邏輯
   if (token && user) {
     
     // 1. 如果是 AI 測試員 (ai_test)
     if (user.role === 'ai_test') {
-      // 測試員只能待在 /TestAI 或 /loading，想去別的地方就抓回來
-      if (!isTestAIPage && to.path !== '/loading' && !publicPages.includes(to.path)) {
-        console.warn('🧪 測試員請回實驗室');
-        return next('/TestAI');
+      // 🌟 修正：把 isTestAIPage 換成 aiTestPages.includes(to.path)
+      if (!aiTestPages.includes(to.path) && to.path !== '/loading' && !publicPages.includes(to.path)) {
+        console.warn('🧪 測試員請回實驗室大廳');
+        return next('/lab');
       }
     }
     
     // 2. 如果是管理員 (admin)
     else if (user.role === 'admin') {
-      // 管理員通常有最高權限，但如果你想讓他專注在管理後台：
-      // if (isUserPage) return next('/AdminMain');
+      // ...
     }
     
     // 3. 如果是一般使用者 (user)
     else {
-      // 一般使用者不准進管理員頁面
       if (isAdminPage) {
         console.warn('🚫 非管理員，拒絕存取');
         return next('/book');
       }
-      // 一般使用者不准進 AI 測試頁面
-      if (isTestAIPage) {
+      // 🌟 修正：把 isTestAIPage 換成 aiTestPages.includes(to.path)
+      if (aiTestPages.includes(to.path)) {
         console.warn('🚫 非測試員，拒絕存取');
         return next('/book');
       }
@@ -330,7 +343,7 @@ router.beforeEach((to, from, next) => {
     return next('/loading');
   }
 
-  next(); // 通過檢查，放行
+  next();
 });
 
 export default router;

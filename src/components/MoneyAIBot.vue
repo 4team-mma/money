@@ -288,6 +288,61 @@ const personasList = [
   { value: 'lazy', label: '😿 厭世喵' }, { value: 'rich', label: '💰 土豪喵' }
 ];
 
+
+// ==========================================
+// 🌟 快捷按鈕與分層選單邏輯
+// ==========================================
+
+// 1. 發送快捷訊息（並隱藏用過的按鈕）
+const sendQuickMessage = async (text, msgId) => {
+  // 點擊後，把該則訊息的按鈕清掉，讓歷史紀錄保持乾淨
+  const msg = messages.value.find(m => m.id === msgId);
+  if (msg) msg.quick_replies = null;
+
+  input.value = text;
+  await nextTick();
+  handleSend();
+};
+
+// 2. 點擊「💡 專家建議」觸發的子選單
+const showAdvisorMenu = () => {
+  messages.value.push({
+    id: Date.now(),
+    text: '喵！請選擇你想進行的財務分析：',
+    sender: 'bot',
+    quick_replies: [
+      '📈 幫我查一下最近物價是不是變貴了？',
+      '💼 請幫我比對目前的薪資競爭力',
+      // 等隊友寫好 Z-score，把這行的註解拿掉就好！
+      // '🩺 幫我進行本月財務健檢' 
+    ],
+    timestamp: new Date().toISOString()
+  });
+  scrollToBottom();
+};
+
+// 3. 點擊「📖 本站知識」觸發的子選單
+const showKnowledgeMenu = () => {
+  messages.value.push({
+    id: Date.now(),
+    text: '想了解什麼理財知識呢喵？可以直接點擊，或輸入你想問的名詞：',
+    sender: 'bot',
+    quick_replies: [
+      '📖 什麼是 CPI (消費者物價指數)？',
+      '🏦 ETF 是什麼？新手適合買嗎？',
+      '💰 什麼是 50/30/20 理財法則？'
+    ],
+    timestamp: new Date().toISOString()
+  });
+  scrollToBottom();
+};
+
+
+
+
+
+
+
 const handleSend = async () => {
   if (!input.value.trim() || isTyping.value) return;
   const query = input.value;
@@ -297,7 +352,7 @@ const handleSend = async () => {
   // 🌟 修正 1：統一使用 userMsgId，這樣等一下 AI 改錯字才找得到這個泡泡
   const userMsgId = Date.now();
   messages.value.push({ id: userMsgId, text: query, sender: 'user', timestamp: new Date().toISOString() });
-  
+
   input.value = '';
   paintDrops.value = [];
   isTyping.value = true;
@@ -308,14 +363,14 @@ const handleSend = async () => {
   }, 1500);
 
 
-// ==========================================
+  // ==========================================
   // 🚀 核心防呆機制：本地端 GPU 糾錯攔截
   // ==========================================
   let finalQuery = query; // 預設使用原句
   if (wasSpoken.value) {
     loadingText.value = "啟動 RTX 4060 Ti 糾錯中喵... 🐾";
     console.log(`🎤 [耳朵聽寫] 收到語音原始草稿：【${query}】`);
-    
+
     try {
       // 送給後端
       const correctRes = await processSpeechCorrection(query);
@@ -330,9 +385,9 @@ const handleSend = async () => {
           console.log(`✨ [大腦 LoRA 發功] 發現錯字並成功修正！\n❌ 原句：${query}\n✅ 修正：${finalQuery}`);
           const msgIndex = messages.value.findIndex(m => m.id === userMsgId);
           if (msgIndex !== -1) {
-              
-              // ✅ 請改成這行：保留原始草稿，並加上 AI 修正結果！
-              messages.value[msgIndex].text = `🎤 原始：${query}\n✨ 修正：${finalQuery}`;
+
+            // ✅ 請改成這行：保留原始草稿，並加上 AI 修正結果！
+            messages.value[msgIndex].text = `🎤 原始：${query}\n✨ 修正：${finalQuery}`;
           }
         } else {
           console.log(`🛡️ [大腦 LoRA 判定] 原句已經很完美，無需修正！保持原樣：【${finalQuery}】`);
@@ -360,7 +415,7 @@ const handleSend = async () => {
 
     // 確保帳戶資料同步
     if (response.is_command && accountStore.accounts.length === 0) await accountStore.loadAccounts(true);
-    
+
     // AI 回覆的那段
     messages.value.push({
       id: Date.now() + 1,
@@ -371,12 +426,12 @@ const handleSend = async () => {
       provider: response.provider,
       is_command: response.is_command,
       action_data: actionData,
-      intent: response.intent,           
-      confidence: response.confidence    
+      intent: response.intent,
+      confidence: response.confidence
     });
   } catch (error) {
     // 🌟 修正 3：這才是真正的 Ollama (記帳大腦) 斷線錯誤處理！
-    console.error("❌ 聊天大腦發生錯誤：", error); 
+    console.error("❌ 聊天大腦發生錯誤：", error);
     messages.value.push({ id: Date.now() + 1, text: "喵... 我斷線了喵！請檢查後端終端機或 Ollama 狀態！", sender: 'bot', timestamp: new Date().toISOString() });
   } finally {
     isTyping.value = false;
@@ -474,7 +529,7 @@ const chatWindowStyle = computed(() => {
   const catX = pixelPosition.value.x;
   const catY = pixelPosition.value.y;
   const windowHeight = window.innerHeight;
-  const chatHeight = 520; 
+  const chatHeight = 520;
 
   const style = {
     position: 'fixed', // 確保浮動在最上層
@@ -495,7 +550,7 @@ const chatWindowStyle = computed(() => {
 
   // 2. 垂直定位：讓對話框中心對齊貓咪中心
   let topPosition = catY + 45; // 預設對齊貓咪中心點
-  
+
   // 智慧防溢出：如果貓太靠上面或下面，強制把對話框推回安全範圍內
   if (topPosition - (chatHeight / 2) < 20) {
     topPosition = (chatHeight / 2) + 20; // 防止撞到天花板
@@ -639,153 +694,166 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
       </div>
     </Teleport>
     <Teleport to="body">
-    <Transition>
-      <div v-if="isOpen" class="chat-window-custom" @mousedown.stop :style="chatWindowStyle">
-        <div class="chat-header-custom" @mousedown="startDrag" style="cursor: move;">
-          <div class="header-left">
-            <div class="avatar-container-header">
-              <img :src="catImg" class="header-icon" draggable="false" />
+      <Transition>
+        <div v-if="isOpen" class="chat-window-custom" @mousedown.stop :style="chatWindowStyle">
+          <div class="chat-header-custom" @mousedown="startDrag" style="cursor: move;">
+            <div class="header-left">
+              <div class="avatar-container-header">
+                <img :src="catImg" class="header-icon" draggable="false" />
+              </div>
+              <div class="bot-status">
+                <span class="name">Money 喵喵小助手</span>
+                <span class="status">{{ isTyping ? '正在動腦...' : '隨時為您服務' }}</span>
+              </div>
             </div>
-            <div class="bot-status">
-              <span class="name">Money 喵喵小助手</span>
-              <span class="status">{{ isTyping ? '正在動腦...' : '隨時為您服務' }}</span>
+            <div class="header-actions">
+
+              <select v-model="selectedPersona" class="persona-select" title="切換喵喵性格">
+                <option v-for="p in personasList" :key="p.value" :value="p.value">
+                  {{ p.label }}
+                </option>
+              </select>
+              <button class="clear-btn" @click="clearChat" title="清空對話">🗑️</button>
+              <button class="close-x" @click="isOpen = false">✕</button>
             </div>
           </div>
-          <div class="header-actions">
 
-            <select v-model="selectedPersona" class="persona-select" title="切換喵喵性格">
-              <option v-for="p in personasList" :key="p.value" :value="p.value">
-                {{ p.label }}
-              </option>
-            </select>
-            <button class="clear-btn" @click="clearChat" title="清空對話">🗑️</button>
-            <button class="close-x" @click="isOpen = false">✕</button>
-          </div>
-        </div>
+          <div class="messages-container" ref="messagesContainer">
+            <div v-for="message in messages" :key="message.id" :class="['msg-row', message.sender]">
+              <div v-if="message.sender === 'bot'" class="avatar-container-msg">
+                <img :src="catImg" class="msg-avatar" />
+              </div>
+              <div class="bubble">
+                <p style="white-space: pre-wrap;">{{ message.text }}</p>
 
-        <div class="messages-container" ref="messagesContainer">
-          <div v-for="message in messages" :key="message.id" :class="['msg-row', message.sender]">
-            <div v-if="message.sender === 'bot'" class="avatar-container-msg">
-              <img :src="catImg" class="msg-avatar" />
-            </div>
-            <div class="bubble">
-              <p style="white-space: pre-wrap;">{{ message.text }}</p>
-
-              <template v-if="message.is_command && message.action_data && message.action_data.length > 0">
-                <div v-for="(actionItem, idx) in message.action_data" :key="idx" class="action-card"
-                  style="margin-bottom: 12px;">
-                  <div class="card-header">
-                    {{ actionItem.record_type === 'transfer' ? '🔄 轉帳確認' : '📝 收支確認' }}
-                    <span style="font-size: 12px; color: #94a3b8; font-weight: normal; margin-left: auto;">({{ idx + 1
-                      }}/{{ message.action_data.length }})</span>
-                  </div>
-
-                  <div class="card-body">
-                    <div class="data-row">
-                      <span class="label">日期：</span>
-                      <input type="date" v-model="actionItem.record_date" class="value ai-select"
-                        style="max-width: 130px;" />
-                    </div>
-
-                    <div class="data-row">
-                      <span class="label">金額：</span>
-                      <span class="value amount"
-                        :style="{ color: actionItem.record_type === 'income' ? '#10b981' : (actionItem.record_type === 'expense' ? '#ef4444' : '#3b82f6') }">
-                        {{ actionItem.record_type === 'income' ? '+' : (actionItem.record_type === 'expense' ? '-' : '')
-                        }} $ {{ actionItem.add_amount }}
-                      </span>
-                    </div>
-
-                    <template v-if="actionItem.record_type !== 'transfer'">
-                      <div class="data-row"><span class="label">類別：</span><span class="value">{{ actionItem.add_class
-                          }}</span></div>
-                      <div class="data-row"><span class="label">項目：</span><span class="value">{{ actionItem.add_note
-                          }}</span></div>
-
-                      <div class="data-row">
-                        <span class="label">帳戶：</span>
-                        <select v-model="actionItem.account_name" class="value ai-select">
-                          <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">
-                            {{ acc.itemName }}
-                          </option>
-                        </select>
-                      </div>
-
-                      <div class="data-row"><span class="label">標籤：</span><span class="value tag-text">{{
-                        actionItem.add_member }} / {{ actionItem.add_tag }}</span></div>
-                    </template>
-
-                    <template v-else>
-                      <div class="data-row">
-                        <span class="label">轉出 (From)：</span>
-                        <select v-model="actionItem.from_account" class="value ai-select">
-                          <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">{{
-                            acc.itemName }}</option>
-                        </select>
-                      </div>
-
-                      <div class="data-row">
-                        <span class="label">轉入 (To)：</span>
-                        <select v-model="actionItem.to_account" class="value ai-select">
-                          <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">{{
-                            acc.itemName }}</option>
-                        </select>
-                      </div>
-
-                      <div class="data-row"><span class="label">備註：</span><span class="value">{{ actionItem.add_note
-                          }}</span></div>
-                    </template>
-                  </div>
-
-                  <div class="card-footer">
-                    <button class="btn cancel" @click="cancelRecord(message.id, idx)">取消</button>
-                    <button class="btn confirm" @click="confirmRecord(message.id, idx, actionItem)">確認送出</button>
-                  </div>
+                <!-- 讓對話泡泡長出按鈕 -->
+                <div v-if="message.quick_replies && message.quick_replies.length > 0" class="inline-quick-replies">
+                  <button v-for="(replyText, idx) in message.quick_replies" :key="idx" class="inline-qr-btn"
+                    @click="sendQuickMessage(replyText, message.id)">
+                    {{ replyText }}
+                  </button>
                 </div>
-              </template>
 
-              <span class="time">
-                {{ formatTime(message.timestamp) }}
-                <span v-if="message.sender === 'bot' && message.duration" class="meta-info">
-                  <span class="provider-tag" v-if="message.provider">[{{ message.provider.toUpperCase() }}]</span>
-                  <span class="duration-tag">⏱️{{ formatDuration(message.duration) }}</span>
-                </span>
+                <template v-if="message.is_command && message.action_data && message.action_data.length > 0">
+                  <div v-for="(actionItem, idx) in message.action_data" :key="idx" class="action-card"
+                    style="margin-bottom: 12px;">
+                    <div class="card-header">
+                      {{ actionItem.record_type === 'transfer' ? '🔄 轉帳確認' : '📝 收支確認' }}
+                      <span style="font-size: 12px; color: #94a3b8; font-weight: normal; margin-left: auto;">({{ idx + 1
+                      }}/{{ message.action_data.length }})</span>
+                    </div>
 
-                <span v-if="message.sender === 'bot'" class="feedback-actions">
-                  <template v-if="!message.feedbackGiven">
-                    <button class="feedback-btn" title="回答很棒" @click="handleFeedback(message, true)">👍</button>
-                    <button class="feedback-btn" title="回答有誤" @click="handleFeedback(message, false)">👎</button>
-                  </template>
-                  <template v-else>
-                    <span class="feedback-thanks">已回饋 ✓</span>
-                  </template>
+                    <div class="card-body">
+                      <div class="data-row">
+                        <span class="label">日期：</span>
+                        <input type="date" v-model="actionItem.record_date" class="value ai-select"
+                          style="max-width: 130px;" />
+                      </div>
+
+                      <div class="data-row">
+                        <span class="label">金額：</span>
+                        <span class="value amount"
+                          :style="{ color: actionItem.record_type === 'income' ? '#10b981' : (actionItem.record_type === 'expense' ? '#ef4444' : '#3b82f6') }">
+                          {{ actionItem.record_type === 'income' ? '+' : (actionItem.record_type === 'expense' ? '-' :
+                            '')
+                          }} $ {{ actionItem.add_amount }}
+                        </span>
+                      </div>
+
+                      <template v-if="actionItem.record_type !== 'transfer'">
+                        <div class="data-row"><span class="label">類別：</span><span class="value">{{ actionItem.add_class
+                        }}</span></div>
+                        <div class="data-row"><span class="label">項目：</span><span class="value">{{ actionItem.add_note
+                        }}</span></div>
+
+                        <div class="data-row">
+                          <span class="label">帳戶：</span>
+                          <select v-model="actionItem.account_name" class="value ai-select">
+                            <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">
+                              {{ acc.itemName }}
+                            </option>
+                          </select>
+                        </div>
+
+                        <div class="data-row"><span class="label">標籤：</span><span class="value tag-text">{{
+                          actionItem.add_member }} / {{ actionItem.add_tag }}</span></div>
+                      </template>
+
+                      <template v-else>
+                        <div class="data-row">
+                          <span class="label">轉出 (From)：</span>
+                          <select v-model="actionItem.from_account" class="value ai-select">
+                            <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">{{
+                              acc.itemName }}</option>
+                          </select>
+                        </div>
+
+                        <div class="data-row">
+                          <span class="label">轉入 (To)：</span>
+                          <select v-model="actionItem.to_account" class="value ai-select">
+                            <option v-for="acc in accountStore.accounts" :key="acc.account_id" :value="acc.itemName">{{
+                              acc.itemName }}</option>
+                          </select>
+                        </div>
+
+                        <div class="data-row"><span class="label">備註：</span><span class="value">{{ actionItem.add_note
+                        }}</span></div>
+                      </template>
+                    </div>
+
+                    <div class="card-footer">
+                      <button class="btn cancel" @click="cancelRecord(message.id, idx)">取消</button>
+                      <button class="btn confirm" @click="confirmRecord(message.id, idx, actionItem)">確認送出</button>
+                    </div>
+                  </div>
+                </template>
+
+                <span class="time">
+                  {{ formatTime(message.timestamp) }}
+                  <span v-if="message.sender === 'bot' && message.duration" class="meta-info">
+                    <span class="provider-tag" v-if="message.provider">[{{ message.provider.toUpperCase() }}]</span>
+                    <span class="duration-tag">⏱️{{ formatDuration(message.duration) }}</span>
+                  </span>
+
+                  <span v-if="message.sender === 'bot'" class="feedback-actions">
+                    <template v-if="!message.feedbackGiven">
+                      <button class="feedback-btn" title="回答很棒" @click="handleFeedback(message, true)">👍</button>
+                      <button class="feedback-btn" title="回答有誤" @click="handleFeedback(message, false)">👎</button>
+                    </template>
+                    <template v-else>
+                      <span class="feedback-thanks">已回饋 ✓</span>
+                    </template>
+                  </span>
                 </span>
-              </span>
+              </div>
+            </div>
+            <div v-if="isTyping" class="msg-row bot">
+              <div class="avatar-container-msg">
+                <img :src="catImg" class="msg-avatar" />
+              </div>
+              <div class="bubble typing">{{ loadingText }}</div>
             </div>
           </div>
-          <div v-if="isTyping" class="msg-row bot">
-            <div class="avatar-container-msg">
-              <img :src="catImg" class="msg-avatar" />
-            </div>
-            <div class="bubble typing">{{ loadingText }}</div>
+
+          <div class="bottom-menu-bar">
+            <button class="menu-btn" @click="showAdvisorMenu">💡 專家建議</button>
+            <button class="menu-btn" @click="showKnowledgeMenu">📖 本站知識</button>
+          </div>
+
+
+          <div class="input-area">
+            <input ref="inputRef" v-model="input" placeholder="輸入訊息..." @keyup.enter.prevent="handleSend"
+              @input="wasSpoken = false" :disabled="isTyping" />
+
+            <button class="mic-btn" :class="{ 'is-recording': isRecording }" @click="toggleRecording"
+              :disabled="isTyping" :title="isRecording ? '點擊停止錄音' : '語音輸入'">
+              {{ isRecording ? '🎙️' : '🎤' }}
+            </button>
+
+            <button class="send-btn" @click="handleSend" :disabled="isTyping">🐾</button>
           </div>
         </div>
-
-        <div class="input-area">
-          <input ref="inputRef" v-model="input" placeholder="輸入訊息..." 
-          @keyup.enter.prevent="handleSend"
-          @input="wasSpoken = false"
-            :disabled="isTyping" />
-
-          <button class="mic-btn" :class="{ 'is-recording': isRecording }" @click="toggleRecording" :disabled="isTyping"
-            :title="isRecording ? '點擊停止錄音' : '語音輸入'">
-            {{ isRecording ? '🎙️' : '🎤' }}
-          </button>
-
-          <button class="send-btn" @click="handleSend" :disabled="isTyping">🐾</button>
-        </div>
-      </div>
-    </Transition>
+      </Transition>
     </Teleport>
   </div>
 </template>
@@ -1299,4 +1367,62 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
   }
 }
+
+/* --- 🌟 底部主功能選單列 --- */
+.bottom-menu-bar {
+  display: flex;
+  gap: 10px;
+  padding: 8px 15px;
+  background-color: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.menu-btn {
+  flex: 1;
+  /* 平分寬度 */
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.menu-btn:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+/* --- 🌟 對話框內的條列式按鈕樣式 --- */
+.inline-quick-replies {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.inline-qr-btn {
+  background-color: #ffffff;
+  border: 1px solid #c7d2fe;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #4f46e5;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.inline-qr-btn:hover {
+  background-color: #e0e7ff;
+  border-color: #818cf8;
+  transform: translateY(-1px);
+}
+
 </style>
