@@ -1,8 +1,10 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { changePassword, deleteMe } from '@/api/user'
+import { ref, onMounted, computed } from 'vue'
+import { changePassword, deleteMe,getProfile } from '@/api/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { settingApi } from '@/api/setting'
+
+
 
 // 🌟 引入 Siri 圖示 (解決破圖)
 import logoSiri from '@/assets/logo_siri.png'
@@ -16,16 +18,52 @@ const security = ref({
 const loginActivities = ref([])
 const isLoading = ref(true)
 
-// --- 🌟 Siri 捷徑綁定邏輯 ---
 
-const siriShortcutUrl = "https://www.icloud.com/shortcuts/a6202362a34a4f1fadbf3c275aa7f236"
+// 🌟 從環境變數讀取網址 (更專業、更安全)
+const SHORTCUT_CONFIG = {
+    user: import.meta.env.VITE_SIRI_URL_USER,
+    test: import.meta.env.VITE_SIRI_URL_TEST
+}
+
+// --- 🌟 Siri 捷徑綁定邏輯 (分權限) ---
+
 const userToken = ref('')
+const userRole = ref('') // 🌟 新增：儲存使用者角色
+
+// 1. 動態計算網址：role 為 test 就給測試版，其餘給使用者版
+const siriShortcutUrl = computed(() => {
+    return userRole.value === 'test' ? SHORTCUT_CONFIG.test : SHORTCUT_CONFIG.user
+})
+
+// 2. 動態計算標題
+const siriTitle = computed(() => {
+    return userRole.value === 'test' ? "Siri 語音助手 (開發者測試版)" : "Siri 語音助手 (喵喵助手)"
+})
+
+
+// 🌟 關鍵修正：同步身分，確保 role 抓到的是資料庫最新的
+const syncUserIdentity = async () => {
+    try {
+        const res = await getProfile()
+        const userData = res.data || res
+        // 根據你資料庫截圖，抓取 role 欄位
+        userRole.value = userData.role || 'user'
+        localStorage.setItem('user_role', userRole.value)
+    } catch (error) {
+        console.error('身分同步失敗:', error)
+        userRole.value = localStorage.getItem('user_role') || 'user'
+    }
+}
+
+
 
 const fetchLoginActivities = async () => {
     isLoading.value = true
     try {
+
         const response = await settingApi.getLoginActivities()
         const actualData = response.data || response; 
+
         if (actualData && Array.isArray(actualData)) {
             loginActivities.value = actualData.sort((a, b) => new Date(b.login_at) - new Date(a.login_at))
         }
@@ -37,14 +75,20 @@ const fetchLoginActivities = async () => {
     }
 }
 
-onMounted(() => {
+onMounted(async () => {
+
+    // 1. 先抓 Token
     fetchLoginActivities();
     
-    // 🌟 修正：根據截圖，你的 Key 是 'user_token'
+    // 2. 抓取 Token
     const token = localStorage.getItem('user_token');
-    if (token) {
-        userToken.value = token;
-    }
+    if (token) userToken.value = token;
+
+    // 3. 🌟 向後端同步身分 (解決你截圖中顯示錯誤的問題)
+    await syncUserIdentity();
+    
+
+    
 })
 
 const copyToken = () => {
@@ -60,7 +104,8 @@ const copyToken = () => {
 }
 
 const goToShortcut = () => {
-    window.open(siriShortcutUrl, '_blank')
+    // 🌟 使用 computed 算出來的動態網址
+    window.open(siriShortcutUrl.value, '_blank')
 }
 
 // --- 其餘原本的功能 (密碼、刪除帳號、格式化) ---
@@ -139,14 +184,19 @@ const handleDeleteAccount = () => {
         <div class="settings-section siri-integration">
             <div class="siri-header">
                 <div class="siri-title">
-                
-                    <h2>Siri 語音助手 (喵喵助手)</h2>
+                    <h2>{{ siriTitle }}</h2>
                 </div>
-                <span class="status-badge">Beta</span>
+                <span v-if="userRole === 'test'" class="status-badge dev-badge">Tester</span>
+                <span v-else class="status-badge">Beta</span>
             </div>
             
             <div class="siri-content">
-                <p>透過「嘿 Siri」喚醒喵喵，直接語音記帳。請先複製憑證後再加入捷徑。</p>
+                <p v-if="userRole === 'test'">
+                    <strong>偵測到測試員權限：</strong>此版本捷徑包含環境切換開關，請務必在安裝時貼上開發憑證。
+                </p>
+                <p v-else>
+                    透過「嘿 Siri」喚醒喵喵，直接語音記帳。請先複製憑證後再加入捷徑。
+                </p>
                 
                 <div class="token-box">
                     <code class="token-text">
@@ -159,6 +209,7 @@ const handleDeleteAccount = () => {
                     <ol>
                         <li>點擊下方按鈕加入捷徑。</li>
                         <li>在安裝畫面的 <strong>Token</strong> 欄位貼上憑證。</li>
+                        <li v-if="userRole === 'test'">選擇連線環境 (Mac/Win(要檢查電腦名稱，點選開始案右鍵選系統，因為開發者電腦名稱不同)/雲端)。</li>
                         <li>對手機說：「嘿 Siri，喵喵記帳」。</li>
                     </ol>
                 </div>
