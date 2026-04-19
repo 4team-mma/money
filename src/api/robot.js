@@ -21,6 +21,7 @@ export const saveAiRobotConfig = (data) => {
 // 3. 與 AI 對話 (最關鍵的部分)
 // 對應後端: POST /api/ai_models/chat
 // 對應 Schema: ChatRequest
+// 專家建議只要透過langGraph就能直接用這個動態呼叫api,不用專門寫路由對應
 export const postAiRobotChat = (data) => {
   return api.post("/ai_models/chat", data, {
     // ⚠️ 關鍵：這裡必須覆蓋全域的 10秒 設定，改成 120秒

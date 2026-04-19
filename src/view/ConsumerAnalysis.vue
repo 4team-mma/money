@@ -68,39 +68,86 @@ const renderChart = (data) => {
     if (chartInstance.value) chartInstance.value.destroy();
 
     chartInstance.value = new Chart(ctx, {
-        type: 'bar',
         data: {
             labels: data.map(item => item.category),
             datasets: [
                 {
+                    type: 'bar',
                     label: '我的花費 (NT$)',
                     data: data.map(item => item.my_spending),
-                    backgroundColor: 'rgba(67, 56, 202, 0.7)',
-                    borderRadius: 6,
-                    yAxisID: 'y'
+                    backgroundColor: 'rgba(59, 130, 246, 0.6)', // 專業藍
+                    borderColor: '#3b82f6',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    yAxisID: 'y', // 對應左軸
+                    barPercentage: 0.6,
                 },
                 {
+                    type: 'line',
                     label: '全國 CPI 年增率 (%)',
                     data: data.map(item => item.gov_cpi_rate),
-                    type: 'line',
-                    borderColor: '#ef4444',
+                    borderColor: '#ef4444', // 警示紅
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
                     borderWidth: 3,
-                    pointBackgroundColor: '#fff',
-                    tension: 0.3,
-                    yAxisID: 'y1'
+                    pointBackgroundColor: '#ef4444',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    tension: 0.4, // 圓滑曲線
+                    fill: false, // 妳可以改為 true 變成面積圖
+                    yAxisID: 'y1', // 對應右軸
                 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { usePointStyle: true, padding: 20 }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    callbacks: {
+                        label: (context) => {
+                            let label = context.dataset.label || '';
+                            if (label) label += ': ';
+                            if (context.datasetIndex === 0) {
+                                label += new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', maximumFractionDigits: 0 }).format(context.parsed.y);
+                            } else {
+                                label += context.parsed.y + '%';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
             scales: {
-                y: { type: 'linear', position: 'left', title: { display: true, text: '消費 (元)' } },
-                y1: { 
-                    type: 'linear', position: 'right', 
-                    title: { display: true, text: 'CPI 漲幅 (%)' },
-                    grid: { display: false },
-                    ticks: { callback: (val) => val + '%' }
+                y: {
+                    type: 'linear',
+                    position: 'left',
+                    title: { display: true, text: '我的消費金額 (元)', color: '#3b82f6', font: { weight: 'bold' } },
+                    ticks: { color: '#3b82f6' },
+                    grid: { drawOnChartArea: true } // 只顯示左軸的格線
+                },
+                y1: {
+                    type: 'linear',
+                    position: 'right',
+                    title: { display: true, text: '全國物價漲幅 (%)', color: '#ef4444', font: { weight: 'bold' } },
+                    ticks: { 
+                        color: '#ef4444',
+                        callback: (val) => val + '%' 
+                    },
+                    grid: { drawOnChartArea: false }, // 🌟 關鍵：關閉右軸格線，避免與左軸重疊誤導
+                    // 🌟 強制讓 0 軸對齊，避免視覺偏差
+                    beginAtZero: false 
                 }
             }
         }
