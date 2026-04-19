@@ -94,7 +94,101 @@ defineExpose({ scrollToBottom });
 </template>
 
 <style scoped>
-/* 將原本 MoneyAIBot.vue 中關於訊息列表的 CSS 移到這裡 */
+/* ==========================================
+   🆕 新增：記帳確認卡片樣式
+   ========================================== */
+.action-card {
+    margin-top: 12px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    /* 防止卡片太寬撐破對話框 */
+    width: 100%;
+    min-width: 200px;
+}
+
+.card-header {
+    background: #f8fafc;
+    padding: 8px 12px;
+    font-weight: bold;
+    font-size: 0.85rem;
+    color: #475569;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.card-body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.data-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.data-row .label {
+    color: #64748b;
+}
+
+.data-row .value {
+    font-weight: bold;
+    color: #1e293b;
+}
+
+.data-row .amount {
+    color: #ef4444;
+    /* 紅色強調金額 */
+    font-size: 1.1rem;
+}
+
+.card-footer {
+    display: flex;
+    border-top: 1px solid #e2e8f0;
+}
+
+.card-footer .btn {
+    flex: 1;
+    padding: 10px 0;
+    border: none;
+    background: transparent;
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.card-footer .btn.cancel {
+    color: #64748b;
+    border-right: 1px solid #e2e8f0;
+}
+
+.card-footer .btn.cancel:hover {
+    background: #f1f5f9;
+}
+
+.card-footer .btn.confirm {
+    color: #3b82f6;
+    /* 藍色確認鈕 */
+}
+
+.card-footer .btn.confirm:hover {
+    background: #eff6ff;
+}
+
+.tag-text {
+    font-size: 0.8rem;
+    color: #3b82f6;
+    background: #eff6ff;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
 .messages-container {
     flex: 1;
     padding: 16px;

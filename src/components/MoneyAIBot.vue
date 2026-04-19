@@ -2,14 +2,13 @@
 // ==========================================
 // 1. 引用與基礎狀態 (Imports & Basic State)
 // ==========================================
-import { ref, nextTick, watch, onMounted, onUnmounted, computed } from 'vue'
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/api'
 import { getLocalDate } from '@/utils/dateHelper'
-import { postAiRobotChat, postAiFeedback } from '@/api/robot'
 import { useAccountStore } from '@/stores/useAccountStore'
 import { ElMessage } from 'element-plus'
-import { processSpeechCorrection } from '@/api/speech'
+import { useMeowChat } from '@/composables/aiCat/useMeowChat'
 
 // 💡 引入剛剛拆分出來的小組件
 import AiCatPaintCanvas from './aiCat/AiCatPaintCanvas.vue'
@@ -18,20 +17,45 @@ import AiCatInputArea from './aiCat/AiCatInputArea.vue'
 import AiCatMessages from './aiCat/AiCatMessages.vue'
 
 const route = useRoute()
+
+// 2. 取得 UI 組件的 Ref
 const messagesRef = ref(null)
 const paintCanvasRef = ref(null)
 const inputAreaRef = ref(null)
 const accountStore = useAccountStore()
 const catImg = new URL('@/assets/AI_cat.png', import.meta.url).href
 
+
+// 3. 傳入 Ref 初始化大腦 🌟
+const {
+  isOpen,
+  messages,
+  isTyping,
+  loadingText,
+  selectedPersona,
+  personasList,
+  scrollToBottom,    // 解構出來，原本 template 裡的呼叫不用改
+  clearChat,
+  handleFeedback,
+  handleChatRequest,
+  checkAndGreet,
+  showAdvisorMenu,
+  showKnowledgeMenu
+
+} = useMeowChat(paintCanvasRef, inputAreaRef, messagesRef)
+
+
+const toggleOpen = (val) => {
+  isOpen.value = val === undefined ? !isOpen.value : val;
+}
+const setPersona = (val) => {
+  selectedPersona.value = val;
+}
+
 // ==========================================
 // 🌟 Helper functions
 // ==========================================
-const greetingsMap = {
-  '/': '嗨！我是 喵喵小助手 💰',
-  '/admins': '歡迎來到控制中心喵！',
-  '/user': '小主人歡迎回來，今天想記點什麼喵？'
-};
+
 
 const getAccountId = (accountName) => {
   if (!accountName || typeof accountName !== 'string') return null;
@@ -46,16 +70,6 @@ const getClassIcon = (className) => {
   const iconMap = { '飲食': '🍔', '交通': '🚗', '居家': '🏠', '娛樂': '🎮', '醫療': '💊', '學習': '📚', '帳單': '🧾', '其他': '📦' };
   return iconMap[className] || '📌';
 };
-
-const formatTime = (isoStr) => new Date(isoStr).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
-
-const formatDuration = (seconds) => {
-  if (!seconds) return '';
-  if (seconds < 60) return `${seconds}s`;
-  const mins = Math.floor(seconds / 60);
-  const secs = (seconds % 60).toFixed(1);
-  return `${mins}m ${secs}s`;
-}
 
 // ==========================================
 // 2-1. 互動功能 (Drag)
@@ -74,9 +88,9 @@ const pixelPosition = computed(() => ({
 const startDrag = (e) => {
   isDragging.value = true;
   startPos.value = { x: e.clientX, y: e.clientY };
-  dragOffset.value = { 
-    x: e.clientX - pixelPosition.value.x, 
-    y: e.clientY - pixelPosition.value.y 
+  dragOffset.value = {
+    x: e.clientX - pixelPosition.value.x,
+    y: e.clientY - pixelPosition.value.y
   };
   window.addEventListener('mousemove', onDragging);
   window.addEventListener('mouseup', stopDrag);
@@ -104,12 +118,11 @@ const stopDrag = (e) => {
   window.removeEventListener('mouseup', stopDrag);
 
   const moveDistance = Math.sqrt(
-    Math.pow(e.clientX - startPos.value.x, 2) + 
+    Math.pow(e.clientX - startPos.value.x, 2) +
     Math.pow(e.clientY - startPos.value.y, 2));
 
   if (moveDistance < 5) {
-    isOpen.value = true;
-    return;
+    toggleOpen(true);
   }
 
 };
@@ -156,62 +169,7 @@ const connectWebSocket = () => {
 // ==========================================
 // 3. AI 對話邏輯
 // ==========================================
-const isOpen = ref(localStorage.getItem('isMeowChatOpen') === 'true')
-const messages = ref(JSON.parse(localStorage.getItem('meowChatHistory')) || [{
-  id: 1, text: '嗨！我是 喵喵小助手 💰', sender: 'bot', timestamp: new Date().toISOString()
-}])
-const isTyping = ref(false)
-const loadingText = ref('思考中喵...')
-let loadingInterval = null
-const selectedPersona = ref(localStorage.getItem('meowPersona') || 'cute')
-const waitingJokes = ["喵喵正在翻閱帳本... 📖", "正在計算罐罐的匯率... 🐟", "數據量大，喵喵努力消化中... 🐾"]
 
-const personasList = [
-  { value: 'cute', label: '😽 可愛喵喵' }, { value: 'gentle', label: '🐈 溫柔管家喵' },
-  { value: 'professional', label: '🦁 嚴肅顧問' }, { value: 'tsundere', label: '😼 傲嬌喵' },
-  { value: 'lazy', label: '😿 厭世喵' }, { value: 'rich', label: '💰 土豪喵' }
-];
-
-const scrollToBottom = () => {
-  nextTick(() => {
-    if (messagesRef.value) messagesRef.value.scrollToBottom()
-  })
-}
-
-const checkAndGreet = () => {
-  const customText = greetingsMap[route.path]
-  if (customText && !messages.value.some(m => m.text === customText)) {
-    messages.value.push({ id: Date.now(), text: customText, sender: 'bot', timestamp: new Date().toISOString(), duration: null })
-    scrollToBottom()
-  }
-}
-
-// 🧹 清空紀錄
-const clearChat = () => {
-  if (confirm('喵？確定要清空嗎？')) {
-    messages.value = [{ id: Date.now(), text: '紀錄已清空喵！', sender: 'bot', timestamp: new Date().toISOString() }];
-    setTimeout(() => {
-      messages.value = [{ id: Date.now(), text: '嗨！我是 喵喵小助手 💰 有什麼能幫你的嗎喵？', sender: 'bot', timestamp: new Date().toISOString() }];
-    }, 3000);
-  }
-};
-
-// 💡 選單按鈕功能
-const showAdvisorMenu = () => {
-  messages.value.push({
-    id: Date.now(), text: '喵！請選擇你想進行的財務分析：', sender: 'bot', timestamp: new Date().toISOString(),
-    quick_replies: ['📈 幫我查一下最近物價是不是變貴了？', '💼 請幫我比對目前的薪資競爭力']
-  });
-  scrollToBottom();
-};
-
-const showKnowledgeMenu = () => {
-  messages.value.push({
-    id: Date.now(), text: '想了解什麼理財知識呢喵？可以直接點擊，或輸入你想問的名詞：', sender: 'bot', timestamp: new Date().toISOString(),
-    quick_replies: ['📖 什麼是 CPI (消費者物價指數)？', '🏦 ETF 是什麼？新手適合買嗎？', '💰 什麼是 50/30/20 理財法則？']
-  });
-  scrollToBottom();
-};
 
 const sendQuickMessage = async (text, msgId) => {
   const msg = messages.value.find(m => m.id === msgId);
@@ -219,118 +177,6 @@ const sendQuickMessage = async (text, msgId) => {
   await handleChatRequest({ query: text, wasSpoken: false });
 };
 
-const handleFeedback = async (message, isGood) => {
-  message.feedbackGiven = true;
-  if (!isGood) {
-    try {
-      const msgIndex = messages.value.findIndex(m => m.id === message.id);
-      const userMsg = msgIndex > 0 ? messages.value[msgIndex - 1].text : '未知問題';
-      await postAiFeedback({
-        user_message: userMsg, llm_response: message.text,
-        predicted_intent: message.intent || 'UNKNOWN', confidence_score: message.confidence || 0.0
-      });
-      ElMessage.success('收到倒讚！已將這筆對話送交後台審核 📝');
-    } catch (error) {
-      ElMessage.error('糟糕，反饋傳送失敗了喵...');
-    }
-  } else {
-    ElMessage.success('謝謝小主人的稱讚喵！🥰');
-  }
-};
-
-// 🚀 核心發送邏輯 (改由 AiCatInputArea 觸發)
-const handleChatRequest = async ({ query, wasSpoken }) => {
-  if (isTyping.value) return;
-  const now = new Date();
-  const exactTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-
-  const userMsgId = Date.now();
-  messages.value.push({ id: userMsgId, text: query, sender: 'user', timestamp: new Date().toISOString() });
-
-  // 清空噴漆畫布
-  if (paintCanvasRef.value) paintCanvasRef.value.clearCanvas();
-  isTyping.value = true;
-  scrollToBottom();
-
-  loadingInterval = setInterval(() => { loadingText.value = waitingJokes[Math.floor(Math.random() * waitingJokes.length)]; }, 1500);
-
-  let finalQuery = query;
-  if (wasSpoken) {
-    loadingText.value = "啟動 RTX 4060 Ti 糾錯中喵... 🐾";
-    try {
-      const correctRes = await processSpeechCorrection(query);
-      const responseData = correctRes?.data || correctRes;
-      if (responseData && responseData.corrected_text && responseData.corrected_text !== query) {
-        finalQuery = responseData.corrected_text;
-        const msgIndex = messages.value.findIndex(m => m.id === userMsgId);
-        if (msgIndex !== -1) messages.value[msgIndex].text = `🎤 原始：${query}\n✨ 修正：${finalQuery}`;
-      }
-    } catch (err) {
-      console.warn("⚠️ GPU 糾錯引擎未開啟或連線失敗", err);
-    } finally {
-      loadingText.value = waitingJokes[0];
-    }
-  }
-
-  try {
-    const historyText = messages.value.slice(-5, -1).map(m => `${m.sender === 'user' ? '小主人' : '喵喵'}：${m.text.substring(0, 30)}`).join('\n');
-    const finalPrompt = `[台北時間 ${exactTime}]\n${historyText}\n小主人：${finalQuery}`;
-
-    const rawRes = await postAiRobotChat({ message: finalPrompt, persona: selectedPersona.value });
-
-    // ✅ 真正安全且相容你後端架構的寫法：找回被拔掉的 .data
-    // 如果後端有包裝 { data: { reply: "..." } } 就解開它，否則用原物件
-    const response = rawRes?.data || rawRes || {};
-
-    // ✅ 防炸：如果連最基本的回覆都沒有，印出真兇並丟給 catch 處理
-    if (!response.reply) {
-      console.error("🔍 [Debug] 後端實際回傳的內容是:", rawRes);
-      throw new Error("AI 回傳格式錯誤或為空");
-    }
-
-    // ✅ 正規化 action_data (確保一定會是陣列或 null)
-    let actionData = null;
-    if (Array.isArray(response.action_data)) {
-      actionData = response.action_data;
-    } else if (response.action_data) {
-      actionData = [response.action_data];
-    }
-
-    // 確保帳戶資料同步
-    if (response.is_command && accountStore.accounts.length === 0) {
-      await accountStore.loadAccounts(true);
-    }
-
-    // AI 回覆的那段
-    messages.value.push({
-      id: Date.now() + 1,
-      text: response.reply,
-      sender: 'bot',
-      timestamp: new Date().toISOString(),
-      duration: response.duration,
-      provider: response.provider,
-      is_command: response.is_command,
-      action_data: actionData,
-      intent: response.intent,
-      confidence: response.confidence
-    });
-  } catch (error) {
-    // 🛡️ 只要上面 throw Error，就會優雅地滑進這裡！
-    console.error("❌ 聊天大腦發生錯誤：", error);
-    messages.value.push({
-      id: Date.now() + 1,
-      text: "喵... 我斷線了喵！請檢查後端終端機或 Ollama 狀態！",
-      sender: 'bot',
-      timestamp: new Date().toISOString()
-    });
-  } finally {
-    isTyping.value = false;
-    if (loadingInterval) clearInterval(loadingInterval);
-    scrollToBottom();
-    await nextTick();
-    if (inputAreaRef.value) inputAreaRef.value.focusInput();
-  }
-};
 
 // ==========================================
 // 4. 卡片操作邏輯 (子組件 emit 出來時觸發)
@@ -416,7 +262,13 @@ const chatWindowStyle = computed(() => {
 
 onMounted(async () => {
   await accountStore.loadAccounts();
-  if (isOpen.value) checkAndGreet();
+
+  if (isOpen.value) checkAndGreet(route.path, greetingsMap);
+
+  if (isOpen.value) {
+    checkAndGreet(route.path);  // ✅ 不用傳 map
+  }
+
   window.addEventListener('resize', () => {
     position.value.x = Math.min(Math.max(2, position.value.x), 88)
     position.value.y = Math.min(Math.max(2, position.value.y), 88)
@@ -429,25 +281,31 @@ onUnmounted(() => {
   if (ws) { ws.onclose = null; ws.close(); }
 });
 
-watch(isOpen, (newVal) => localStorage.setItem('isMeowChatOpen', newVal));
-watch(messages, (newVal) => localStorage.setItem('meowChatHistory', JSON.stringify(newVal)), { deep: true });
-watch(() => route.path, () => { if (isOpen.value) checkAndGreet() });
-watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
+
+watch(
+  () => route.path,
+  (newPath) => {
+    if (isOpen.value) {
+      checkAndGreet(newPath);  // ✅
+    }
+  }
+);
+
 </script>
 
 <template>
-
-
-
   <div class="money-ai-bot" :style="{ left: pixelPosition.x + 'px', top: pixelPosition.y + 'px' }">
-
-    <button v-if="!isOpen" class="bot-toggle-transparent" @mousedown="startDrag">
-      <img :src="catImg" class="floating-cat" alt="cat" draggable="false" />
-      <div class="stars-container">
-        <span class="star s1">✦</span>
-        <span class="star s3">✨</span>
-      </div>
-    </button>
+    <Teleport to="body">
+      <button v-if="!isOpen" class="bot-toggle-transparent"
+        :style="{ left: pixelPosition.x + 'px', top: pixelPosition.y + 'px', position: 'fixed', zIndex: 2147483647 }"
+        @mousedown="startDrag">
+        <img :src="catImg" class="floating-cat" alt="cat" draggable="false" />
+        <div class="stars-container">
+          <span class="star s1">✦</span>
+          <span class="star s3">✨</span>
+        </div>
+      </button>
+    </Teleport>
 
     <Teleport to="body">
       <AiCatPaintCanvas ref="paintCanvasRef" :isTyping="isTyping" />
@@ -468,13 +326,14 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
             </div>
             <div class="header-actions">
 
-              <select v-model="selectedPersona" class="persona-select" title="切換喵喵性格">
+              <select :model-value="selectedPersona" @update:modelValue="setPersona" class="persona-select"
+                title="切換喵喵性格">
                 <option v-for="p in personasList" :key="p.value" :value="p.value">
                   {{ p.label }}
                 </option>
               </select>
               <button class="clear-btn" @click="clearChat" title="清空對話">🗑️</button>
-              <button class="close-x" @click="isOpen = false">✕</button>
+              <button class="close-x" @click="toggleOpen(false)">✕</button>
             </div>
           </div>
 
@@ -687,14 +546,15 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
   cursor: pointer;
 }
 
+.money-ai-bot {
+  position: fixed;
+  z-index: 2147483647;
+  /* 這是瀏覽器能允許的最大數字，絕對不會被蓋住 */
+}
 
-
-
-
-
-
-
-
+.chat-window-custom {
+  z-index: 2147483647;
+}
 
 .duration {
   font-size: 9px;
@@ -729,101 +589,6 @@ watch(selectedPersona, (newVal) => localStorage.setItem('meowPersona', newVal));
   cursor: pointer;
 }
 
-
-/* ==========================================
-   🆕 新增：記帳確認卡片樣式
-   ========================================== */
-.action-card {
-  margin-top: 12px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  /* 防止卡片太寬撐破對話框 */
-  width: 100%;
-  min-width: 200px;
-}
-
-.card-header {
-  background: #f8fafc;
-  padding: 8px 12px;
-  font-weight: bold;
-  font-size: 0.85rem;
-  color: #475569;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.card-body {
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.data-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.9rem;
-}
-
-.data-row .label {
-  color: #64748b;
-}
-
-.data-row .value {
-  font-weight: bold;
-  color: #1e293b;
-}
-
-.data-row .amount {
-  color: #ef4444;
-  /* 紅色強調金額 */
-  font-size: 1.1rem;
-}
-
-.card-footer {
-  display: flex;
-  border-top: 1px solid #e2e8f0;
-}
-
-.card-footer .btn {
-  flex: 1;
-  padding: 10px 0;
-  border: none;
-  background: transparent;
-  font-size: 0.9rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.card-footer .btn.cancel {
-  color: #64748b;
-  border-right: 1px solid #e2e8f0;
-}
-
-.card-footer .btn.cancel:hover {
-  background: #f1f5f9;
-}
-
-.card-footer .btn.confirm {
-  color: #3b82f6;
-  /* 藍色確認鈕 */
-}
-
-.card-footer .btn.confirm:hover {
-  background: #eff6ff;
-}
-
-.tag-text {
-  font-size: 0.8rem;
-  color: #3b82f6;
-  background: #eff6ff;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
 
 .chat-window-custom {
   max-height: 80vh;
