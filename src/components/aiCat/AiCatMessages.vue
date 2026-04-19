@@ -48,10 +48,9 @@ defineExpose({ scrollToBottom });
                 <p style="white-space: pre-wrap;">{{ message.text }}</p>
 
                 <div v-if="message.quick_replies && message.quick_replies.length > 0" class="inline-quick-replies">
-                    <button v-for="(replyText, idx) in message.quick_replies" :key="idx" class="inline-qr-btn"
-                        @click="emit('quick-reply', replyText, message.id)">
-                        {{ replyText }}
-                    </button>
+                    <button v-for="(replyObj, idx) in message.quick_replies" :key="idx" class="inline-qr-btn"
+                        @click="emit('quick-reply', replyObj, message.id)">
+                        {{ replyObj.text || replyObj }} </button>
                 </div>
 
                 <template
@@ -279,30 +278,48 @@ defineExpose({ scrollToBottom });
 }
 
 /* --- 🌟 對話框內的條列式按鈕樣式 --- */
+/* --- 🌟 對話框內的條列式按鈕樣式 (優化為文字連結) --- */
 .inline-quick-replies {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-top: 12px;
+    gap: 6px;
+    /* 稍微縮小間距 */
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(0, 0, 0, 0.1);
+    /* 加一條細虛線與上方對話隔開 */
 }
 
 .inline-qr-btn {
-    background-color: #ffffff;
-    border: 1px solid #c7d2fe;
-    border-radius: 12px;
-    padding: 8px 12px;
-    font-size: 13px;
-    color: #4f46e5;
+    display: block;
+    width: fit-content;
+    background: transparent;
+    /* 移除白底 */
+    border: none;
+    /* 移除邊框 */
+    box-shadow: none;
+    /* 移除陰影 */
+    padding: 4px 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #3b82f6;
+    /* 連結的藍色 */
+    text-decoration: underline;
+    /* 加上底線更有點擊感 */
+    text-underline-offset: 4px;
+    /* 調整底線距離 */
     cursor: pointer;
     text-align: left;
     transition: all 0.2s ease;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .inline-qr-btn:hover {
-    background-color: #e0e7ff;
-    border-color: #818cf8;
-    transform: translateY(-1px);
+    color: #2563eb;
+    background: rgba(59, 130, 246, 0.08);
+    /* 滑過時給予淡淡的藍色背景反饋 */
+    border-radius: 6px;
+    transform: translateX(4px);
+    /* 滑過時稍微往右移，增加互動感 */
 }
 
 /* 🌟 新增的反饋按鈕樣式 */

@@ -171,10 +171,16 @@ const connectWebSocket = () => {
 // ==========================================
 
 
-const sendQuickMessage = async (text, msgId) => {
+const sendQuickMessage = async (replyData, msgId) => {
   const msg = messages.value.find(m => m.id === msgId);
-  if (msg) msg.quick_replies = null; // 點擊後隱藏按鈕
-  await handleChatRequest({ query: text, wasSpoken: false });
+  if (msg) msg.quick_replies = null; // 點擊後隱藏選單
+  
+  // 💡 判斷傳進來的是物件還是純字串
+  const finalQuery = typeof replyData === 'object' ? replyData.query : replyData;
+  const displayText = typeof replyData === 'object' ? replyData.text : replyData;
+
+  // 這樣藍色氣泡就會顯示短短的「📊 財務總覽健檢」，但後端會收到長長的「請幫我進行整體的財務健檢...」
+  await handleChatRequest({ query: finalQuery, displayText: displayText, wasSpoken: false });
 };
 
 
@@ -262,9 +268,6 @@ const chatWindowStyle = computed(() => {
 
 onMounted(async () => {
   await accountStore.loadAccounts();
-
-  if (isOpen.value) checkAndGreet(route.path, greetingsMap);
-
   if (isOpen.value) {
     checkAndGreet(route.path);  // ✅ 不用傳 map
   }

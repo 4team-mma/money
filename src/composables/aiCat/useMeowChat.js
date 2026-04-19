@@ -69,13 +69,22 @@ export function useMeowChat(paintCanvasRef, inputAreaRef, messagesRef) {
   };
 
   // 🌟 新增：專家建議選單
-  const showAdvisorMenu = () => {
+const showAdvisorMenu = () => {
     messages.value.push({
-      id: Date.now(), text: '喵！請選擇你想進行的財務分析：', sender: 'bot', timestamp: new Date().toISOString(),
-      quick_replies: ['📈 幫我查一下最近物價是不是變貴了？', '💼 請幫我比對目前的薪資競爭力']
+        id: Date.now(),
+        text: '喵！請選擇你想進行的分析：',
+        sender: 'bot',
+        timestamp: new Date().toISOString(),
+        
+        quick_replies: [
+            { text: '📊 財務總覽健檢', query: '請幫我進行整體的財務健檢，評估我這個月的收支狀況。' },
+            { text: '🩺 存不到錢 (Z-Score)', query: '我最近覺得一直存不到錢，請幫我診斷目前的消費狀況正不正常？' },
+            { text: '🛒 感受通膨 (CPI)', query: '上個月物價一直漲，請幫我比對目前的通膨狀況。' },
+            { text: '💼 薪資競爭力 (PR值)', query: '請幫我比對目前的薪資競爭力，看看算不算合理？' }
+        ]
     });
     scrollToBottom();
-  };
+};
 
   // 🌟 新增：知識庫選單
   const showKnowledgeMenu = () => {
