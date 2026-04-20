@@ -3,9 +3,19 @@ import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 const router = useRouter();
 
+// const navigateTo = (path) => {
+//     router.push(path);
+// };
+
 const navigateTo = (path) => {
-    router.push(path);
+    console.log(`🚀 [LabDashboard] 準備跳轉至: ${path}`);
+    router.push(path).then(() => {
+        console.log(`✅ [LabDashboard] 跳轉成功！`);
+    }).catch(err => {
+        console.error(`❌ [LabDashboard] 跳轉失敗，原因:`, err);
+    });
 };
+
 
 const handleLogout = () => {
     localStorage.removeItem('user_token');
@@ -65,21 +75,18 @@ const handleLogout = () => {
                         </div>
                     </div>
                 </div>
-
+<!-- RagSandbox -->
 
                 <div class="tech-card action-card" @click="navigateTo('/RagSandbox')">
-                    <div class="card-glow green-glow"></div>
-                    <div class="card-content">
-                        <div class="card-icon-container green-bg">
-                            <span class="card-icon">🧪</span>
-                        </div>
-                        <h2>B1 向量機房實驗室</h2>
-                        <p class="desc">微調 HNSW 索引參數，監測 RTX 4060 Ti 即時推論效能與 RAG 檢索精準度。</p>
-                        <div class="card-footer">
-                            <button class="action-btn green-btn">進入沙盒 ⚡</button>
-                        </div>
-                    </div>
-                </div>
+    <div class="card-glow silver-glow"></div> <div class="card-content">
+        <div class="card-icon-container silver-bg"> <span class="card-icon">🧪</span>
+        </div>
+        <h2>B1 向量機房實驗室</h2>
+        <p class="desc">微調 HNSW 索引參數，監測 RTX 4060 Ti 即時效能。 HNSW Parameter Tuning & Inference Monitor.</p>
+        <div class="card-footer">
+            <button class="action-btn silver-btn">進入沙盒 | ENTER SANDBOX ⚡</button> </div>
+    </div>
+</div>
 
             </section>
         </div>
@@ -332,27 +339,30 @@ const handleLogout = () => {
         max-width: 100%;
     }
 }
-
-/* 🌟 真正的綠色漸層按鈕 */
-.green-btn {
-    background: linear-gradient(135deg, #059669, #10b981) !important; /* 強制覆蓋 */
-    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+/* 🌟 科技銀按鈕 (Silver Metallic Gradient) */
+.silver-btn {
+    background: linear-gradient(135deg, #f8fafc, #94a3b8) !important;
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
+    color: #0f172a !important; /* 深色文字增加對比 */
+    font-weight: 800;
+    border-radius: 12px;
+    transition: all 0.3s;
 }
 
-.green-btn:hover {
-    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
-    transform: translateY(-2px);
+.silver-btn:hover {
+    background: linear-gradient(135deg, #ffffff, #cbd5e1) !important;
+    box-shadow: 0 6px 20px rgba(255, 255, 255, 0.25);
+    transform: translateY(-3px);
 }
 
-/* 🌟 卡片背後的綠色發光圓球 */
-.green-glow { 
-    background: #10b981; 
+/* 🌟 科技銀發光效果 */
+.silver-glow { 
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
 }
 
-/* 🌟 Icon 容器的綠色背景 */
-.green-bg { 
-    background: rgba(16, 185, 129, 0.1); 
-    border: 1px solid rgba(16, 185, 129, 0.2); 
+/* 🌟 科技銀 Icon 容器 */
+.silver-bg {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
-
 </style>

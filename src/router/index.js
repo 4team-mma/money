@@ -278,8 +278,8 @@ const routes = [
   },
     {
     path: "/RagSandbox",
-    component: RagSandbox,
     name: "RagSandbox",
+    component: RagSandbox,
     meta: { requiresAuth: true, hideNav: true }
   },
 
@@ -292,7 +292,7 @@ const router = createRouter({
   routes,
 });
 
-// 路由守衛 (Router Guard)
+
 // 路由守衛 (Router Guard)
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('user_token');
@@ -304,7 +304,7 @@ router.beforeEach((to, from, next) => {
   const isAdminPage = ['/Admins', '/AdminMain', '/AdminModel', '/AdminsComments', '/AdminData', '/AdminSetting'].some(path => to.path.startsWith(path));
   
   // 🌟 AI 測試員專屬頁面陣列
-  const aiTestPages = ['/lab', '/TestAI', '/SpeechCorrectionLab'];
+  const aiTestPages = ['/lab', '/TestAI', '/SpeechCorrectionLab','/RagSandbox'];
   
   // 一般使用者頁面
   const isUserPage = !publicPages.includes(to.path) && !isAdminPage && !aiTestPages.includes(to.path) && to.path !== '/loading';
