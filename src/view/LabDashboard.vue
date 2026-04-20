@@ -31,13 +31,13 @@ const handleLogout = () => {
                         </div>
                     </div>
                     <button class="nav-btn danger-hover" @click="handleLogout">
-                            🚪 登出
-                        </button>
+                        🚪 登出
+                    </button>
                 </div>
             </header>
 
             <section class="module-cards-container">
-                
+
                 <div class="tech-card action-card" @click="navigateTo('/SpeechCorrectionLab')">
                     <div class="card-glow blue-glow"></div>
                     <div class="card-content">
@@ -66,6 +66,21 @@ const handleLogout = () => {
                     </div>
                 </div>
 
+
+                <div class="tech-card action-card" @click="navigateTo('/RagSandbox')">
+                    <div class="card-glow green-glow"></div>
+                    <div class="card-content">
+                        <div class="card-icon-container green-bg">
+                            <span class="card-icon">🧪</span>
+                        </div>
+                        <h2>B1 向量機房實驗室</h2>
+                        <p class="desc">微調 HNSW 索引參數，監測 RTX 4060 Ti 即時推論效能與 RAG 檢索精準度。</p>
+                        <div class="card-footer">
+                            <button class="action-btn green-btn">進入沙盒 ⚡</button>
+                        </div>
+                    </div>
+                </div>
+
             </section>
         </div>
     </div>
@@ -85,7 +100,7 @@ const handleLogout = () => {
 
 .mma-lab-content {
     width: 100%;
-    max-width: 1000px;
+    max-width: 1200px;
 }
 
 /* Header 設計 */
@@ -167,8 +182,8 @@ const handleLogout = () => {
 /* 科技風卡片本體 */
 .tech-card {
     flex: 1;
-    min-width: 320px;
-    max-width: 450px;
+    min-width: 300px;
+    max-width: 380px;
     position: relative;
     background: rgba(30, 41, 59, 0.7);
     backdrop-filter: blur(10px);
@@ -205,8 +220,13 @@ const handleLogout = () => {
     opacity: 0.5;
 }
 
-.blue-glow { background: #3b82f6; }
-.purple-glow { background: #a855f7; }
+.blue-glow {
+    background: #3b82f6;
+}
+
+.purple-glow {
+    background: #a855f7;
+}
 
 /* 卡片內容層 (確保在光暈上方) */
 .card-content {
@@ -229,8 +249,15 @@ const handleLogout = () => {
     margin-bottom: 25px;
 }
 
-.blue-bg { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); }
-.purple-bg { background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.2); }
+.blue-bg {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.purple-bg {
+    background: rgba(168, 85, 247, 0.1);
+    border: 1px solid rgba(168, 85, 247, 0.2);
+}
 
 .tech-card h2 {
     font-size: 1.5rem;
@@ -296,13 +323,36 @@ const handleLogout = () => {
         align-items: flex-start;
         gap: 20px;
     }
-    
+
     .module-cards-container {
         flex-direction: column;
     }
-    
+
     .tech-card {
         max-width: 100%;
     }
 }
+
+/* 🌟 真正的綠色漸層按鈕 */
+.green-btn {
+    background: linear-gradient(135deg, #059669, #10b981) !important; /* 強制覆蓋 */
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.green-btn:hover {
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+    transform: translateY(-2px);
+}
+
+/* 🌟 卡片背後的綠色發光圓球 */
+.green-glow { 
+    background: #10b981; 
+}
+
+/* 🌟 Icon 容器的綠色背景 */
+.green-bg { 
+    background: rgba(16, 185, 129, 0.1); 
+    border: 1px solid rgba(16, 185, 129, 0.2); 
+}
+
 </style>

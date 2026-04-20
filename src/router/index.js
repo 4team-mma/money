@@ -32,11 +32,13 @@ import LoadingView from "@/view/LoadingView.vue";
 import Notifications from "@/view/Notifications.vue";
 import AdminData from "@/view/AdminData.vue";
 import AdminSetting from "@/view/AdminSetting.vue";
-import TestAI from "@/view/TestAI.vue";
+import TestAI from "@/view/Lab/TestAI.vue";
 import AdminAiConfig from "@/view/AdminAiConfig.vue";
 import AdminAiDevTools from "@/view/AdminAiDevTools.vue";
 import LabDashboard from "@/view/LabDashboard.vue";
-import SpeechCorrectionLab from "@/view/SpeechCorrectionLab.vue";
+import SpeechCorrectionLab from "@/view/Lab/SpeechCorrectionLab.vue";
+import RagSandbox from "@/view/Lab/RagSandbox.vue";
+
 
 const routes = [
   {
@@ -272,6 +274,12 @@ const routes = [
     path: '/SpeechCorrectionLab',
     name: 'SpeechCorrectionLab',
     component: SpeechCorrectionLab,
+    meta: { requiresAuth: true, hideNav: true }
+  },
+    {
+    path: "/RagSandbox",
+    component: RagSandbox,
+    name: "RagSandbox",
     meta: { requiresAuth: true, hideNav: true }
   },
 
