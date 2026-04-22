@@ -25,10 +25,25 @@ export const recordApi = {
 
 
     // 新增：兩步驟訂單記帳
-    parseReceipt: (formData) => api.post('/records/ai-parse', formData),
-    confirmOrder: (data) => api.post('/records/ai-confirm', data),
+    // parseReceipt: (formData) => api.post('/records/ai-parse', formData),
+    // confirmOrder: (data) => api.post('/records/ai-confirm', data),
+
+    parseReceipt: (formData) => {
+    return api.post("/records/ai-parse", formData, {
+      // ⚠️ 關鍵：給地端視覺模型充足的思考時間，設為 100 秒
+    timeout: 100000 
+    });
+    },
+
+  confirmOrder: (data) => {
+    return api.post("/records/ai-confirm", data);
+  }
+
 
 }
+
+
+
 
 // 為了相容你目前的 useAddRecord.js，保留這個導出
 export const createRecord = recordApi.create;
