@@ -5,10 +5,8 @@ import api from '@/api'
 export const recordApi = {
     // 1. 新增記錄
     create: (data) => api.post('/records/', data),
-
     // 2. 獲取所有記錄 (支援分頁與搜尋，預設一頁 10 筆)
     getList: (params) => api.get('/records/', { params }),
-
     // 3. 獲取特定月份的「完整清單」與「統計總額」
     // 這個方法會對應到你的 get_monthly_records，回傳 monthly_income 等欄位
     getMonthly: (year, month) => api.get('/records/calendar/monthly', { 
@@ -23,7 +21,13 @@ export const recordApi = {
     update: (recordId, data) => api.patch(`/records/${recordId}`, data),
 
     // 6. 刪除記錄 (用於註銷功能)
-    delete: (recordId) => api.delete(`/records/${recordId}`)
+    delete: (recordId) => api.delete(`/records/${recordId}`),
+
+
+    // 新增：兩步驟訂單記帳
+    parseReceipt: (formData) => api.post('/records/ai-parse', formData),
+    confirmOrder: (data) => api.post('/records/ai-confirm', data),
+
 }
 
 // 為了相容你目前的 useAddRecord.js，保留這個導出
@@ -36,6 +40,9 @@ export const updateRecord = (id, data) => {
 
 export const getMonthlyRecords = recordApi.getMonthly;
 export const getMonthlyStats = recordApi.getCurrentStats;
+
+
+
 
 
 //下面附上引用到vue的範例:

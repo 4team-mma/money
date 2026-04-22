@@ -38,7 +38,7 @@ import AdminAiDevTools from "@/view/AdminAiDevTools.vue";
 import LabDashboard from "@/view/LabDashboard.vue";
 import SpeechCorrectionLab from "@/view/Lab/SpeechCorrectionLab.vue";
 import RagSandbox from "@/view/Lab/RagSandbox.vue";
-
+import AddItems from "@/view/AddItems.vue";
 
 const routes = [
   {
@@ -98,6 +98,13 @@ const routes = [
     path: "/AddIncome",
     component: AddIncome,
     name: "AddIncome",
+    meta: { requiresAuth: true}
+  },
+  
+  {
+    path: "/AddItems",
+    component: AddItems,
+    name: "AddItems",
     meta: { requiresAuth: true}
   },
   {
