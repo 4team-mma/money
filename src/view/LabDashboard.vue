@@ -3,9 +3,19 @@ import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 const router = useRouter();
 
+// const navigateTo = (path) => {
+//     router.push(path);
+// };
+
 const navigateTo = (path) => {
-    router.push(path);
+    console.log(`🚀 [LabDashboard] 準備跳轉至: ${path}`);
+    router.push(path).then(() => {
+        console.log(`✅ [LabDashboard] 跳轉成功！`);
+    }).catch(err => {
+        console.error(`❌ [LabDashboard] 跳轉失敗，原因:`, err);
+    });
 };
+
 
 const handleLogout = () => {
     localStorage.removeItem('user_token');
@@ -31,13 +41,13 @@ const handleLogout = () => {
                         </div>
                     </div>
                     <button class="nav-btn danger-hover" @click="handleLogout">
-                            🚪 登出
-                        </button>
+                        🚪 登出
+                    </button>
                 </div>
             </header>
 
             <section class="module-cards-container">
-                
+
                 <div class="tech-card action-card" @click="navigateTo('/SpeechCorrectionLab')">
                     <div class="card-glow blue-glow"></div>
                     <div class="card-content">
@@ -65,6 +75,18 @@ const handleLogout = () => {
                         </div>
                     </div>
                 </div>
+<!-- RagSandbox -->
+
+                <div class="tech-card action-card" @click="navigateTo('/RagSandbox')">
+    <div class="card-glow silver-glow"></div> <div class="card-content">
+        <div class="card-icon-container silver-bg"> <span class="card-icon">🧪</span>
+        </div>
+        <h2>B1 向量機房實驗室</h2>
+        <p class="desc">微調 HNSW 索引參數，監測 RTX 4060 Ti 即時效能。 HNSW Parameter Tuning & Inference Monitor.</p>
+        <div class="card-footer">
+            <button class="action-btn silver-btn">進入沙盒 | ENTER SANDBOX ⚡</button> </div>
+    </div>
+</div>
 
             </section>
         </div>
@@ -85,7 +107,7 @@ const handleLogout = () => {
 
 .mma-lab-content {
     width: 100%;
-    max-width: 1000px;
+    max-width: 1200px;
 }
 
 /* Header 設計 */
@@ -167,8 +189,8 @@ const handleLogout = () => {
 /* 科技風卡片本體 */
 .tech-card {
     flex: 1;
-    min-width: 320px;
-    max-width: 450px;
+    min-width: 300px;
+    max-width: 380px;
     position: relative;
     background: rgba(30, 41, 59, 0.7);
     backdrop-filter: blur(10px);
@@ -205,8 +227,13 @@ const handleLogout = () => {
     opacity: 0.5;
 }
 
-.blue-glow { background: #3b82f6; }
-.purple-glow { background: #a855f7; }
+.blue-glow {
+    background: #3b82f6;
+}
+
+.purple-glow {
+    background: #a855f7;
+}
 
 /* 卡片內容層 (確保在光暈上方) */
 .card-content {
@@ -229,8 +256,15 @@ const handleLogout = () => {
     margin-bottom: 25px;
 }
 
-.blue-bg { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); }
-.purple-bg { background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.2); }
+.blue-bg {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.purple-bg {
+    background: rgba(168, 85, 247, 0.1);
+    border: 1px solid rgba(168, 85, 247, 0.2);
+}
 
 .tech-card h2 {
     font-size: 1.5rem;
@@ -296,13 +330,39 @@ const handleLogout = () => {
         align-items: flex-start;
         gap: 20px;
     }
-    
+
     .module-cards-container {
         flex-direction: column;
     }
-    
+
     .tech-card {
         max-width: 100%;
     }
+}
+/* 🌟 科技銀按鈕 (Silver Metallic Gradient) */
+.silver-btn {
+    background: linear-gradient(135deg, #f8fafc, #94a3b8) !important;
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
+    color: #0f172a !important; /* 深色文字增加對比 */
+    font-weight: 800;
+    border-radius: 12px;
+    transition: all 0.3s;
+}
+
+.silver-btn:hover {
+    background: linear-gradient(135deg, #ffffff, #cbd5e1) !important;
+    box-shadow: 0 6px 20px rgba(255, 255, 255, 0.25);
+    transform: translateY(-3px);
+}
+
+/* 🌟 科技銀發光效果 */
+.silver-glow { 
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+}
+
+/* 🌟 科技銀 Icon 容器 */
+.silver-bg {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 </style>

@@ -42,11 +42,20 @@ const loadData = async () => {
         const params = {
             start_date: startDate.value,
             end_date: endDate.value,
-            group_by_field: groupBy.value // 傳送分組參數給後端
+            group_by_field: groupBy.value 
         }
-        // 呼叫模組化的 API
-        const data = await statsApi.getExpenseCategoryStats(params)
-        categoryTableData.value = data 
+
+        // 1. 先等待 API 回傳結果並定義 res
+        const res = await statsApi.getExpenseCategoryStatsWithItems(params)
+
+        // 2. 這時候才能印出 res (如果要除錯的話)
+        console.log("API res =", res)
+
+        // 3. 自動判斷並賦值
+        // 這裡幫你加了層保護，確保 res 存在才讀取 .data
+        const data = Array.isArray(res) ? res : (res && res.data ? res.data : [])
+        categoryTableData.value = data
+
         renderChart()
     } catch (error) {
         console.error("統計資料讀取失敗:", error)

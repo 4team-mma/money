@@ -32,11 +32,14 @@ import LoadingView from "@/view/LoadingView.vue";
 import Notifications from "@/view/Notifications.vue";
 import AdminData from "@/view/AdminData.vue";
 import AdminSetting from "@/view/AdminSetting.vue";
-import TestAI from "@/view/TestAI.vue";
+import TestAI from "@/view/Lab/TestAI.vue";
 import AdminAiConfig from "@/view/AdminAiConfig.vue";
 import AdminAiDevTools from "@/view/AdminAiDevTools.vue";
 import LabDashboard from "@/view/LabDashboard.vue";
-import SpeechCorrectionLab from "@/view/SpeechCorrectionLab.vue";
+import SpeechCorrectionLab from "@/view/Lab/SpeechCorrectionLab.vue";
+import RagSandbox from "@/view/Lab/RagSandbox.vue";
+import AddItems from "@/view/AddItems.vue";
+import AddItemList from "@/view/AddItemList.vue";
 
 const routes = [
   {
@@ -96,6 +99,20 @@ const routes = [
     path: "/AddIncome",
     component: AddIncome,
     name: "AddIncome",
+    meta: { requiresAuth: true}
+  },
+  
+  {
+    path: "/AddItems",
+    component: AddItems,
+    name: "AddItems",
+    meta: { requiresAuth: true}
+  },
+  
+  {
+    path: "/AddItemList",
+    component: AddItemList,
+    name: "AddItemList",
     meta: { requiresAuth: true}
   },
   {
@@ -274,6 +291,12 @@ const routes = [
     component: SpeechCorrectionLab,
     meta: { requiresAuth: true, hideNav: true }
   },
+    {
+    path: "/RagSandbox",
+    name: "RagSandbox",
+    component: RagSandbox,
+    meta: { requiresAuth: true, hideNav: true }
+  },
 
 
 ];
@@ -284,7 +307,7 @@ const router = createRouter({
   routes,
 });
 
-// 路由守衛 (Router Guard)
+
 // 路由守衛 (Router Guard)
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('user_token');
@@ -296,7 +319,7 @@ router.beforeEach((to, from, next) => {
   const isAdminPage = ['/Admins', '/AdminMain', '/AdminModel', '/AdminsComments', '/AdminData', '/AdminSetting'].some(path => to.path.startsWith(path));
   
   // 🌟 AI 測試員專屬頁面陣列
-  const aiTestPages = ['/lab', '/TestAI', '/SpeechCorrectionLab'];
+  const aiTestPages = ['/lab', '/TestAI', '/SpeechCorrectionLab','/RagSandbox'];
   
   // 一般使用者頁面
   const isUserPage = !publicPages.includes(to.path) && !isAdminPage && !aiTestPages.includes(to.path) && to.path !== '/loading';
