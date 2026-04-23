@@ -9,6 +9,7 @@
       <RouterLink class="btn btn-outline-primary" to="/AddIncome" active-class="active">收入</RouterLink>
       <RouterLink class="btn btn-outline-primary" to="/AddTrans" active-class="active">轉帳</RouterLink>
       <RouterLink class="btn btn-outline-primary" to="/AddItems" active-class="active">📷 訂單</RouterLink>
+      <RouterLink class="btn btn-outline-primary" to="/AddItemList" active-class="active">📋 訂單明細</RouterLink>
     </div>
   </div>
 </template>

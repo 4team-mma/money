@@ -1,71 +1,50 @@
 import api from '@/api'
-// 這是物件匯出法
 
 // 對應資料庫的 Adds 表
 export const recordApi = {
-    // 1. 新增記錄
-    create: (data) => api.post('/records/', data),
-    // 2. 獲取所有記錄 (支援分頁與搜尋，預設一頁 10 筆)
-    getList: (params) => api.get('/records/', { params }),
-    // 3. 獲取特定月份的「完整清單」與「統計總額」
-    // 這個方法會對應到你的 get_monthly_records，回傳 monthly_income 等欄位
-    getMonthly: (year, month) => api.get('/records/calendar/monthly', { 
-        params: { year, month } 
-    }),
+  // 1. 新增記錄
+  create: (data) => api.post('/records/', data),
+  
+  // 2. 獲取所有記錄 (支援分頁與搜尋，預設一頁 10 筆)
+  getList: (params) => api.get('/records/', { params }),
+  
+  // 3. 獲取特定月份的「完整清單」與「統計總額」
+  getMonthly: (year, month) => api.get('/records/calendar/monthly', { 
+    params: { year, month } 
+  }),
 
-    // 4. 獲取「當前月份」的簡單統計數據 (對應 get_monthly_stats)
-    // 適合用在儀表板的小卡片，只回傳三個數字：收入、支出、結餘
-    getCurrentStats: () => api.get('/records/stats/monthly'),
+  // 4. 獲取「當前月份」的簡單統計數據
+  getCurrentStats: () => api.get('/records/stats/monthly'),
 
-    // 5. 修改記錄 (用於編輯功能)
-    update: (recordId, data) => api.patch(`/records/${recordId}`, data),
+  // 5. 修改記錄 (用於編輯功能)
+  update: (recordId, data) => api.patch(`/records/${recordId}`, data),
 
-    // 6. 刪除記錄 (用於註銷功能)
-    delete: (recordId) => api.delete(`/records/${recordId}`),
+  // 6. 刪除記錄 (用於註銷功能)
+  delete: (recordId) => api.delete(`/records/${recordId}`),
 
-
-    // 新增：兩步驟訂單記帳
-    // parseReceipt: (formData) => api.post('/records/ai-parse', formData),
-    // confirmOrder: (data) => api.post('/records/ai-confirm', data),
-
-    parseReceipt: (formData) => {
+  // ── AI 辨識相關 ──
+  parseReceipt: (formData) => {
     return api.post("/records/ai-parse", formData, {
       // ⚠️ 關鍵：給地端視覺模型充足的思考時間，設為 100 秒
-    timeout: 100000 
+      timeout: 100000 
     });
-    },
+  },
 
   confirmOrder: (data) => {
     return api.post("/records/ai-confirm", data);
-  }
+  }, // 👈 關鍵在這裡：這組大括號結束後，必須加上逗號，才能繼續接下一個屬性！
 
-
+  // ── 歷史訂單相關 (你新增的) ──
+  getOrderList: (params) => api.get('/records/orders', { params }),
+  getOrderItems: (recordId) => api.get(`/records/${recordId}/items`)
 }
 
-
-
-
-// 為了相容你目前的 useAddRecord.js，保留這個導出
+// 為了相容你目前的 useAddRecord.js，保留這些單獨導出
 export const createRecord = recordApi.create;
 
-// 更新紀錄
 export const updateRecord = (id, data) => {
-    return recordApi.update(id, data)
+  return recordApi.update(id, data)
 }
 
 export const getMonthlyRecords = recordApi.getMonthly;
 export const getMonthlyStats = recordApi.getCurrentStats;
-
-
-
-
-
-//下面附上引用到vue的範例:
-// import { getMonthlyRecords } from '@/api/record'
-
-// const loadStats = async () => {
-//   const res = await getMonthlyRecords(2026, 2)
-//   // 即使一頁只顯示 10 筆，這裡拿到的 income 也是整個月的總和！
-//   const income = res.monthly_income 
-//   const expense = res.monthly_expenses
-// }

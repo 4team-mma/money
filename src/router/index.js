@@ -39,6 +39,7 @@ import LabDashboard from "@/view/LabDashboard.vue";
 import SpeechCorrectionLab from "@/view/Lab/SpeechCorrectionLab.vue";
 import RagSandbox from "@/view/Lab/RagSandbox.vue";
 import AddItems from "@/view/AddItems.vue";
+import AddItemList from "@/view/AddItemList.vue";
 
 const routes = [
   {
@@ -105,6 +106,13 @@ const routes = [
     path: "/AddItems",
     component: AddItems,
     name: "AddItems",
+    meta: { requiresAuth: true}
+  },
+  
+  {
+    path: "/AddItemList",
+    component: AddItemList,
+    name: "AddItemList",
     meta: { requiresAuth: true}
   },
   {
