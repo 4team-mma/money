@@ -1,4 +1,3 @@
-<!-- // AddItems.vue -->
 <!-- AddItems.vue -->
 <script setup>
 import Add_bar from '@/components/AddBar.vue'
@@ -129,6 +128,7 @@ function removeItem(idx) {
 }
 
 async function confirmRecord() {
+  console.log('selectedAccount:', selectedAccount.value) 
   if (!selectedAccount.value) { scanError.value = '請選擇帳戶'; return }
   isSubmitting.value = true
   try {
@@ -140,10 +140,12 @@ async function confirmRecord() {
       add_class: editClass.value,
       add_note:     editNote.value,
       account_name: selectedAccount.value.account_name,
+      account_id:   selectedAccount.value.account_id,  // ← 加這行，直接送 ID
       add_member:   '自己',
       add_tag:      '需要',
       items:        editItems.value
     })
+    await accountStore.loadAccounts(true)  // ← 加這行，force=true 強制刷新
     step.value = 'success'
   } catch (err) {
     scanError.value = err?.message || '記帳失敗，請重試'

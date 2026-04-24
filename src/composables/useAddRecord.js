@@ -205,6 +205,7 @@ export function useAddRecord(initialType = false) {
         try {
             if (await submitData()) {
                 ElMessage.success(form.add_id ? '修改成功！' : '儲存成功！')
+                await accountStore.loadAccounts(true)  // ← 加這行，寫入後強制刷新
                 await noticeStore.fetchAll(true)
                 router.push('/book')
                 return { 'success': true }
@@ -222,6 +223,7 @@ export function useAddRecord(initialType = false) {
         try {
             if (await submitData()) {
                 ElMessage.success('已儲存，請繼續下一筆')
+                await accountStore.loadAccounts(true)  // ← 加這行
                 form.add_amount = null
                 form.add_note = ''
                 form.add_id = null
