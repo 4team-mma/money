@@ -1,49 +1,112 @@
-//useCalendarStore.js
+// useCalendarStore.js
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export const useCalendarStore = defineStore('calendar', () => {
-    // 存放從 Google 抓回來的行程
-    const googleEvents = ref([])
 
-    // 設定行程（並存入本地，防止重整消失）
-    const setGoogleEvents = (events) => {
-        const formatted = events.map(e => {
-        // 🌟 重新解析時間，確保顯示格式為 HH:mm
-        const startTime = e.start?.dateTime?.substring(11, 16) || "09:00";
-        const endTime = e.end?.dateTime?.substring(11, 16) || "12:00";
-        
-        return {
-            ...e,
-            add_id: e.id || Math.random().toString(36).substr(2, 9),
-            add_date: e.start.dateTime.substring(0, 10),
-            add_type: 'event', // 關鍵：這是拆分邏輯的依據
-            
-            // 🌟 這裡決定列表顯示什麼
-            add_class: e.summary,            // 顯示：LLM
-            add_note: `${startTime} ~ ${endTime}`, // 顯示：09:00 ~ 12:00
-            
-            add_class_icon: '🗓️',
-            add_amount: 0,
-            currency: ''
+    const googleEvents = ref([])
+    // ✅ Token 存記憶體，不存 localStorage（安全考量，過期就過期）
+    const googleToken = ref('')
+
+    // ✅ 核心修正：用 user_id 隔離不同帳號的資料
+    const getStorageKey = () => {
+        try {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}')
+            const userId = currentUser?.user_id || localStorage.getItem('user_id') || 'anonymous'
+            return `cached_google_events_${userId}`
+        } catch {
+            return 'cached_google_events_anonymous'
         }
-        });
-        googleEvents.value = formatted
-        // 同步存到 localStorage
-        localStorage.setItem('cached_google_events', JSON.stringify(formatted))
     }
 
-    // 初始化：從本地讀回資料
-    const initStore = () => {
-        const saved = localStorage.getItem('cached_google_events')
-        if (saved) {
-            googleEvents.value = JSON.parse(saved)
+    // Token 管理（由 BookCalendarSection 在取得授權後呼叫）
+    const setGoogleToken = (token) => {
+    googleToken.value = token
+    sessionStorage.setItem('google_calendar_token', token) // ← 新增
+}
+
+    const clearGoogleToken = () => {
+    googleToken.value = ''
+    sessionStorage.removeItem('google_calendar_token') // ← 新增
+}
+
+    // 存入並格式化行程
+    const setGoogleEvents = (events) => {
+        const formatted = events.map(e => {
+            const startDT = e.start?.dateTime || ''
+            const endDT = e.end?.dateTime || ''
+            const startTime = startDT.substring(11, 16) || '09:00'
+            const endTime = endDT.substring(11, 16) || '12:00'
+
+            return {
+                // 保留原始資料供編輯使用
+                _raw_id: e.id,
+                add_id: e.id || `local_${Math.random().toString(36).substr(2, 9)}`,
+                add_date: startDT.substring(0, 10) || e.start?.date || '',
+                add_type: 'event',
+                add_class: e.summary || '未命名行程',
+                add_note: `${startTime} ~ ${endTime}`,
+                add_class_icon: '🗓️',
+                add_amount: 0,
+                currency: '',
+                // 編輯用的完整時間資料
+                start_datetime: startDT,
+                end_datetime: endDT,
+            }
+        })
+        googleEvents.value = formatted
+        localStorage.setItem(getStorageKey(), JSON.stringify(formatted))
+    }
+
+    // initStore 裡也補上讀取
+const initStore = () => {
+    const saved = localStorage.getItem(getStorageKey())
+    if (saved) {
+        try { googleEvents.value = JSON.parse(saved) } catch { googleEvents.value = [] }
+    }
+    // ← 新增：恢復 token（同一個 session 內有效）
+    const savedToken = sessionStorage.getItem('google_calendar_token')
+    if (savedToken) googleToken.value = savedToken
+}
+
+    // 刪除單一行程（本地同步）
+    const removeEvent = (eventId) => {
+        googleEvents.value = googleEvents.value.filter(e => e.add_id !== eventId)
+        localStorage.setItem(getStorageKey(), JSON.stringify(googleEvents.value))
+    }
+
+    // 更新單一行程（本地同步）
+    const updateEvent = (eventId, updatedData) => {
+        const idx = googleEvents.value.findIndex(e => e.add_id === eventId)
+        if (idx !== -1) {
+            googleEvents.value[idx] = { ...googleEvents.value[idx], ...updatedData }
+            localStorage.setItem(getStorageKey(), JSON.stringify(googleEvents.value))
         }
+    }
+
+    // 清空指定月份行程（本地）
+    const clearMonthEvents = (year, month) => {
+        const prefix = `${year}-${String(month).padStart(2, '0')}`
+        googleEvents.value = googleEvents.value.filter(e => !e.add_date.startsWith(prefix))
+        localStorage.setItem(getStorageKey(), JSON.stringify(googleEvents.value))
+    }
+
+    // 清空所有行程（登出時呼叫）
+    const clearAllEvents = () => {
+        googleEvents.value = []
+        localStorage.removeItem(getStorageKey())
     }
 
     return {
         googleEvents,
+        googleToken,
+        setGoogleToken,
+        clearGoogleToken,
         setGoogleEvents,
-        initStore
+        initStore,
+        removeEvent,
+        updateEvent,
+        clearMonthEvents,
+        clearAllEvents,
     }
 })

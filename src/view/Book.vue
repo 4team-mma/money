@@ -6,11 +6,11 @@ import BookTransactionDetails from "@/components/BookTransactionDetails.vue";
 import BookSummaryCard from "@/components/BookSummaryCard.vue";
 import api from "@/api";
 import { ref, computed, onMounted, watch, onUnmounted } from "vue";
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { getLocalDate, getLocalDateString } from '@/utils/dateHelper'
 import { triggerMissionAction } from '@/api/gamification';
 import { useCalendarStore } from '@/stores/useCalendarStore'
-
+import { integrationApi } from '@/api/integrations'
 
 
 const transactions = ref([]);
@@ -191,26 +191,73 @@ const refreshList = async () => {
 }
 
 const deleteTransaction = async (type, id) => {
-    const confirmDelete = window.confirm('確定要刪除這筆交易嗎？此操作無法復原！');
-    if (!confirmDelete) return;
+    const confirmDelete = window.confirm('確定要刪除嗎？此操作無法復原！')
+    if (!confirmDelete) return
     try {
-        const path = type === 'transfer' ? `/transfers/${id}` : `/records/${id}`;
-        await api.delete(path);
-        await fetchTransactions();
-        ElMessage.success('刪除成功！');
+        if (type === 'event') {
+            const isLocal = String(id).startsWith('local_')
+            if (!isLocal && calendarStore.googleToken) {
+                // 有真實 Google ID 且 token 有效，才呼叫 API
+                await integrationApi.deleteEvent(calendarStore.googleToken, id)
+                ElMessage.success('行程已刪除並同步 Google 日曆！')
+            } else if (isLocal) {
+                ElMessage.info('此行程僅存在本地，已從顯示中移除')
+            } else {
+                ElMessage.warning('Google Token 已過期，僅從本地移除')
+            }
+            calendarStore.removeEvent(id)
+        } else {
+            const path = type === 'transfer' ? `/transfers/${id}` : `/records/${id}`
+            await api.delete(path)
+            await fetchTransactions()
+            ElMessage.success('刪除成功！')
+        }
     } catch (error) {
-        ElMessage.error('刪除失敗：' + (error.response?.data?.detail || '連線異常'));
+        ElMessage.error('刪除失敗：' + (error.response?.data?.detail || '連線異常'))
     }
-};
+}
 
-const handleDevCleanup = () => {
-    // 透過 ref 去呼叫 BookCalendarSection 裡面的清理方法
-    if (calendarRef.value) {
-        calendarRef.value.devCleanup(); 
-    } else {
-        console.error("找不到日曆組件的 Ref 喵！");
+// const handleDevCleanup = () => {
+//     // 透過 ref 去呼叫 BookCalendarSection 裡面的清理方法
+//     if (calendarRef.value) {
+//         calendarRef.value.devCleanup(); 
+//     } else {
+//         console.error("找不到日曆組件的 Ref 喵！");
+//     }
+// };
+
+const handleDeleteMonthEvents = async () => {
+    // 如果 token 不見了，提示使用者回去重新授權
+    if (!calendarStore.googleToken) {
+        ElMessage.warning('請先點擊「第一步：授權 Google 日曆」按鈕取得授權，再執行清除喵！')
+        return
     }
-};
+    try {
+        await ElMessageBox.confirm(
+            `確定清除 ${year.value}年${month.value}月 所有 App 匯入行程？\n（手動建立的 Google 行程不受影響）`,
+            '清除行程確認',
+            { confirmButtonText: '確定清除', cancelButtonText: '取消', type: 'warning' }
+        )
+    } catch { return }
+
+    const pad = n => String(n).padStart(2, '0')
+    const lastDay = new Date(year.value, month.value, 0).getDate()
+    const timeMin = `${year.value}-${pad(month.value)}-01T00:00:00+08:00`
+    const timeMax = `${year.value}-${pad(month.value)}-${lastDay}T23:59:59+08:00`
+
+    try {
+    if (calendarStore.googleToken) {
+        const res = await integrationApi.deleteMonthEvents(calendarStore.googleToken, timeMin, timeMax)
+        const msg = res?.data?.message || res?.message || '清除完成！'
+        ElMessage.success(msg)
+    }
+    calendarStore.clearMonthEvents(year.value, month.value)
+} catch (e) {
+    // 就算 API 報錯，本地也要清掉
+    calendarStore.clearMonthEvents(year.value, month.value)
+    ElMessage.warning('Google 端清除可能有誤，但本地已清除')
+}
+}
 
 </script>
 
@@ -222,13 +269,13 @@ const handleDevCleanup = () => {
     </div>
     <div class="calendar-page-layout">
         <div class="calendar-grid">
-            <BookCalendarSection :attributes="calendarAttributes" :today="today" @select-date="selectDate"
+            <BookCalendarSection  ref="calendarRef" :attributes="calendarAttributes" :today="today" @select-date="selectDate"
                 @move-today="selectedDate = today" @update-date="updateBookDate"
                 @refresh-with-events="handleRefreshWithEvents" :selectedDate="selectedDate" />
             <BookTransactionDetails :selectedDate="selectedDate" :transactions="selectedDateTransactions"
                 :displayMode="displayMode" @deleteTransaction="deleteTransaction" @refreshList="refreshList"
                 @change-view="handleChangeView" 
-                @trigger-cleanup="handleDevCleanup"
+                @trigger-cleanup="handleDeleteMonthEvents"
                 />
         </div>
         <BookSummaryCard :year="year" :month="month" :monthlyIncome="monthlyIncome" :monthlyExpenses="monthlyExpenses"

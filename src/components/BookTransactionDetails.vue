@@ -306,4 +306,21 @@ const currentFormComponent = computed(() => {
     background: var(--color-primary);
     color: var(--text-inverse);
 }
+
+.btn-cleanup-dev {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-cleanup-dev:hover {
+  background: #fde68a;
+}
+
+
 </style>
