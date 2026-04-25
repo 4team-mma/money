@@ -1,4 +1,5 @@
 <script setup>
+//RagSandbox.vue
 import { ref, reactive, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
@@ -12,10 +13,6 @@ let loadingInterval = null;
 const query = ref('');
 const userScore = ref(0);
 const currentTheme = ref('silver');
-
-
-
-
 
 // 參數綁定
 const params = reactive({ m: 16, ef: 100, k: 5 });

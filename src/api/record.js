@@ -1,3 +1,4 @@
+// record.js
 import api from '@/api'
 
 // 對應資料庫的 Adds 表

@@ -1,10 +1,10 @@
 <script setup>
+// SpeechCorrectionLab.vue
 /**
  * 邱比特大腦：財經語音糾錯擂台 (LoRA 展示版)
  */
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-// 隊長，請確保你有在 api/ robot.js 新增後端的 /api/ai/correct/process 接口
 import { processSpeechCorrection, updateFinalCorrectedText } from '@/api/robot';
 import { ElMessage,vLoading } from 'element-plus';
 

@@ -1,4 +1,6 @@
+
 <script setup>
+// Book.vue
 import BookCalendarSection from "@/components/BookCalendarSection.vue";
 import BookTransactionDetails from "@/components/BookTransactionDetails.vue";
 import BookSummaryCard from "@/components/BookSummaryCard.vue";

@@ -1,4 +1,5 @@
 <script setup>
+//BookTransactionDetails.vue
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import EditTransferForm from './EditTransferForm.vue'
 import EditRecordForm from './EditRecordForm.vue'

@@ -1,6 +1,6 @@
 <script setup>
 /**
- * 邱比特大腦：意圖識別 A/B 測試擂台 (三強對決版)
+ * 邱比特大腦：意圖識別 A/B 測試擂台 (三強對決版)TestAI.vue
  */
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
