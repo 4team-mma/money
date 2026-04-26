@@ -32,31 +32,38 @@ export const useCalendarStore = defineStore('calendar', () => {
 
     // 存入並格式化行程
     const setGoogleEvents = (events) => {
-        const formatted = events.map(e => {
-            const startDT = e.start?.dateTime || ''
-            const endDT = e.end?.dateTime || ''
-            const startTime = startDT.substring(11, 16) || '09:00'
-            const endTime = endDT.substring(11, 16) || '12:00'
+    const formatted = events.map(e => {
+        const startDT = e.start?.dateTime || ''
+        const endDT = e.end?.dateTime || ''
+        const startTime = startDT.substring(11, 16) || '09:00'
+        const endTime = endDT.substring(11, 16) || '12:00'
 
+        // ✅ 如果已經是格式化的行程（有 add_date），直接用，不重新解析
+        if (e.add_type === 'event' && e.add_date && !e.start?.dateTime) {
             return {
-                // 保留原始資料供編輯使用
-                _raw_id: e.id,
-                add_id: e.id || `local_${Math.random().toString(36).substr(2, 9)}`,
-                add_date: startDT.substring(0, 10) || e.start?.date || '',
-                add_type: 'event',
-                add_class: e.summary || '未命名行程',
-                add_note: `${startTime} ~ ${endTime}`,
-                add_class_icon: '🗓️',
-                add_amount: 0,
-                currency: '',
-                // 編輯用的完整時間資料
-                start_datetime: startDT,
-                end_datetime: endDT,
+                ...e,
+                start_datetime: e.start_datetime || '',
+                end_datetime: e.end_datetime || '',
             }
-        })
-        googleEvents.value = formatted
-        localStorage.setItem(getStorageKey(), JSON.stringify(formatted))
-    }
+        }
+
+        return {
+            _raw_id: e.id,
+            add_id: e.id || e.add_id || `local_${Math.random().toString(36).substr(2, 9)}`,
+            add_date: startDT.substring(0, 10) || e.start?.date || e.add_date || '',
+            add_type: 'event',
+            add_class: e.summary || e.add_class || '未命名行程',
+            add_note: `${startTime} ~ ${endTime}`,
+            add_class_icon: '🗓️',
+            add_amount: 0,
+            currency: '',
+            start_datetime: startDT,
+            end_datetime: endDT,
+        }
+    })
+    googleEvents.value = formatted
+    localStorage.setItem(getStorageKey(), JSON.stringify(formatted))
+}
 
     // initStore 裡也補上讀取
 const initStore = () => {
@@ -66,6 +73,7 @@ const initStore = () => {
     }
     // ← 新增：恢復 token（同一個 session 內有效）
     const savedToken = sessionStorage.getItem('google_calendar_token')
+    console.log('🔑 [Store] 從 sessionStorage 恢復 token:', savedToken ? '有值' : '空的')
     if (savedToken) googleToken.value = savedToken
 }
 

@@ -89,8 +89,8 @@ const filteredTransactions = computed(() => {
         return props.transactions.filter(t => t.add_type === 'event');
 
     }
-    // 預設顯示全部
-    return props.transactions;
+    // 全部：只顯示收支與轉帳，行程自己去行程tab
+    return props.transactions.filter(t => t.add_type !== 'event');
 });
 
 // 控制哪一個項目的下拉選單是開啟的 (存儲 index)

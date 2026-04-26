@@ -222,7 +222,7 @@ const handleFinalSync = async () => {
 // 新增「同步 Google 行事曆」按鈕
 const syncFromGoogle = async () => {
     if (!calendarStore.googleToken) {
-        ElMessage.warning('請先點擊「第一步：授權 Google 日曆」取得授權喵！')
+        ElMessage.warning('請先點擊「授權 Google 日曆」取得授權喵！')
         return
     }
     const loading = ElLoading.service({ lock: true, text: '正在從 Google 日曆同步行程...' })
@@ -232,10 +232,23 @@ const syncFromGoogle = async () => {
         const timeMax = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
         const res = await integrationApi.getEvents(calendarStore.googleToken, timeMin, timeMax)
         const events = Array.isArray(res) ? res : (res.data ?? [])
+
+        if (events.length === 0) {
+            ElMessage.info('Google 日曆這個月沒有行程喔！')
+            loading.close()
+            return
+        }
+
         emit('refresh-with-events', events)
         ElMessage.success(`✅ 已同步 ${events.length} 筆行程！`)
     } catch (e) {
-        ElMessage.error('同步失敗，請確認授權是否有效')
+        // token 過期就清掉，強迫重新授權
+        if (e.response?.status === 401) {
+            calendarStore.clearGoogleToken()
+            ElMessage.error('授權已過期，請重新點擊「授權 Google 日曆」喵！')
+        } else {
+            ElMessage.error('同步失敗，請確認授權是否有效')
+        }
     } finally {
         loading.close()
     }
@@ -265,7 +278,7 @@ defineExpose({ triggerUpload });
             :attributes="props.attributes" locale="zh-TW" @dayclick="day => emit('select-date', day)"
             @did-move="handlePageChange">
             <template #footer>
-                <div style="display:flex; justify-content:center; flex-wrap:wrap;">
+                <div style="display:flex; justify-content:center; flex-wrap:wrap; align-items:center;">
                     <button class="btn-icon" @click="moveToday" style="margin:10px;">今天</button>
                     <RouterLink style="margin:10px;" class="btn-icon btn-outline-primary"
                         :to="{ path: '/Add', state: { date: props.selectedDate } }">新增支出</RouterLink>
@@ -274,21 +287,41 @@ defineExpose({ triggerUpload });
                     <RouterLink style="margin:10px;" class="btn-icon btn-outline-primary"
                         :to="{ path: '/AddTrans', state: { date: props.selectedDate } }">新增轉帳</RouterLink>
 
-                    <button v-if="!tempGoogleToken"
-                        style="margin:10px; background-color:#f59e0b; color:white; border:none; border-radius:4px; padding:5px 10px; cursor:pointer; font-weight:600;"
+                    <!-- 狀態一：沒有任何 token → 只顯示授權 -->
+                    <button v-if="!tempGoogleToken && !calendarStore.googleToken"
+                        style="margin:10px; background-color:#f59e0b; color:white; border:none; border-radius:8px; padding:8px 14px; cursor:pointer; font-weight:600;"
                         @click="requestTokenOnly">
-                        🔐 第一步：授權 Google 日曆
+                        🔐 授權 Google 日曆
                     </button>
-                    <button v-if="calendarStore.googleToken"
-                        style="margin:10px; background-color:#6366f1; color:white; border:none; border-radius:4px; padding:5px 10px; cursor:pointer; font-weight:600;"
-                        @click="syncFromGoogle">
-                        🔄 同步 Google 行事曆
-                    </button>
-                    <button v-else
-                        style="margin:10px; background-color:#10b981; color:white; border:none; border-radius:4px; padding:5px 10px; cursor:pointer; font-weight:600;"
-                        @click="scheduleInput.click()">
-                        📸 第二步：選擇課表圖片匯入
-                    </button>
+
+                    <!-- 狀態二：剛授權完（有臨時 token）→ 顯示兩個選項 -->
+                    <template v-if="tempGoogleToken">
+                        <span style="margin:10px 4px; font-size:0.8rem; color:#64748b;">授權完成，選擇：</span>
+                        <button
+                            style="margin:10px 6px; background-color:#10b981; color:white; border:none; border-radius:8px; padding:8px 14px; cursor:pointer; font-weight:600;"
+                            @click="scheduleInput.click()">
+                            📸 匯入課表圖片
+                        </button>
+                        <button
+                            style="margin:10px 6px; background-color:#6366f1; color:white; border:none; border-radius:8px; padding:8px 14px; cursor:pointer; font-weight:600;"
+                            @click="syncFromGoogle">
+                            🔄 同步 Google 行事曆
+                        </button>
+                    </template>
+
+                    <!-- 狀態三：有 session token 但沒有臨時 token（刷新後）→ 顯示授權 + 同步 -->
+                    <template v-if="!tempGoogleToken && calendarStore.googleToken">
+                        <button
+                            style="margin:10px 6px; background-color:#f59e0b; color:white; border:none; border-radius:8px; padding:8px 14px; cursor:pointer; font-weight:600;"
+                            @click="requestTokenOnly">
+                            🔐 授權 Google 日曆
+                        </button>
+                        <button
+                            style="margin:10px 6px; background-color:#6366f1; color:white; border:none; border-radius:8px; padding:8px 14px; cursor:pointer; font-weight:600;"
+                            @click="syncFromGoogle">
+                            🔄 同步 Google 行事曆
+                        </button>
+                    </template>
 
                     <input type="file" ref="scheduleInput" accept="image/*" style="display:none;"
                         @change="handleScheduleUpload" />
