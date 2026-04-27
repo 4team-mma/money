@@ -1,9 +1,8 @@
 <script setup>
+//AdminSetting.vue
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getAiCorrectionStatus, toggleAiCorrectionModel } from '@/api/speech'
-
-
 
 const props = defineProps({
     themes: Object,

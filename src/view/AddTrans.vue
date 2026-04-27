@@ -1,3 +1,4 @@
+<!-- AddTrans.vue -->
 <script setup>
 import Nav from '@/components/Nav.vue'
 import Add_bar from '@/components/AddBar.vue'

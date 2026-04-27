@@ -1,4 +1,5 @@
 <script setup>
+//BookTransactionDetails.vue
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import EditTransferForm from './EditTransferForm.vue'
 import EditRecordForm from './EditRecordForm.vue'
@@ -88,8 +89,8 @@ const filteredTransactions = computed(() => {
         return props.transactions.filter(t => t.add_type === 'event');
 
     }
-    // 預設顯示全部
-    return props.transactions;
+    // 全部：只顯示收支與轉帳，行程自己去行程tab
+    return props.transactions.filter(t => t.add_type !== 'event');
 });
 
 // 控制哪一個項目的下拉選單是開啟的 (存儲 index)
@@ -305,4 +306,21 @@ const currentFormComponent = computed(() => {
     background: var(--color-primary);
     color: var(--text-inverse);
 }
+
+.btn-cleanup-dev {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-cleanup-dev:hover {
+  background: #fde68a;
+}
+
+
 </style>
