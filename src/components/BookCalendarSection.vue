@@ -23,6 +23,10 @@ const previewVisible = ref(false);
 const pendingEvents = ref([]);
 const currentGoogleToken = ref('');
 
+const viewingYear = ref(new Date().getFullYear())
+const viewingMonth = ref(new Date().getMonth() + 1)  // 1-12
+
+
 // ══════════════════════════════════════════════
 // 🌟 批量設定：上午/下午各自可自訂時間
 // ══════════════════════════════════════════════
@@ -196,10 +200,10 @@ const handleFinalSync = async () => {
         let displayEvents
         try {
             const realRes = await integrationApi.getEvents(
-                currentGoogleToken.value,
-                new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(),
-                new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString()
-            )
+    currentGoogleToken.value,
+    new Date(viewingYear.value, viewingMonth.value - 1, 1).toISOString(),
+    new Date(viewingYear.value, viewingMonth.value, 0).toISOString()
+)
             displayEvents = Array.isArray(realRes) ? realRes : (realRes.data ?? [])
         } catch {
             displayEvents = pendingEvents.value.map(e => ({
@@ -225,27 +229,28 @@ const syncFromGoogle = async () => {
         ElMessage.warning('請先點擊「授權 Google 日曆」取得授權喵！')
         return
     }
-    const loading = ElLoading.service({ lock: true, text: '正在從 Google 日曆同步行程...' })
+    const loading = ElLoading.service({ lock: true, text: `正在同步 ${viewingYear.value}年${viewingMonth.value}月 行程...` })
     try {
-        const now = new Date()
-        const timeMin = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-        const timeMax = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
+        // 用目前瀏覽的年月，不是當下時間
+        const firstDay = new Date(viewingYear.value, viewingMonth.value - 1, 1)
+        const lastDay = new Date(viewingYear.value, viewingMonth.value, 0)
+        const timeMin = firstDay.toISOString()
+        const timeMax = lastDay.toISOString()
+
         const res = await integrationApi.getEvents(calendarStore.googleToken, timeMin, timeMax)
         const events = Array.isArray(res) ? res : (res.data ?? [])
 
         if (events.length === 0) {
-            ElMessage.info('Google 日曆這個月沒有行程喔！')
-            loading.close()
+            ElMessage.info(`${viewingYear.value}年${viewingMonth.value}月 Google 日曆沒有行程`)
             return
         }
 
         emit('refresh-with-events', events)
-        ElMessage.success(`✅ 已同步 ${events.length} 筆行程！`)
+        ElMessage.success(`✅ 已同步 ${viewingYear.value}年${viewingMonth.value}月 共 ${events.length} 筆行程！`)
     } catch (e) {
-        // token 過期就清掉，強迫重新授權
         if (e.response?.status === 401) {
             calendarStore.clearGoogleToken()
-            ElMessage.error('授權已過期，請重新點擊「授權 Google 日曆」喵！')
+            ElMessage.error('授權已過期，請重新授權喵！')
         } else {
             ElMessage.error('同步失敗，請確認授權是否有效')
         }
@@ -264,6 +269,8 @@ function moveToday() {
 const handlePageChange = (pages) => {
     if (pages && pages.length > 0) {
         const { month: newMonth, year: newYear } = pages[0];
+        viewingYear.value = newYear       // ← 加這行
+        viewingMonth.value = newMonth     // ← 加這行
         emit('update-date', { year: newYear, month: newMonth });
     }
 }
