@@ -140,11 +140,15 @@ const connectWebSocket = () => {
   const token = localStorage.getItem("user_token") || localStorage.getItem("token");
   if (!token) return;
   const apiBase = import.meta.env.VITE_API_BASE_URL;
-  const wsUrl = apiBase === '/api'
-    ? `ws://localhost:8000/api/ws/chat?token=${token}`
-    : `${apiBase.replace('https://', 'wss://').replace('http://', 'ws://')}/ws/chat?token=${token}`;
 
-  ws = new WebSocket(wsUrl);
+  // 1. URL 不要再串接 ?token= 了
+  const wsUrl = apiBase === '/api'
+    ? `ws://localhost:8000/api/ws/chat`
+    : `${apiBase.replace('https://', 'wss://').replace('http://', 'ws://')}/ws/chat`;
+
+  // 2. 把 token 放在陣列中，當作 subprotocol 傳遞給後端
+  ws = new WebSocket(wsUrl, [token])
+
   ws.onopen = () => { wsRetryCount = 0; };
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
