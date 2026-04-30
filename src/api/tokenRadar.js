@@ -1,7 +1,7 @@
 // src/api/tokenRadar.js
 import api from '@/api'; // 引用你的 index.js (已包含攔截器)
 
-const BASE = '/api/token-radar';
+const BASE = '/token-radar';
 
 /**
  * 取得儀表板彙總數據
