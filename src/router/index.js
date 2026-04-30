@@ -40,6 +40,7 @@ import SpeechCorrectionLab from "@/view/Lab/SpeechCorrectionLab.vue";
 import RagSandbox from "@/view/Lab/RagSandbox.vue";
 import AddItems from "@/view/AddItems.vue";
 import AddItemList from "@/view/AddItemList.vue";
+import TokenRadarLab from "@/view/Lab/TokenRadarLab.vue";
 
 const routes = [
   {
@@ -297,6 +298,12 @@ const routes = [
     component: RagSandbox,
     meta: { requiresAuth: true, hideNav: true }
   },
+    {
+    path: "/TokenRadarLab",
+    name: "TokenRadarLab",
+    component: TokenRadarLab,
+    meta: { requiresAuth: true, hideNav: true }
+  },
 
 
 ];
@@ -319,7 +326,7 @@ router.beforeEach((to, from, next) => {
   const isAdminPage = ['/Admins', '/AdminMain', '/AdminModel', '/AdminsComments', '/AdminData', '/AdminSetting'].some(path => to.path.startsWith(path));
   
   // 🌟 AI 測試員專屬頁面陣列
-  const aiTestPages = ['/lab', '/TestAI', '/SpeechCorrectionLab','/RagSandbox'];
+  const aiTestPages = ['/lab', '/TestAI', '/SpeechCorrectionLab','/RagSandbox','/TokenRadarLab'];
   
   // 一般使用者頁面
   const isUserPage = !publicPages.includes(to.path) && !isAdminPage && !aiTestPages.includes(to.path) && to.path !== '/loading';
