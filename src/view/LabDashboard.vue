@@ -36,7 +36,7 @@ const handleLogout = () => {
                             <span class="sparkle">🔬</span>
                         </div>
                         <div class="brand-text">
-                            <h1>邱比特 AI 實驗室大廳</h1>
+                            <h1>AI 實驗室大廳</h1>
                             <p>MoneyMMA 核心模型效能測試與驗證中心</p>
                         </div>
                     </div>
@@ -163,9 +163,10 @@ const handleLogout = () => {
     font-size: 2rem;
     font-weight: 700;
     margin: 0 0 5px 0;
-    background: linear-gradient(to right, #ffffff, #94a3b8);
-    
-    -webkit-text-fill-color: transparent;
+
+    color: #cbd5e1;
+    line-height: 1.6;
+
 }
 
 .brand-text p {
