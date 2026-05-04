@@ -1,10 +1,9 @@
+<!-- SettingAccount.vue -->
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { changePassword, deleteMe,getProfile } from '@/api/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { settingApi } from '@/api/setting'
-
-
 
 // 🌟 引入 Siri 圖示 (解決破圖)
 import logoSiri from '@/assets/logo_siri.png'
@@ -14,10 +13,8 @@ const security = ref({
     newPassword: '',
     confirmPassword: ''
 })
-
 const loginActivities = ref([])
 const isLoading = ref(true)
-
 
 // 🌟 從環境變數讀取網址 (更專業、更安全)
 const SHORTCUT_CONFIG = {
@@ -41,21 +38,58 @@ const siriTitle = computed(() => {
 })
 
 
-// 🌟 關鍵修正：同步身分，確保 role 抓到的是資料庫最新的
+
+// 🌟 Notion 狀態管理
+const isNotionBound = ref(false)
+const isEditingNotion = ref(false)
+const notionConfig = ref({ apiKey: '', pageId: '' })
+
+/// 🌟 同步身分邏輯
 const syncUserIdentity = async () => {
     try {
         const res = await getProfile()
         const userData = res.data || res
-        // 根據你資料庫截圖，抓取 role 欄位
-        userRole.value = userData.role || 'user'
-        localStorage.setItem('user_role', userRole.value)
-    } catch (error) {
-        console.error('身分同步失敗:', error)
-        userRole.value = localStorage.getItem('user_role') || 'user'
-    }
+        
+        userRole.value = userData.role  // ✅ 補上這行
+        
+        if (userData.notion_page_id) {
+            isNotionBound.value = true
+            isEditingNotion.value = false
+            notionConfig.value.apiKey = '********'
+            notionConfig.value.pageId = userData.notion_page_id
+        } else {
+            isNotionBound.value = false
+            isEditingNotion.value = true
+        }
+    } catch (e) { console.error(e) }
 }
 
+const handleNotionSave = async () => {
+    try {
+        await settingApi.updateNotionConfig({
+            notion_api_key: notionConfig.value.apiKey === '********' 
+                ? undefined 
+                : notionConfig.value.apiKey,
+            notion_page_id: notionConfig.value.pageId
+        })
+        ElMessage.success('Notion 設定已儲存喵！')
+        await syncUserIdentity()
+    } catch (e) { ElMessage.error('儲存失敗') }
+}
 
+const handleUnbindNotion = async () => {
+    ElMessageBox.confirm('確定要解除 Notion 綁定嗎？', '解除綁定', { type: 'warning' })
+    .then(async () => {
+        await settingApi.updateNotionConfig({
+            notion_api_key: null,
+            notion_page_id: null
+        })
+        notionConfig.value = { apiKey: '', pageId: '' }
+        isNotionBound.value = false
+        isEditingNotion.value = true
+        ElMessage.success('已解除綁定喵！')
+    })
+}
 
 const fetchLoginActivities = async () => {
     isLoading.value = true
@@ -164,6 +198,43 @@ const handleDeleteAccount = () => {
 
 <template>
     <div class="tab-content">
+
+
+<div class="settings-section notion-integration">
+
+        <div class="siri-header">
+            <h2>Notion 財務同步</h2>
+            <span v-if="isNotionBound" class="status-badge success">已綁定</span>
+            <span v-else class="status-badge info">未連線</span>
+        </div>
+        <div v-if="isEditingNotion" class="siri-steps notion-steps">
+                <p><strong>🔗 如何取得綁定資訊？</strong></p>
+                <ol>
+                    <li><strong>API Key：</strong>請至 <a href="https://www.notion.so/my-integrations" target="_blank" class="notion-link">Notion 開發者後台</a> 建立或複製你的機器人整合授權碼。</li>
+                    <li><strong>目標 Page ID：</strong>打開你的 Notion 目標頁面，複製網址。網址中 <code>-</code> 後面的 32 位數代碼即為 Page ID（例如：<code>.../user-3537efad061f80cb...</code> 中的 <code>3537...</code>）。</li>
+                    <li class="highlight-step"><strong>⚠️ 最重要的一步 (授權機器人)：</strong>在你的 Notion 目標頁面右上角點擊 <code>...</code> 圖示，選擇 <code>Connections (連線)</code> -> <code>Connect to (新增連線)</code>，搜尋並加入你的 <strong>MoneyMMA-MCP</strong> 機器人，否則喵喵會被擋在門外喔！</li>
+                    <li><strong>詢問範例：</strong>喵喵，請幫我寫一段『上個月飲食花費』的財務摘要，並寫入我的 Notion。</li>
+                </ol>
+            </div>
+
+        <div class="form-group">
+            <label>Notion API Key</label>
+            <input type="password" v-model="notionConfig.apiKey" :disabled="!isEditingNotion" placeholder="secret_xxxx...">
+        </div>
+        <div class="form-group">
+            <label>目標 Page ID</label>
+            <input type="text" v-model="notionConfig.pageId" :disabled="!isEditingNotion" placeholder="從網址中複製 32 位元代碼">
+        </div>
+
+        <div class="btn-group">
+            <button v-if="!isEditingNotion" class="btn-secondary" @click="isEditingNotion = true">修改設定</button>
+            <button v-if="isEditingNotion" class="btn-primary" @click="handleNotionSave">確認儲存</button>
+            <button v-if="isNotionBound" class="btn-outline-danger" @click="handleUnbindNotion">解除綁定</button>
+        </div>
+
+    </div>
+
+
         <div class="settings-section">
             <h2>密碼安全</h2>
             <div class="form-group">
@@ -304,6 +375,26 @@ const handleDeleteAccount = () => {
 .btn-copy:active {
     transform: scale(0.95);
 }
-
-
+.notion-integration {
+    margin-top: 20px;
+    border: 1px solid #e2e8f0;
+    background: linear-gradient(145deg, #ffffff, #f8fafc);
+}
+.notion-badge { background: #37352f !important; } /* Notion 招牌黑 */
+.btn-notion {
+    width: 100%;
+    padding: 12px;
+    background: #37352f;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+    margin-top: 10px;
+}
+.btn-notion:hover { background: #000; transform: translateY(-2px); }
+.btn-group { display: flex; gap: 10px; margin-top: 15px; }
+.btn-outline-danger { background: none; border: 1px solid #f56c6c; color: #f56c6c; border-radius: 8px; cursor: pointer; padding: 8px 15px; }
+.btn-outline-danger:hover { background: #fef0f0; }
 </style>

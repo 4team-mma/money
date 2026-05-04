@@ -45,17 +45,17 @@ const loadData = async () => {
             group_by_field: groupBy.value 
         }
 
-        // 1. 先等待 API 回傳結果並定義 res
-        const res = await statsApi.getExpenseCategoryStatsWithItems(params)
+        let data
+        if (groupBy.value === 'add_class') {
+            // 按類別時用有 item 拆分的進階版
+            const res = await statsApi.getExpenseCategoryStatsWithItems(params)
+            data = Array.isArray(res) ? res : (res && res.data ? res.data : [])
+        } else {
+            // 其他維度（帳戶、成員、標籤）用一般版，才有 group_by_field 支援
+            data = await statsApi.getExpenseCategoryStats(params)
+        }
 
-        // 2. 這時候才能印出 res (如果要除錯的話)
-        console.log("API res =", res)
-
-        // 3. 自動判斷並賦值
-        // 這裡幫你加了層保護，確保 res 存在才讀取 .data
-        const data = Array.isArray(res) ? res : (res && res.data ? res.data : [])
         categoryTableData.value = data
-
         renderChart()
     } catch (error) {
         console.error("統計資料讀取失敗:", error)
