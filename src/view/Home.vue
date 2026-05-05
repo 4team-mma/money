@@ -21,42 +21,64 @@ const formData = ref({
 
 // --- 初始化邏輯 (修正為 async) ---
 onMounted(async () => {
-    // 1. 初始化 LIFF
+    // 🌟 兩件事並行，互不等待
+    const liffTask = initLiff()
+    const googleTask = initGoogle()
+    await Promise.allSettled([liffTask, googleTask])
+})
+
+// LIFF 初始化獨立出去
+const initLiff = async () => {
     try {
-        if (!LIFF_ID) {
-            console.warn("未設定 LIFF_ID，跳過 LINE 初始化");
-        } else {
-            await liff.init({ liffId: LIFF_ID });
-            if (liff.isLoggedIn()) {
-                const profile = await liff.getProfile();
-                lineUserId.value = profile.userId;
-                console.log("LINE ID 載入成功:", lineUserId.value);
-            }
+        if (!LIFF_ID) return
+        await liff.init({ liffId: LIFF_ID })
+        if (liff.isLoggedIn()) {
+            const profile = await liff.getProfile()
+            lineUserId.value = profile.userId
         }
     } catch (err) {
-        console.log("非 LINE 環境或 LIFF 初始化失敗", err);
+        console.log("非 LINE 環境", err)
     }
+}
 
-    // 2. Google 登入按鈕渲染
-    if (window.google) {
-        window.google.accounts.id.initialize({
-            client_id: GOOGLE_CLIENT_ID,
-            callback: handleGoogleCallback,
-        });
-        
-        window.google.accounts.id.renderButton(
-            document.getElementById("google-login-btn"),
-            { 
-                theme: "outline", 
-                size: "large",
-                width: "320",
-                text: "signin_with",
-                shape: "rectangular",
-                logo_alignment: "left"
+// Google 按鈕初始化，帶載入守衛
+const initGoogle = () => {
+    return new Promise((resolve) => {
+        const render = () => {
+            if (!window.google) return
+            window.google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: handleGoogleCallback,
+            })
+            window.google.accounts.id.renderButton(
+                document.getElementById("google-login-btn"),
+                { theme: "outline", size: "large", width: "320",
+                text: "signin_with", shape: "rectangular", logo_alignment: "left" }
+            )
+            resolve()
+        }
+
+        // 如果 Google script 已載入就直接跑，否則監聽載入事件
+        if (window.google) {
+            render()
+        } else {
+            // 找到 index.html 裡的 Google script tag，監聽它載入完成
+            const script = document.querySelector('script[src*="accounts.google.com"]')
+            if (script) {
+                script.addEventListener('load', render, { once: true })
+            } else {
+                // 保底 polling，每 100ms 檢查一次，最多等 5 秒
+                let attempts = 0
+                const poll = setInterval(() => {
+                    if (window.google || ++attempts > 50) {
+                        clearInterval(poll)
+                        render()
+                    }
+                }, 100)
             }
-        );
-    }
-});
+        }
+    })
+}
 
 // --- Google 登入回調 (同步支援 LINE 綁定) ---
 const handleGoogleCallback = async (response) => {
