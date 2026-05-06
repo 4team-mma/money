@@ -57,7 +57,14 @@ const loadData = async () => {
             group_by_field: groupBy.value // 傳送分組參數給後端
         }
         const data = await statsApi.getIncomeCategoryStats(params)
-        categoryTableData.value = data 
+        // --- 🌟 在這裡進行排序，確保表格與圖表邏輯一致 ---
+        categoryTableData.value = data.sort((a, b) => {
+            // 如果名稱是「未分類標籤」，回傳 1 (往後排)
+            if (a.category === '未分類標籤') return 1;
+            if (b.category === '未分類標籤') return -1;
+            // 其他項目可以依金額大小排序（可選），或維持原樣
+            return b.amount - a.amount;
+        });
         renderChart()
     } catch (error) {
         console.error("統計資料讀取失敗:", error)
@@ -75,18 +82,26 @@ onMounted(() => {
 // 🌟 計算屬性 (保留在前端，處理 UI 邏輯)
 const periodDays = computed(() => calculatePeriodDays(period.value, startDate.value, endDate.value))
 const totalAmount = computed(() => categoryTableData.value.reduce((sum, i) => sum + i.amount, 0))
-const averagePerDay = computed(() => {
+const averagePerMonth = computed(() => {
     const days = periodDays.value;
-    return (totalAmount.value > 0 && days > 0) 
-        ? Math.round(totalAmount.value / days) 
+    const monthCount = days / 30;
+    return (totalAmount.value > 0 && monthCount > 0)
+        ? Math.round(totalAmount.value / monthCount)
         : 0;
 });
 
 const renderChart = () => {
     if (!dailyChartRef.value) return
     if (chartInstance) chartInstance.destroy()
-    const chartData = categoryTableData.value
+
+    const chartData = [...categoryTableData.value].sort((a, b) => {
+    if (a.category === '未分類標籤') return 1;  // a 是未分類，往後移
+    if (b.category === '未分類標籤') return -1; // b 是未分類，往前移
+    return 0; // 其他維持原樣
+    });
+
     if (chartData.length === 0) return
+
     // 判斷是否為標籤模式
     const isTagMode = groupBy.value === 'add_tag'
     
@@ -96,7 +111,7 @@ const renderChart = () => {
         data: {
             labels: chartData.map(i => i.category),
             datasets: [{
-                label: '支出金額', // 長條圖需要 label
+                label: '金額', // 長條圖需要 label
                 data: chartData.map(i => i.amount),
                 backgroundColor: isTagMode ? '#36A2EB' : ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'],
                 borderWidth: 1,
@@ -195,11 +210,15 @@ watch([period, startDate, endDate, groupBy], (newVal, oldVal) => {
                         </div>
                         <div class="chart-wrapper" style="position: relative; height: 350px; width: 100%;">
                             <div v-if="is_loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">加載中...</div>
-                            <canvas ref="dailyChartRef"></canvas>
+                            <canvas v-show="!is_loading && categoryTableData.length > 0" ref="dailyChartRef"></canvas>
+                            <div v-if="!is_loading && categoryTableData.length === 0" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #909399;">
+                            <p colspan="4" style="text-align: center; padding: 40px; color: #999;">此期間尚無收入資料</p>
+                            </div>
+                            
                         </div>
                         <div class="summary">
                             <div>合計：NT${{ totalAmount.toLocaleString() }}</div>
-                            <div>平均每天：NT${{ averagePerDay.toLocaleString() }}</div>
+                            <div>平均每月：NT${{ averagePerMonth.toLocaleString() }}</div>
                         </div>
                     </div>
                 </div>
@@ -214,8 +233,8 @@ watch([period, startDate, endDate, groupBy], (newVal, oldVal) => {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="row in categoryTableData" :key="row.category">
-                            <td>{{ row.id }}</td>
+                        <tr v-for="row, index in categoryTableData" :key="index">
+                            <td>{{ index +1 }}</td>
                             <td>{{ row.category  }}</td>
                             <td>NT${{ row.amount.toLocaleString() }}</td>
                             <td>{{ row.ratio.toFixed(1) }}%</td>

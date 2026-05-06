@@ -2,62 +2,72 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRecordStore } from '@/stores/useRecordStore'
 import { useAccountStore } from '@/stores/useAccountStore'
-import { ElDrawer, ElButton, ElDivider, ElMessage, ElNotification } from 'element-plus'
+import { ElDrawer, ElButton, ElMessage, ElNotification, ElIcon } from 'element-plus'
 import api from '@/api'
-import { vLoading } from 'element-plus' // 💡 補上這一行
+import { Loading } from '@element-plus/icons-vue'
+import MarkdownIt from 'markdown-it';
 const recordStore = useRecordStore()
 const accountStore = useAccountStore()
 
-// --- AI 智慧財務洞察: 狀態定義 ---
-const aiData = ref(null)       // 存放後端回傳的 AI 建議與指標
-const aiLoading = ref(false)   // 按鈕的載入狀態（會讓按鈕轉圈圈）
-const drawerVisible = ref(false) // 控制側邊抽屜是否顯示
+const components = {
+  Loading
+}
 
+// AI智慧洞察
+// 1. 先定義基礎工具與狀態 (狀態要放在最前面)
+const md = new MarkdownIt({
+    html: true, // 👈 關鍵：允許 Markdown 內容中包含 HTML 標籤
+    breaks: true,
+    linkify: true
+})
+
+const aiData = ref(null)
+const aiLoading = ref(false)
+const drawerVisible = ref(false)
+
+// 2. 再定義依賴於狀態的計算屬性
+const renderedInsight = computed(() => {
+    if (!aiData.value || !aiData.value.ai_insight) return '';
+    // 拿處理過的 content 去替換，不要直接動 aiData.value 避免副作用
+    let content = aiData.value.ai_insight;
+    // 替換 [i:...] 標籤
+    content = content.replace(/\[i:(.+?)\]/g, (match, p1) => {
+        return `<span class="ai-info-icon" title="${p1}" style="cursor:help; margin-left:4px; color:#909399;">ⓘ</span>`;
+    });
+    return md.render(content);
+})
+
+// 3. 最後是執行邏輯的 Function
 const fetchAiSummary = async () => {
-    // 1. 防呆檢查：沒 Token 就不發請求，節省資源
     const token = localStorage.getItem('user_token')
     if (!token) {
         ElMessage.warning('請先登入帳號，才能使用 AI 洞察功能喔！')
         return
     }
 
-    // 2. 開啟 Loading 狀態 (按鈕轉圈圈)
+    // 💡 體驗優化：先開啟抽屜並進入 Loading
+    drawerVisible.value = true
     aiLoading.value = true
+    aiData.value = null // 清空舊資料，避免使用者看到上次的內容
 
     try {
-        // 3. 發送 API 請求：增加 timeout 到 30 秒，給 AI 充足時間思考
-        const response = await api.get('/v1/ai/analysis/financial-insight', {
-            timeout: 30000 
+        const res = await api.get('/v1/ai/analysis/financial-insight', {
+            timeout: 60000 // 給 AI 1分鐘，比較保險
         })
-        console.log('API 回傳的原始結構:', response) // 💡 加這行，打開瀏覽器 F12 看看
 
-        // 4. 資料賦值 (根據 axios 攔截器習慣，通常資料在 response.data 或 response)
-        // 這裡建議先用 console.log 檢查一次結構，如果是妳原本的寫法就用 response
-        aiData.value = response.data || response
-        drawerVisible.value = true
+        // 根據 API 回傳結構賦值
+        aiData.value = res;
 
         ElNotification({
             title: '分析完成',
-            message: 'AI 顧問已根據心理學與數據模型為您準備好建議',
+            message: 'AI 顧問已準備好你的心理財務報告',
             type: 'success',
             position: 'bottom-right'
         })
-
     } catch (error) {
         console.error('AI 請求出錯:', error)
-
-        // 5. 針對不同的錯誤給予精確回饋
-        if (error.code === 'ECONNABORTED') {
-            ElMessage.error('AI 思考太久超時了，請再試一次或確認網路狀況')
-        } else {
-            const status = error.response?.status
-            const errorMsg = status === 401 ? '認證失效，請重新登入' 
-                           : status === 404 ? '找不到 AI 介面，請確認路徑' 
-                           : 'AI 顧問目前忙碌中，請稍後再試'
-            ElMessage.error(errorMsg)
-        }
+        ElMessage.error('AI 好像分心了，請再試一次')
     } finally {
-        // 6. 無論成功或失敗，最後都要關閉 Loading 狀態
         aiLoading.value = false
     }
 }
@@ -188,16 +198,10 @@ const monthlyMOMStats = computed(() => {
             <div class="action-right">
                 <el-button type="text" @click="fetchAiSummary" class="ai-btn"> AI 智慧財務洞察
                 </el-button>
-                <el-drawer v-model="drawerVisible" :modal="true" :append-to-body="true" title="🤖 AI 智慧財務顧問"
-                    direction="rtl" size="380px">
-                    <h3 style="padding-left: 20px;">AI 智慧財務洞察</h3>
+                <el-drawer v-model="drawerVisible" :modal="true" :append-to-body="true" title="🤖 AI 智慧財務洞察"
+                    direction="rtl" size="500px">
                     <div v-if="aiData" class="ai-content">
-                        <p style="white-space: pre-wrap; line-height: 1.8;padding: 20px;">{{ aiData.ai_insight }}</p>
-                        <el-divider />
-                        <div class="metrics-footer">
-                            <el-text size="small" ; style="padding-left: 20px;">本月支出：NT$ {{
-                                aiData.metrics?.total_expense }}</el-text>
-                        </div>
+                        <div v-html="renderedInsight" class="markdown-body"></div>
                     </div>
                     <div v-else-if="aiLoading" style="height: 200px; display: flex; align-items: center; justify-content: center;">
                         <el-icon class="is-loading" :size="30"><Loading /></el-icon>
@@ -451,5 +455,72 @@ h2 {
     /* 滑鼠移上去稍微放大 */
     text-shadow: 0 0 8px rgba(64, 158, 255, 0.4);
     /* 增加一點發光感 */
+}
+
+.ai-content p {
+    white-space: pre-wrap; 
+    line-height: 1.8;
+    padding: 20px;
+    
+    /* 以下是處理縮排的關鍵 */
+    text-indent: -1.5em;    /* 第一行向左縮回 (符號凸出) */
+    padding-left: 2.5em;   /* 整體內容向右推開 */
+    word-break: break-all; /* 確保長句子會自動換行 */
+}
+
+<style scoped>
+.markdown-body {
+    line-height: 1.8;
+    padding: 20px 30px; /* 增加左右留白，讓視覺更集中 */
+    color: #374151;
+}
+
+/* 1. 增加大標題上方的間距，拉開區塊距離 */
+.markdown-body :deep(h3) {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #111827;
+    margin-top: 40px;      /* 💡 增加這裡，讓大區塊之間有明顯區隔 */
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1.5px solid #f3f4f6;
+}
+
+/* 2. 增加列表項之間的距離 */
+.markdown-body :deep(li) {
+    margin-bottom: 16px;   /* 💡 增加列點與列點之間的空隙 */
+    padding-left: 4px;
+}
+
+/* 3. 增加一般段落（如開頭與結尾文字）的上下距 */
+.markdown-body :deep(p) {
+    margin-top: 12px;
+    margin-bottom: 20px;   /* 💡 讓結尾那大段文字不要貼著標題 */
+    letter-spacing: 0.02em; /* 稍微增加字距，閱讀更輕鬆 */
+    /* 💡 關鍵：增加左右內縮，讓它跟上面的列點對齊 */
+    padding-left: 1.5em;  /* 這裡的數值可以根據你 ul 的縮排來調整 */
+    padding-right: 1em;   /* 右邊也留一點空間，避免貼邊 */
+}
+
+/* 4. 強制讓標題與上一個段落拉開 */
+.markdown-body :deep(h3:first-child) {
+    margin-top: 0px;      /* 第一個標題不用太上面 */
+}
+
+/* 讓小 i 符號在滑鼠移上去時變色 */
+:deep(.ai-info-icon) {
+    transition: color 0.2s ease;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+:deep(.ai-info-icon:hover) {
+    color: #409eff !important; /* 滑鼠移上去變藍色 */
+}
+
+/* 確保 markdown-body 內的內容不會太擁擠 */
+.markdown-body {
+    line-height: 1.6;
+    font-size: 14px;
 }
 </style>

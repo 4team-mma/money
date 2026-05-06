@@ -42,20 +42,18 @@ const loadData = async () => {
         const params = {
             start_date: startDate.value,
             end_date: endDate.value,
-            group_by_field: groupBy.value 
+            group_by_field: groupBy.value // 傳送分組參數給後端
         }
-
-        // 1. 先等待 API 回傳結果並定義 res
-        const res = await statsApi.getExpenseCategoryStatsWithItems(params)
-
-        // 2. 這時候才能印出 res (如果要除錯的話)
-        console.log("API res =", res)
-
-        // 3. 自動判斷並賦值
-        // 這裡幫你加了層保護，確保 res 存在才讀取 .data
-        const data = Array.isArray(res) ? res : (res && res.data ? res.data : [])
-        categoryTableData.value = data
-
+        // 呼叫模組化的 API
+        const data = await statsApi.getExpenseCategoryStats(params)
+        // --- 🌟 在這裡進行排序，確保表格與圖表邏輯一致 ---
+        categoryTableData.value = data.sort((a, b) => {
+            // 如果名稱是「未分類標籤」，回傳 1 (往後排)
+            if (a.category === '未分類標籤') return 1;
+            if (b.category === '未分類標籤') return -1;
+            // 其他項目可以依金額大小排序（可選），或維持原樣
+            return b.amount - a.amount;
+        });
         renderChart()
     } catch (error) {
         console.error("統計資料讀取失敗:", error)
@@ -83,8 +81,15 @@ const averagePerDay = computed(() => {
 const renderChart = () => {
     if (!dailyChartRef.value) return
     if (chartInstance) chartInstance.destroy()
-    const chartData = categoryTableData.value
+    
+    const chartData = [...categoryTableData.value].sort((a, b) => {
+        if (a.category === '未分類標籤') return 1;  // a 是未分類，往後移
+        if (b.category === '未分類標籤') return -1; // b 是未分類，往前移
+        return 0; // 其他維持原樣
+    });
+
     if (chartData.length === 0) return
+
     // 判斷是否為標籤模式
     const isTagMode = groupBy.value === 'add_tag'
     
@@ -94,7 +99,7 @@ const renderChart = () => {
         data: {
             labels: chartData.map(i => i.category),
             datasets: [{
-                label: '支出金額', // 長條圖需要 label
+                label: '金額',
                 data: chartData.map(i => i.amount),
                 backgroundColor: isTagMode ? '#36A2EB' : ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'],
                 borderWidth: 1,
@@ -193,7 +198,10 @@ const today = computed(() => {
                         </div>
                         <div class="chart-wrapper" style="position: relative; height: 350px; width: 100%;">
                             <div v-if="is_loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">加載中...</div>
-                            <canvas ref="dailyChartRef"></canvas>
+                            <canvas v-show="!is_loading && categoryTableData.length > 0" ref="dailyChartRef"></canvas>
+                            <div v-if="!is_loading && categoryTableData.length === 0" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #909399;">
+                            <p colspan="4" style="text-align: center; padding: 40px; color: #999;">此期間尚無支出資料</p>
+                            </div>
                         </div>
                         <div class="summary">
                             <div>合計：NT${{ totalAmount.toLocaleString() }}</div>
@@ -206,8 +214,8 @@ const today = computed(() => {
                         <tr><th>排序</th><th>{{ tableLabel }}</th><th>金額</th><th>比例</th></tr>
                     </thead>
                     <tbody>
-                        <tr v-for="row in categoryTableData" :key="row.category">
-                            <td>{{ row.id }}</td>
+                        <tr v-for="row, index in categoryTableData" :key="index">
+                            <td>{{ index +1 }}</td>
                             <td>{{ row.category }}</td>
                             <td>NT${{ row.amount.toLocaleString() }}</td>
                             <td>{{ row.ratio.toFixed(1) }}%</td>
