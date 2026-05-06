@@ -68,7 +68,25 @@ service.interceptors.response.use(
           }
           break;
         case 403:
-          ElMessage.error(errorMsg || "無權限存取");
+          // 加上防抖標記判斷 (可與 401 共用 is401Alerting 避免瘋狂彈窗)
+          if (!is401Alerting) {
+            is401Alerting = true;
+            
+            ElMessage.error(errorMsg || "偵測到異常權限操作，為確保安全，請重新登入系統");
+
+            // 🛡️ 關鍵防禦：清除被駭客竄改的假資料與 Token，徹底破除無限迴圈！
+            localStorage.removeItem("user_token");
+            localStorage.removeItem("token");
+            localStorage.removeItem("currentUser");
+            // 你可以把其他該清的快取一起清掉
+
+            // 跳回登入頁 (這時因為沒有 token，Router Guard 就不會把你拉回去了)
+            router.replace("/");
+
+            setTimeout(() => {
+              is401Alerting = false;
+            }, 3000);
+          }
           break;
         case 404:
           ElMessage.error(errorMsg || "請求的資源不存在");
