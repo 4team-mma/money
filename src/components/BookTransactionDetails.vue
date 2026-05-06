@@ -192,7 +192,7 @@ const currentFormComponent = computed(() => {
                 </div>
 
                 <!-- 內層：交易項目 -->
-                <div v-for="(t, index) in group.list" :key="t.add_id" class="transaction-item">
+                <div v-for="(t) in group.list" :key="t.add_id" class="transaction-item">
                     <!-- 左側：內容 -->
                     <div class="transaction-info">
                         <div class="transaction-icon"
@@ -249,9 +249,9 @@ const currentFormComponent = computed(() => {
                                 v-if="t.add_type !== 'event'">
                                 {{ t.add_type ? '+' : '-' }}{{ t.currency }} {{ formatNumber(t.add_amount) }}
                             </div>
-                            <div class="transaction-amount" v-else>
-                                查看詳情
-                            </div>
+                            <div class="transaction-account-name" v-if="t.add_type !== 'event'">
+                            {{ t.account_name }}
+                        </div>
                         </template>
                     </div>
 
