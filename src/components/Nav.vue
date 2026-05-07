@@ -1,13 +1,13 @@
 <script setup>
+//Nav.vue
 import { useRouter,useRoute } from 'vue-router'
 import { ref, onMounted, computed, onUnmounted } from 'vue'
 import MoneyAIBot from '../components/MoneyAIBot.vue'
 import { useUserStore } from '@/stores/user'
 import { useNotificationStore } from '@/stores/notification'
+import { useCalendarStore } from '@/stores/useCalendarStore'
 
 const sidebarOpen = ref(false)
-
-
 
 const router = useRouter() //執行動作。用來指令電腦「去哪裡」。
 const route = useRoute() // 讀取狀態。用來查看「目前在哪」
@@ -92,18 +92,17 @@ const checkAuth = () => {
 
 const logout = () => {
   if (confirm('確定要登出系統嗎？')) {
+    // 清 Google token（過期後沒意義，清掉比較安全）
+    const calendarStore = useCalendarStore()
+    calendarStore.clearGoogleToken()
+
     localStorage.removeItem('currentUser')
     localStorage.removeItem('user_token')
-
-    // 2. ⚡️ 新增：清除喵喵機器人的聊天紀錄與開關狀態
     localStorage.removeItem('meowChatHistory')
     localStorage.removeItem('isMeowChatOpen')
-
-    // 清除 Pinia 持久化快取 (確保不同帳號登入時資料不打架)
     localStorage.removeItem('category')
     localStorage.removeItem('notification')
 
-    // 終極清除：強制重整並導回首頁，確保記憶體變數完全釋放
     window.location.href = '/';
   }
 }

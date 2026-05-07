@@ -50,6 +50,14 @@ export const settingApi = {
         return api.get('/setting/setting_account/login-activities');
     },
 
+
+    /**
+     * 🌟 更新使用者 Notion 綁定資訊
+     */
+    updateNotionConfig: (data) => {
+        // 這邊對應後端一個特定的 PATCH 或 PUT 路由
+        return api.patch('/setting/setting_account/notion-config', data);
+    },
 };
 
  // 告訴 Axios 這是要下載檔案用的

@@ -1,4 +1,5 @@
 <script setup>
+//BookTransactionDetails.vue
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import EditTransferForm from './EditTransferForm.vue'
 import EditRecordForm from './EditRecordForm.vue'
@@ -88,8 +89,8 @@ const filteredTransactions = computed(() => {
         return props.transactions.filter(t => t.add_type === 'event');
 
     }
-    // 預設顯示全部
-    return props.transactions;
+    // 全部：只顯示收支與轉帳，行程自己去行程tab
+    return props.transactions.filter(t => t.add_type !== 'event');
 });
 
 // 控制哪一個項目的下拉選單是開啟的 (存儲 index)
@@ -183,15 +184,15 @@ const currentFormComponent = computed(() => {
                     <span class="divider-date">{{ group.date }} 🔍</span>
                     <div class="divider-totals">
                         <span v-if="group.dayIncome > 0" class="day-income">收入: {{ formatNumber(group.dayIncome)
-                            }}</span>
+                        }}</span>
                         <span v-if="group.dayExpense > 0" class="day-expense">支出: {{ formatNumber(group.dayExpense)
-                            }}</span>
+                        }}</span>
                         <span v-if="group.dayTransfer > 0">轉帳: {{ formatNumber(group.dayTransfer) }}</span>
                     </div>
                 </div>
 
                 <!-- 內層：交易項目 -->
-                <div v-for="(t, index) in group.list" :key="t.add_id" class="transaction-item">
+                <div v-for="(t) in group.list" :key="t.add_id" class="transaction-item">
                     <!-- 左側：內容 -->
                     <div class="transaction-info">
                         <div class="transaction-icon"
@@ -208,7 +209,7 @@ const currentFormComponent = computed(() => {
                                 <template v-if="t.add_type === 'transfer'">
                                     {{ t.source_account }} ➔ {{ t.account_name }}
                                 </template>
-                                
+
                                 <template v-else-if="t.add_type === 'event'">
                                     <span style="font-weight: bold; color: var(--color-primary);">
                                         {{ t.add_class }} </span>
@@ -224,6 +225,9 @@ const currentFormComponent = computed(() => {
                                 <template v-if="t.add_type === 'transfer'">
                                     {{ t.add_note }}
                                 </template>
+
+                                <template v-else-if="t.add_type === 'event'"></template>
+
                                 <template v-else>
                                     {{ t.add_member }}<span v-if="t.add_note"> | {{ t.add_note }}</span>
                                     <div v-if="t.add_tag" class="tag-group">
@@ -248,8 +252,8 @@ const currentFormComponent = computed(() => {
                                 v-if="t.add_type !== 'event'">
                                 {{ t.add_type ? '+' : '-' }}{{ t.currency }} {{ formatNumber(t.add_amount) }}
                             </div>
-                            <div class="transaction-amount" v-else>
-                                查看詳情
+                            <div class="transaction-account-name" v-if="t.add_type !== 'event'">
+                                {{ t.account_name }}
                             </div>
                         </template>
                     </div>
@@ -275,15 +279,15 @@ const currentFormComponent = computed(() => {
 
         <!-- 若過濾後沒資料的顯示 -->
         <div v-else class="no-data">
-    <p>目前沒有相關紀錄</p>
-    
-    <div v-if="currentTab === 'event'" style="margin-top: 15px;">
-        <p style="font-size: 12px; color: #999; margin-bottom: 8px;">(開發測試) 如果手機出現重複行程，請點擊下方按鈕清理喵！</p>
-        <button class="btn-cleanup-dev" @click="$emit('trigger-cleanup')">
-            🧹 清除 Google 重複行程
-        </button>
-    </div>
-</div>
+            <p>目前沒有相關紀錄</p>
+
+            <div v-if="currentTab === 'event'" style="margin-top: 15px;">
+                <p style="font-size: 12px; color: #999; margin-bottom: 8px;">(開發測試) 如果手機出現重複行程，請點擊下方按鈕清理喵！</p>
+                <button class="btn-cleanup-dev" @click="$emit('trigger-cleanup')">
+                    🧹 清除 Google 重複行程
+                </button>
+            </div>
+        </div>
 
     </div>
 
@@ -304,5 +308,21 @@ const currentFormComponent = computed(() => {
 .tab-container button.active {
     background: var(--color-primary);
     color: var(--text-inverse);
+}
+
+.btn-cleanup-dev {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-cleanup-dev:hover {
+    background: #fde68a;
 }
 </style>

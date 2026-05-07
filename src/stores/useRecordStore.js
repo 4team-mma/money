@@ -1,3 +1,4 @@
+// useRecordStore.js
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/api'

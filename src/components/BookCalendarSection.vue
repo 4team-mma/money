@@ -1,62 +1,107 @@
 <script setup>
+//BookCalendarSection.vue
 import { Calendar } from "v-calendar";
 import { ref, reactive } from "vue";
 import { integrationApi } from '@/api/integrations';
 import { ElMessage, ElLoading } from 'element-plus';
+import { useCalendarStore } from '@/stores/useCalendarStore'
 
-// 接收父層傳入的 props
 const props = defineProps({
     attributes: Array,
     today: String,
     selectedDate: String,
 });
 
-// 向父層回傳事件
-const emit = defineEmits(["select-date", "move-today", "update-date","refresh-with-events"]);
+const emit = defineEmits(["select-date", "move-today", "update-date", "refresh-with-events"]);
 
 const calendar = ref(null);
 const scheduleInput = ref(null);
-
-// 🌟 重要修正：使用 ref 讓按鈕切換具有響應式
 const tempGoogleToken = ref(null);
+const calendarStore = useCalendarStore()
 
-// 🌟 預覽視窗控制
 const previewVisible = ref(false);
 const pendingEvents = ref([]);
 const currentGoogleToken = ref('');
 
-const selectedEventIndices = ref([]); // 用來存選中的項目
-const timeSettings = reactive({
-    morning: { start: '09:00', end: '12:00' },
-    afternoon: { start: '13:00', end: '17:00' }
-});
-// 一鍵套用時間的函式
-const applyTimeToSelected = (type) => {
-    const setting = type === 'morning' ? timeSettings.morning : timeSettings.afternoon;
-    
-    pendingEvents.value.forEach((event, index) => {
-        // 如果你有做勾選功能就判斷選中，沒有就全部套用（或根據 AI 抓的 period）
-        const datePart = event.start.dateTime.substring(0, 10); // 取得 2026-03-30 部分
-        
-        // 🌟 核心：重新拼湊人類看得懂的時間，並轉回 ISO 格式
-        event.start.dateTime = `${datePart}T${setting.start}:00+08:00`;
-        event.end.dateTime = `${datePart}T${setting.end}:00+08:00`;
-    });
-    
-    ElMessage.success(`已將選中行程統一設定為${type === 'morning' ? '上午' : '下午'}時段喵！`);
-};
+const viewingYear = ref(new Date().getFullYear())
+const viewingMonth = ref(new Date().getMonth() + 1)  // 1-12
 
+
+// ══════════════════════════════════════════════
+// 🌟 批量設定：上午/下午各自可自訂時間
+// ══════════════════════════════════════════════
+const batchSettings = reactive({
+    morning: { start: '09:00', end: '12:00' },
+    afternoon: { start: '13:30', end: '16:30' }
+})
 
 /**
- * 🌟 第一步：單純索取 Google 授權 Token
- * 這樣可以避開瀏覽器對於「非直接點擊」觸發彈窗的攔截
+ * 智慧批量套用：
+ * - 判斷每筆行程目前是上午還是下午（以 12:00 為分界）
+ * - 分別套用對應的批量時間，保留 AM/PM 結構
  */
+const applySmartBatch = () => {
+    pendingEvents.value.forEach(event => {
+        const currentHour = parseInt(event.start.dateTime.substring(11, 13))
+        const datePart = event.start.dateTime.substring(0, 10)
+        const setting = currentHour < 12 ? batchSettings.morning : batchSettings.afternoon
+        event.start.dateTime = `${datePart}T${setting.start}:00+08:00`
+        event.end.dateTime = `${datePart}T${setting.end}:00+08:00`
+    })
+    ElMessage.success('已套用批量時間（上午/下午各自保留）')
+}
+
+// 只套用上午那些
+const applyMorningOnly = () => {
+    pendingEvents.value.forEach(event => {
+        const currentHour = parseInt(event.start.dateTime.substring(11, 13))
+        if (currentHour < 12) {
+            const datePart = event.start.dateTime.substring(0, 10)
+            event.start.dateTime = `${datePart}T${batchSettings.morning.start}:00+08:00`
+            event.end.dateTime = `${datePart}T${batchSettings.morning.end}:00+08:00`
+        }
+    })
+    ElMessage.success('已套用上午時段')
+}
+
+// 只套用下午那些
+const applyAfternoonOnly = () => {
+    pendingEvents.value.forEach(event => {
+        const currentHour = parseInt(event.start.dateTime.substring(11, 13))
+        if (currentHour >= 12) {
+            const datePart = event.start.dateTime.substring(0, 10)
+            event.start.dateTime = `${datePart}T${batchSettings.afternoon.start}:00+08:00`
+            event.end.dateTime = `${datePart}T${batchSettings.afternoon.end}:00+08:00`
+        }
+    })
+    ElMessage.success('已套用下午時段')
+}
+
+// 取得單筆的時間（供 input 雙向綁定用）
+const getEventStartTime = (event) => event.start.dateTime.substring(11, 16)
+const getEventEndTime = (event) => event.end.dateTime.substring(11, 16)
+
+// 更新單筆開始時間
+const updateStartTime = (event, newTime) => {
+    const datePart = event.start.dateTime.substring(0, 10)
+    event.start.dateTime = `${datePart}T${newTime}:00+08:00`
+}
+
+// 更新單筆結束時間
+const updateEndTime = (event, newTime) => {
+    const datePart = event.end.dateTime.substring(0, 10)
+    event.end.dateTime = `${datePart}T${newTime}:00+08:00`
+}
+
+// ══════════════════════════════════════════════
+// 授權與上傳流程（不變）
+// ══════════════════════════════════════════════
 const requestTokenOnly = async () => {
     try {
         const token = await requestGoogleCalendarToken();
         if (token) {
-            // 使用 .value 賦值，Vue 才會偵測到變化並切換按鈕
             tempGoogleToken.value = token;
+            calendarStore.setGoogleToken(token)
             ElMessage.success('Google 授權成功！請點擊第二步選擇圖片喵～');
         }
     } catch (error) {
@@ -65,27 +110,14 @@ const requestTokenOnly = async () => {
     }
 };
 
-/**
- * 🌟 第二步：使用者選完檔案後觸發
- * 此時 tempGoogleToken 已經有值了，可以直接送往後端
- */
 const handleScheduleUpload = async (event) => {
     const file = event.target.files[0];
     if (!file || !tempGoogleToken.value) return;
-
-    // 呼叫後端處理 API
     await processAndSyncSchedule(file, tempGoogleToken.value);
-    
-    // 清除狀態，方便下次操作
     event.target.value = '';
-    tempGoogleToken.value = null; 
+    tempGoogleToken.value = null;
 };
 
-
-
-/**
- * 向 Google 討要行事曆權限的 Access Token
- */
 const requestGoogleCalendarToken = () => {
     return new Promise((resolve, reject) => {
         const client = google.accounts.oauth2.initTokenClient({
@@ -98,132 +130,92 @@ const requestGoogleCalendarToken = () => {
                     reject(new Error('未取得授權'));
                 }
             },
-            error_callback: (error) => {
-                reject(error);
-            }
+            error_callback: (error) => { reject(error); }
         });
-        
-        // 強制彈出同意畫面，確保使用者有機會勾選「寫入」權限
         client.requestAccessToken({ prompt: 'consent' });
     });
 };
 
-const fetchEvents = async (token) => {
-    // 簡單抓取前後一個月的行程
-    const now = new Date();
-    const timeMin = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const timeMax = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
-    
-    const res = await integrationApi.getEvents(token, timeMin, timeMax);
-    return res.data;
-};
-
-
-
 const processAndSyncSchedule = async (file, accessToken) => {
-    const loading = ElLoading.service({ 
-        lock: true, 
-        text: 'AI 喵喵正在努力解析課表（大約需要 30-120 秒）...', 
+    const loading = ElLoading.service({
+        lock: true,
+        text: 'AI 喵喵正在努力解析課表（大約需要 30-120 秒）...',
     });
-
     try {
         const formData = new FormData();
         formData.append('file', file);
 
-        // ① STEP 1: AI 解析
         const res = await integrationApi.analyze(formData);
-        console.log("🔥 AI 原始回傳:", res);
         const analyzeRes = res?.data ?? res;
-        if (!analyzeRes?.success) {
-            throw new Error('AI 解析失敗或格式不正確喵');
-        }
+        if (!analyzeRes?.success) throw new Error('AI 解析失敗或格式不正確喵');
 
-        // 🌟 修正：從 analyzeRes 裡抓出 events
         const eventsFromAI = analyzeRes?.events ?? [];
-        console.log("🔥 檢查 events 是否拿到了:", eventsFromAI);
-
         if (eventsFromAI.length === 0) {
             ElMessage.warning('AI 沒辨識出任何內容，請手動新增喵！');
         }
 
-        const normalizeDateTime = (dt) => {
-            return dt.includes('+08:00') ? dt : dt + '+08:00';
-        };
+        const normalizeDateTime = (dt) => dt.includes('+08:00') ? dt : dt + '+08:00';
 
-
-        // 🌟 關鍵修正：將資料存入預覽變數並打開視窗，然後直接 RETURN！
         pendingEvents.value = eventsFromAI.map(e => ({
             ...e,
             start: { dateTime: normalizeDateTime(e.start.dateTime) },
             end: { dateTime: normalizeDateTime(e.end.dateTime) }
-        })); 
+        }));
         currentGoogleToken.value = accessToken;
-        previewVisible.value = true; 
+        previewVisible.value = true;
 
         ElMessage.success(`解析完成！共 ${eventsFromAI.length} 筆行程，請校對時間喵～`);
-
-        // ⛔ 注意：這裡必須停止，不要往下跑同步，同步交給 handleFinalSync 處理
-        return;
-
     } catch (error) {
-        console.error("同步流程錯誤：", error);
-        // 🌟 針對 Timeout 的友善提示
-        const msg = error.message.includes('timeout') ? 'AI 思考太久了，請再試一次或換一張小一點的圖喵' : error.message;
+        const msg = error.message.includes('timeout')
+            ? 'AI 思考太久了，請再試一次或換一張小一點的圖喵'
+            : error.message;
         ElMessage.error('失敗：' + msg);
     } finally {
         loading.close();
     }
 };
 
-
-// 🌟 預覽視窗用的：刪除單筆、新增空白行
 const removeEvent = (index) => pendingEvents.value.splice(index, 1);
+
 const addNewRow = () => {
+    const today = props.selectedDate || new Date().toISOString().substring(0, 10)
     pendingEvents.value.push({
         summary: '新課程',
-        start: { dateTime: props.selectedDate + 'T09:00:00+08:00' },
-        end: { dateTime: props.selectedDate + 'T10:00:00+08:00' }
+        start: { dateTime: `${today}T09:00:00+08:00` },
+        end: { dateTime: `${today}T10:00:00+08:00` }
     });
 };
 
-
-/**
- * 🌟 新增：預覽視窗按「確認同步」後執行的最終動作
- */
 const handleFinalSync = async () => {
     const loading = ElLoading.service({ lock: true, text: '正在同步至 Google 日曆...' });
     try {
         const syncPayload = {
-            events: pendingEvents.value, 
+            events: pendingEvents.value,
             google_token: currentGoogleToken.value
         };
 
-        // 1. 執行同步
         const syncResRaw = await integrationApi.sync(syncPayload);
-        
-        // 🌟 修正點 1：對齊 syncRes 的層級
         const syncRes = (syncResRaw && syncResRaw.events_added !== undefined) ? syncResRaw : syncResRaw.data;
 
-        // 2. 同步完後立即抓取最新列表回顯
-        const displayEvents = pendingEvents.value.map(e => ({
-            ...e,
-            add_date: e.start.dateTime.substring(0, 10)
-        }));
-        
-        console.log("🔥 同步成功，準備發回給父組件的行程：", displayEvents);
+        let displayEvents
+        try {
+            const realRes = await integrationApi.getEvents(
+    currentGoogleToken.value,
+    new Date(viewingYear.value, viewingMonth.value - 1, 1).toISOString(),
+    new Date(viewingYear.value, viewingMonth.value, 0).toISOString()
+)
+            displayEvents = Array.isArray(realRes) ? realRes : (realRes.data ?? [])
+        } catch {
+            displayEvents = pendingEvents.value.map(e => ({
+                ...e, add_date: e.start.dateTime.substring(0, 10)
+            }))
+        }
 
-        // 3. 發送事件給父組件 Book.vue
-        emit("refresh-with-events", displayEvents); 
-
+        emit("refresh-with-events", displayEvents)
         ElMessage.success(`✅ 成功同步 ${syncRes?.events_added ?? pendingEvents.value.length} 筆行程！`);
-        
-        // 4. 關閉視窗與清理
         previewVisible.value = false;
-        tempGoogleToken.value = null; 
-
+        tempGoogleToken.value = null;
     } catch (error) {
-        console.error("同步失敗報錯：", error);
-        // 🌟 強健報錯解析
         const msg = error.response?.data?.detail || error.message || '同步過程中發生未知錯誤';
         ElMessage.error('同步失敗：' + msg);
     } finally {
@@ -231,8 +223,44 @@ const handleFinalSync = async () => {
     }
 };
 
+// 新增「同步 Google 行事曆」按鈕
+const syncFromGoogle = async () => {
+    if (!calendarStore.googleToken) {
+        ElMessage.warning('請先點擊「授權 Google 日曆」取得授權喵！')
+        return
+    }
+    const loading = ElLoading.service({ lock: true, text: `正在同步 ${viewingYear.value}年${viewingMonth.value}月 行程...` })
+    try {
+        // 用目前瀏覽的年月，不是當下時間
+        const firstDay = new Date(viewingYear.value, viewingMonth.value - 1, 1)
+        const lastDay = new Date(viewingYear.value, viewingMonth.value, 0)
+        const timeMin = firstDay.toISOString()
+        const timeMax = lastDay.toISOString()
 
-// 點擊今天按鈕
+        const res = await integrationApi.getEvents(calendarStore.googleToken, timeMin, timeMax)
+        const events = Array.isArray(res) ? res : (res.data ?? [])
+
+        if (events.length === 0) {
+            ElMessage.info(`${viewingYear.value}年${viewingMonth.value}月 Google 日曆沒有行程`)
+            return
+        }
+
+        emit('refresh-with-events', events)
+        ElMessage.success(`✅ 已同步 ${viewingYear.value}年${viewingMonth.value}月 共 ${events.length} 筆行程！`)
+    } catch (e) {
+        if (e.response?.status === 401) {
+            calendarStore.clearGoogleToken()
+            ElMessage.error('授權已過期，請重新授權喵！')
+        } else {
+            ElMessage.error('同步失敗，請確認授權是否有效')
+        }
+    } finally {
+        loading.close()
+    }
+}
+
+
+
 function moveToday() {
     calendar.value.move(props.today);
     emit("move-today");
@@ -241,26 +269,14 @@ function moveToday() {
 const handlePageChange = (pages) => {
     if (pages && pages.length > 0) {
         const { month: newMonth, year: newYear } = pages[0];
+        viewingYear.value = newYear       // ← 加這行
+        viewingMonth.value = newMonth     // ← 加這行
         emit('update-date', { year: newYear, month: newMonth });
     }
 }
 
-const devCleanup = async () => {
-    if (!tempGoogleToken.value) return;
-    try {
-        const res = await integrationApi.cleanupTestEvents(tempGoogleToken.value);
-        ElMessage.success(res.data.message || '清理成功喵！');
-    } catch (error) {
-        ElMessage.error('清理失敗：' + error.message);
-    }
-};
-const triggerUpload = () => {
-    scheduleInput.value.click();
-};
-
-// 暴露給父組件使用
+const triggerUpload = () => { scheduleInput.value.click(); };
 defineExpose({ triggerUpload });
-
 </script>
 
 <template>
@@ -269,182 +285,151 @@ defineExpose({ triggerUpload });
             :attributes="props.attributes" locale="zh-TW" @dayclick="day => emit('select-date', day)"
             @did-move="handlePageChange">
             <template #footer>
-                <div style="display: flex; justify-content: center; flex-wrap: wrap;">
-                    <button class="btn-icon" @click="moveToday" style="margin: 10px;">今天</button>
-                    <RouterLink style="margin: 10px;" class="btn-icon btn-outline-primary"
+                <div style="display:flex; justify-content:center; flex-wrap:wrap; align-items:center;">
+                    <button class="btn-icon" @click="moveToday" style="margin:10px;">今天</button>
+                    <RouterLink style="margin:10px;" class="btn-icon btn-outline-primary"
                         :to="{ path: '/Add', state: { date: props.selectedDate } }">新增支出</RouterLink>
-                    <RouterLink style="margin: 10px;" class="btn-icon btn-outline-primary"
+                    <RouterLink style="margin:10px;" class="btn-icon btn-outline-primary"
                         :to="{ path: '/AddIncome', state: { date: props.selectedDate } }">新增收入</RouterLink>
-                    <RouterLink style="margin: 10px;" class="btn-icon btn-outline-primary"
+                    <RouterLink style="margin:10px;" class="btn-icon btn-outline-primary"
                         :to="{ path: '/AddTrans', state: { date: props.selectedDate } }">新增轉帳</RouterLink>
 
-                    <button v-if="!tempGoogleToken"
-                        style="margin: 10px; background-color: #f59e0b; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-weight: 600;"
+                    <!-- 狀態一：沒有任何 token → 只顯示授權 -->
+                    <button v-if="!tempGoogleToken && !calendarStore.googleToken"
+                        style="margin:10px; background-color:#f59e0b; color:white; border:none; border-radius:8px; padding:8px 14px; cursor:pointer; font-weight:600;"
                         @click="requestTokenOnly">
-                        🔐 第一步：授權 Google 日曆
+                        🔐 授權 Google 日曆
                     </button>
 
-                    <button v-else
-                        style="margin: 10px; background-color: #10b981; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-weight: 600;"
-                        @click="scheduleInput.click()">
-                        📸 第二步：選擇課表圖片匯入
-                    </button>
+                    <!-- 狀態二：剛授權完（有臨時 token）→ 顯示兩個選項 -->
+                    <template v-if="tempGoogleToken">
+                        <span style="margin:10px 4px; font-size:0.8rem; color:#64748b;">授權完成，選擇：</span>
+                        <button
+                            style="margin:10px 6px; background-color:#10b981; color:white; border:none; border-radius:8px; padding:8px 14px; cursor:pointer; font-weight:600;"
+                            @click="scheduleInput.click()">
+                            📸 匯入課表圖片
+                        </button>
+                        <button
+                            style="margin:10px 6px; background-color:#6366f1; color:white; border:none; border-radius:8px; padding:8px 14px; cursor:pointer; font-weight:600;"
+                            @click="syncFromGoogle">
+                            🔄 同步 Google 行事曆
+                        </button>
+                    </template>
 
-                    <input type="file" ref="scheduleInput" accept="image/*" style="display: none;" @change="handleScheduleUpload" />
+                    <!-- 狀態三：有 session token 但沒有臨時 token（刷新後）→ 顯示授權 + 同步 -->
+                    <template v-if="!tempGoogleToken && calendarStore.googleToken">
+                        <button
+                            style="margin:10px 6px; background-color:#f59e0b; color:white; border:none; border-radius:8px; padding:8px 14px; cursor:pointer; font-weight:600;"
+                            @click="requestTokenOnly">
+                            🔐 授權 Google 日曆
+                        </button>
+                        <button
+                            style="margin:10px 6px; background-color:#6366f1; color:white; border:none; border-radius:8px; padding:8px 14px; cursor:pointer; font-weight:600;"
+                            @click="syncFromGoogle">
+                            🔄 同步 Google 行事曆
+                        </button>
+                    </template>
+
+                    <input type="file" ref="scheduleInput" accept="image/*" style="display:none;"
+                        @change="handleScheduleUpload" />
                 </div>
-                </template>
+            </template>
         </Calendar>
     </div>
 
-<div v-if="previewVisible" class="custom-modal-overlay">
-    <div class="custom-modal-card">
-        <h3>🗓️ 檢查 AI 辨識結果</h3>
-        <p>AI 幫你抓到了 {{ pendingEvents.length }} 筆行程。你可以一鍵統一時段：</p>
-        
-        <div class="batch-actions">
-            <span>批量設定：</span>
-            <button @click="applyTimeToSelected('morning')" class="btn-time">☀️ 統一上午 ({{timeSettings.morning.start}}~{{timeSettings.morning.end}})</button>
-            <button @click="applyTimeToSelected('afternoon')" class="btn-time">🌙 統一下午 ({{timeSettings.afternoon.start}}~{{timeSettings.afternoon.end}})</button>
-        </div>
+    <!-- ════ 預覽 Modal ════ -->
+    <div v-if="previewVisible" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>🗓️ 檢查 AI 辨識結果</h3>
+                <span class="event-count">共 {{ pendingEvents.length }} 筆</span>
+            </div>
 
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th width="80">日期</th>
-                        <th>行程名稱</th>
-                        <th width="120">目前時間</th> 
-                        <th width="60">操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="(event, index) in pendingEvents" :key="index">
-                        <td style="font-size: 0.9em; color: #666;">
-                            {{ event.start.dateTime.substring(5, 10) }}
-                        </td>
-                        <td>
-                            <input v-model="event.summary" class="modal-input" placeholder="行程名稱" />
-                        </td>
-                        <td>
-                            <div class="time-display" :title="event.start.dateTime">
-                                {{ event.start.dateTime.substring(11, 16) }} ~ {{ event.end.dateTime.substring(11, 16) }}
-                            </div>
-                        </td>
-                        <td>
-                            <button @click="removeEvent(index)" class="btn-delete">❌</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+            <!-- ── 批量時間設定區 ── -->
+            <div class="batch-section">
+                <div class="batch-title">⚙️ 批量時間設定</div>
 
-        <div class="modal-footer">
-            <button @click="addNewRow" class="btn-secondary">➕ 手動加一筆</button>
-            <div class="right-btns">
-                <button @click="previewVisible = false" class="btn-cancel">取消</button>
-                <button @click="handleFinalSync" class="btn-primary" :disabled="pendingEvents.length === 0">🚀 確認同步到 Google</button>
+                <div class="batch-row">
+                    <!-- 上午設定 -->
+                    <div class="batch-group">
+                        <label class="batch-label">☀️ 上午時段</label>
+                        <div class="batch-inputs">
+                            <input v-model="batchSettings.morning.start" type="time" class="batch-time-input" />
+                            <span>～</span>
+                            <input v-model="batchSettings.morning.end" type="time" class="batch-time-input" />
+                            <button class="btn-apply morning" @click="applyMorningOnly">套上午</button>
+                        </div>
+                    </div>
+
+                    <!-- 下午設定 -->
+                    <div class="batch-group">
+                        <label class="batch-label">🌙 下午時段</label>
+                        <div class="batch-inputs">
+                            <input v-model="batchSettings.afternoon.start" type="time" class="batch-time-input" />
+                            <span>～</span>
+                            <input v-model="batchSettings.afternoon.end" type="time" class="batch-time-input" />
+                            <button class="btn-apply afternoon" @click="applyAfternoonOnly">套下午</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-apply-all" @click="applySmartBatch">
+                    ✨ 一鍵智慧套用（上午/下午各自保留）
+                </button>
+                <p class="batch-hint">💡 以 12:00 為分界自動判斷，上午行程套上午設定、下午行程套下午設定</p>
+            </div>
+
+            <!-- ── 行程列表 ── -->
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:70px">日期</th>
+                            <th>行程名稱</th>
+                            <th style="width:85px">開始</th>
+                            <th style="width:85px">結束</th>
+                            <th style="width:44px">刪</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(event, index) in pendingEvents" :key="index"
+                            :class="parseInt(event.start.dateTime.substring(11, 13)) < 12 ? 'row-morning' : 'row-afternoon'">
+                            <td class="date-cell">{{ event.start.dateTime.substring(5, 10) }}</td>
+                            <td>
+                                <input v-model="event.summary" class="name-input" placeholder="行程名稱" />
+                            </td>
+                            <td>
+                                <input type="time" class="time-input" :value="getEventStartTime(event)"
+                                    @change="e => updateStartTime(event, e.target.value)" />
+                            </td>
+                            <td>
+                                <input type="time" class="time-input" :value="getEventEndTime(event)"
+                                    @change="e => updateEndTime(event, e.target.value)" />
+                            </td>
+                            <td>
+                                <button class="btn-remove" @click="removeEvent(index)">✕</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ── 底部操作 ── -->
+            <div class="modal-footer">
+                <button class="btn-add-row" @click="addNewRow">➕ 新增一筆</button>
+                <div class="footer-right">
+                    <button class="btn-cancel" @click="previewVisible = false">取消</button>
+                    <button class="btn-confirm" @click="handleFinalSync" :disabled="pendingEvents.length === 0">
+                        🚀 確認同步到 Google
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
-
-
 </template>
 
 <style scoped>
-
-/* 🌟 強制彈窗浮動在最上層，不影響原本排版 */
-.custom-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999; /* 確保在最前面 */
-}
-
-.custom-modal-card {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 600px;
-    max-height: 80vh;
-    overflow-y: auto;
-    color: #333;
-}
-
-.table-container {
-    margin: 15px 0;
-    overflow-x: auto;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-th, td {
-    padding: 8px;
-    border-bottom: 1px solid #ddd;
-    text-align: left;
-}
-
-.modal-input {
-    width: 100%;
-    padding: 6px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-.modal-footer {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 20px;
-}
-
-.btn-primary { background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
-.btn-secondary { background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
-.btn-cancel { background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-right: 8px; }
-.btn-delete { background: none; color: #ef4444; border: 1px solid #ef4444; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
-.batch-actions {
-    background: #f8fafc;
-    padding: 10px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.btn-time {
-    background: white;
-    border: 1px solid #d1d5db;
-    padding: 4px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 13px;
-}
-
-.btn-time:hover { background: #eff6ff; border-color: #3b82f6; }
-
-.time-display {
-    font-family: monospace;
-    background: #e0f2fe;
-    color: #0369a1;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 13px;
-    text-align: center;
-}
-
-
-
-
+/* ── 日曆 ── */
 .calendar-section {
     background: var(--bg-sidebar);
     border-radius: 12px;
@@ -456,7 +441,7 @@ th, td {
     background: var(--color-primary);
     color: white;
     padding: 10px 20px;
-    border: 0px;
+    border: 0;
     margin: 1px;
     border-radius: 10px;
     font-weight: 600;
@@ -488,9 +473,300 @@ th, td {
     color: var(--text-primary);
 }
 
-:deep(.vc-day-content.vc-focusable.vc-focus.vc-attr.vc-highlight-content-outline.vc-orange) {
-    color: var(--text-primary);
-    background-color: var(--bg-card);
-    border: 2px solid
+/* ── Modal 外框 ── */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.modal-card {
+    background: white;
+    border-radius: 16px;
+    width: 92%;
+    max-width: 680px;
+    max-height: 88vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    color: #1e293b;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Modal Header ── */
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.event-count {
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+}
+
+/* ── 批量設定區 ── */
+.batch-section {
+    padding: 14px 20px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.batch-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 10px;
+}
+
+.batch-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.batch-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+    min-width: 240px;
+}
+
+.batch-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.batch-inputs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.batch-time-input {
+    padding: 5px 8px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    width: 88px;
+    background: white;
+}
+
+.batch-time-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.btn-apply {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-apply.morning {
+    background: #fef9c3;
+    color: #854d0e;
+}
+
+.btn-apply.afternoon {
+    background: #e0f2fe;
+    color: #075985;
+}
+
+.btn-apply-all {
+    width: 100%;
+    padding: 8px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn-apply-all:hover {
+    opacity: 0.9;
+}
+
+.batch-hint {
+    margin: 6px 0 0;
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+/* ── 表格 ── */
+.table-container {
+    padding: 0 4px;
+    overflow-x: auto;
+    flex: 1;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+th {
+    padding: 8px 6px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-weight: 600;
+    text-align: left;
+    font-size: 0.78rem;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+td {
+    padding: 5px 6px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+/* 上午/下午行顏色 */
+.row-morning {
+    background: #fffbeb;
+}
+
+.row-afternoon {
+    background: #f0f9ff;
+}
+
+.date-cell {
+    font-size: 0.8rem;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.name-input {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    background: white;
+    box-sizing: border-box;
+}
+
+.name-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.time-input {
+    width: 100%;
+    padding: 5px 4px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    background: white;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+.time-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.btn-remove {
+    background: none;
+    border: 1px solid #fca5a5;
+    color: #ef4444;
+    padding: 4px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.15s;
+}
+
+.btn-remove:hover {
+    background: #fef2f2;
+}
+
+/* ── Footer ── */
+.modal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    border-top: 1px solid #e2e8f0;
+    gap: 10px;
+}
+
+.footer-right {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-add-row {
+    background: #f1f5f9;
+    border: 1px dashed #94a3b8;
+    color: #475569;
+    padding: 7px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.btn-add-row:hover {
+    background: #e2e8f0;
+}
+
+.btn-cancel {
+    background: white;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-confirm {
+    background: #10b981;
+    border: none;
+    color: white;
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.9rem;
+    transition: opacity 0.2s;
+}
+
+.btn-confirm:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-confirm:not(:disabled):hover {
+    opacity: 0.9;
 }
 </style>

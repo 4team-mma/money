@@ -53,7 +53,8 @@ export const useAccountStore = defineStore("account", {
 
         this.accounts = rawData.map((acc) => ({
           account_id: acc.account_id,
-          itemName: acc.account_name,
+          itemName: acc.account_name,     // ← 保留 itemName 相容舊的用法
+          account_name: acc.account_name, // ← 改回 account_name
           icon: acc.account_icon || "💰",
           account_type: acc.account_type,
           currency: acc.currency || "NT$",

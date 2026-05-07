@@ -1,4 +1,3 @@
-<!-- // AddItems.vue -->
 <!-- AddItems.vue -->
 <script setup>
 import Add_bar from '@/components/AddBar.vue'
@@ -129,6 +128,7 @@ function removeItem(idx) {
 }
 
 async function confirmRecord() {
+  console.log('selectedAccount:', selectedAccount.value) 
   if (!selectedAccount.value) { scanError.value = '請選擇帳戶'; return }
   isSubmitting.value = true
   try {
@@ -140,10 +140,12 @@ async function confirmRecord() {
       add_class: editClass.value,
       add_note:     editNote.value,
       account_name: selectedAccount.value.account_name,
+      account_id:   selectedAccount.value.account_id,  // ← 加這行，直接送 ID
       add_member:   '自己',
       add_tag:      '需要',
       items:        editItems.value
     })
+    await accountStore.loadAccounts(true)  // ← 加這行，force=true 強制刷新
     step.value = 'success'
   } catch (err) {
     scanError.value = err?.message || '記帳失敗，請重試'
@@ -293,8 +295,9 @@ onMounted(async () => {
               <span>{{ currentCurrency }} {{ itemsTotal }}</span>
             </div>
             <p v-if="amountMismatch" class="mismatch-hint">
-              ⚠️ 品項合計（{{ itemsTotal }}）與總金額（{{ editAmount }}）不符，請檢查
-            </p>
+  ⚠️ 品項合計（{{ itemsTotal }}）與總金額（{{ editAmount }}）不符
+  <button class="sync-btn" @click="editAmount = itemsTotal">← 以品項合計為準</button>
+</p>
           </div>
 
           <div v-if="scanError" class="scan-error">⚠️ {{ scanError }}</div>
@@ -302,8 +305,9 @@ onMounted(async () => {
           <div class="actions">
             <button class="btn-secondary" @click="resetAll">← 重新上傳</button>
             <button class="btn-primary"
-              :disabled="isSubmitting || amountMismatch"
+              :disabled="isSubmitting"
               @click="confirmRecord">
+
               <span v-if="isSubmitting">儲存中...</span>
               <span v-else>✅ 確認記帳</span>
             </button>
@@ -435,4 +439,20 @@ label { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; di
 .btn-primary { background: var(--color-primary); color: white; border: none; padding: 10px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem; }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-secondary { background: var(--bg-hover); color: var(--text-secondary); border: 1px solid var(--border-color); padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; }
+
+.sync-btn {
+  margin-left: 10px;
+  background: none;
+  border: 1px solid #f59e0b;
+  color: #f59e0b;
+  border-radius: 6px;
+  padding: 2px 10px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.sync-btn:hover {
+  background: #fef3c7;
+}
+
+
 </style>

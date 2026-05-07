@@ -36,7 +36,7 @@ const handleLogout = () => {
                             <span class="sparkle">🔬</span>
                         </div>
                         <div class="brand-text">
-                            <h1>邱比特 AI 實驗室大廳</h1>
+                            <h1>AI 實驗室大廳</h1>
                             <p>MoneyMMA 核心模型效能測試與驗證中心</p>
                         </div>
                     </div>
@@ -47,7 +47,7 @@ const handleLogout = () => {
             </header>
 
             <section class="module-cards-container">
-
+<!-- 語音糾錯測試 -->
                 <div class="tech-card action-card" @click="navigateTo('/SpeechCorrectionLab')">
                     <div class="card-glow blue-glow"></div>
                     <div class="card-content">
@@ -61,7 +61,7 @@ const handleLogout = () => {
                         </div>
                     </div>
                 </div>
-
+<!-- ONNX測試 -->
                 <div class="tech-card action-card" @click="navigateTo('/TestAI')">
                     <div class="card-glow purple-glow"></div>
                     <div class="card-content">
@@ -75,8 +75,8 @@ const handleLogout = () => {
                         </div>
                     </div>
                 </div>
-<!-- RagSandbox -->
 
+<!-- RagSandbox -->
                 <div class="tech-card action-card" @click="navigateTo('/RagSandbox')">
     <div class="card-glow silver-glow"></div> <div class="card-content">
         <div class="card-icon-container silver-bg"> <span class="card-icon">🧪</span>
@@ -87,6 +87,23 @@ const handleLogout = () => {
             <button class="action-btn silver-btn">進入沙盒 | ENTER SANDBOX ⚡</button> </div>
     </div>
 </div>
+
+<!-- Token -->
+<div class="tech-card action-card" @click="navigateTo('/TokenRadarLab')">
+    <div class="card-glow" style="background:#3b82f6"></div>
+    <div class="card-content">
+        <div class="card-icon-container" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2)">
+            <span class="card-icon">📡</span>
+        </div>
+        <h2>Token 監測雷達</h2>
+        <p class="desc">即時追蹤 Gemini、Groq、OpenAI 的 Token 消耗。揪出 Text-to-SQL 的流量殺手，守住免費額度。</p>
+        <div class="card-footer">
+            <button class="action-btn blue-btn">進入監控 ⚡</button>
+        </div>
+    </div>
+</div>
+
+
 
             </section>
         </div>
@@ -146,9 +163,10 @@ const handleLogout = () => {
     font-size: 2rem;
     font-weight: 700;
     margin: 0 0 5px 0;
-    background: linear-gradient(to right, #ffffff, #94a3b8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+
+    color: #cbd5e1;
+    line-height: 1.6;
+
 }
 
 .brand-text p {

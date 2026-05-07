@@ -32,9 +32,8 @@ const tableLabel = computed(() => {
     }
     return labelMap[groupBy.value] || '項目'
 })
-
 /**
- * 🌟 核心：直接使用 statsApi 獲取結果
+ * 🌟 核心：直接使用 statsApi 獲取結果 (已修復合併衝突)
  */
 const loadData = async () => {
     is_loading.value = true
@@ -44,16 +43,29 @@ const loadData = async () => {
             end_date: endDate.value,
             group_by_field: groupBy.value // 傳送分組參數給後端
         }
-        // 呼叫模組化的 API
-        const data = await statsApi.getExpenseCategoryStats(params)
-        // --- 🌟 在這裡進行排序，確保表格與圖表邏輯一致 ---
-        categoryTableData.value = data.sort((a, b) => {
-            // 如果名稱是「未分類標籤」，回傳 1 (往後排)
+        
+        let responseData = []
+
+        // 1. 根據維度選擇呼叫對應的 API
+        if (groupBy.value === 'add_class') {
+            // 按類別時用有 item 拆分的進階版
+            const res = await statsApi.getExpenseCategoryStatsWithItems(params)
+            responseData = Array.isArray(res) ? res : (res && res.data ? res.data : [])
+        } else {
+            // 其他維度（帳戶、成員、標籤）用一般版，支援 group_by_field
+            responseData = await statsApi.getExpenseCategoryStats(params)
+        }
+
+        // 2. 在這裡進行統一排序，確保表格與圖表邏輯一致
+        categoryTableData.value = responseData.sort((a, b) => {
+            // 如果名稱是「未分類標籤」，回傳 1 (強制往後排)
             if (a.category === '未分類標籤') return 1;
             if (b.category === '未分類標籤') return -1;
-            // 其他項目可以依金額大小排序（可選），或維持原樣
+            // 其他項目依金額大小排序 (大到小)
             return b.amount - a.amount;
         });
+
+        // 3. 渲染圖表
         renderChart()
     } catch (error) {
         console.error("統計資料讀取失敗:", error)

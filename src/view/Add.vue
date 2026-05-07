@@ -1,3 +1,4 @@
+<!-- Add.vue -->
 <script setup>
 import Add_bar from '@/components/AddBar.vue'
 import Add_cato from '@/components/AddCato.vue'
