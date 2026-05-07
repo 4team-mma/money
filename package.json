@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
     "@line/liff": "^2.28.0",
     "@popperjs/core": "^2.11.8",
     "axios": "^1.13.2",
@@ -19,12 +20,14 @@
     "bootstrap-icons": "^1.13.1",
     "chart.js": "^4.5.1",
     "element-plus": "^2.13.0",
+    "markdown": "^0.5.0",
     "markdown-it": "^14.1.1",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
     "v-calendar": "3.0.1",
     "vue": "^3.5.25",
-    "vue-router": "^4.6.3"
+    "vue-router": "^4.6.3",
+    "vue3-google-signin": "^2.1.1"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.2",

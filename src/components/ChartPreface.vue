@@ -9,9 +9,6 @@ import MarkdownIt from 'markdown-it';
 const recordStore = useRecordStore()
 const accountStore = useAccountStore()
 
-const components = {
-  Loading
-}
 
 // AI智慧洞察
 // 1. 先定義基礎工具與狀態 (狀態要放在最前面)
@@ -468,7 +465,7 @@ h2 {
     word-break: break-all; /* 確保長句子會自動換行 */
 }
 
-<style scoped>
+
 .markdown-body {
     line-height: 1.8;
     padding: 20px 30px; /* 增加左右留白，讓視覺更集中 */
