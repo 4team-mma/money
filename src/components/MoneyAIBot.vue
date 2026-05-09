@@ -301,19 +301,18 @@ const chatWindowStyle = computed(() => {
   return style;
 });
 
+const handleResize = () => {
+  windowWidth.value = window.innerWidth
+  windowHeight.value = window.innerHeight
+  snapToNearestCorner()
+}
+
 onMounted(async () => {
   await accountStore.loadAccounts();
   if (isOpen.value) {
     checkAndGreet(route.path);  // ✅ 不用傳 map
   }
 
-  const handleResize = () => {
-  // ✅ 更新響應式尺寸，觸發 pixelPosition 重算
-  windowWidth.value = window.innerWidth
-  windowHeight.value = window.innerHeight
-  // ✅ 視窗縮放後（含 DevTools 開關）自動回最近角落
-  snapToNearestCorner()
-}
 window.addEventListener('resize', handleResize)
   connectWebSocket();
 });

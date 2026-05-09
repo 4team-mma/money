@@ -45,6 +45,7 @@ const initLiff = async () => {
 const initGoogle = () => {
     return new Promise((resolve) => {
         const render = () => {
+            // console.log('window.google:', window.google)  
             if (!window.google) return
             window.google.accounts.id.initialize({
                 client_id: GOOGLE_CLIENT_ID,
