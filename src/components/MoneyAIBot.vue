@@ -81,10 +81,35 @@ const isDragging = ref(false)
 const dragOffset = ref({ x: 0, y: 0 })
 const startPos = ref({ x: 0, y: 0 })
 
+// ✅ 響應式視窗尺寸，Vue 才會追蹤
+const windowWidth = ref(window.innerWidth)
+const windowHeight = ref(window.innerHeight)
+
 const pixelPosition = computed(() => ({
-  x: (position.value.x / 100) * window.innerWidth,
-  y: (position.value.y / 100) * window.innerHeight
+  x: (position.value.x / 100) * windowWidth.value,
+  y: (position.value.y / 100) * windowHeight.value
 }))
+
+// ✅ 拖曳結束後吸附最近角落
+const snapToNearestCorner = () => {
+  const CAT_SIZE = 90
+  const PADDING = 20
+  const w = windowWidth.value
+  const h = windowHeight.value
+
+  const snapRight = position.value.x > 50
+  const snapBottom = position.value.y > 50
+
+  // 右邊吸附：貓咪右邊緣貼齊螢幕右側留 PADDING
+  // 左邊吸附：貓咪左邊緣距螢幕左側 PADDING
+  position.value.x = snapRight
+    ? ((w - CAT_SIZE - PADDING) / w) * 100
+    : (PADDING / w) * 100
+
+  position.value.y = snapBottom
+    ? ((h - CAT_SIZE - PADDING) / h) * 100
+    : (PADDING / h) * 100
+}
 
 // 2-1. 互動功能 (優化後的自由拖拽)
 const startDrag = (e) => {
@@ -102,15 +127,13 @@ const onDragging = (e) => {
   if (!isDragging.value) return;
   let newX = e.clientX - dragOffset.value.x;
   let newY = e.clientY - dragOffset.value.y;
-
-  // 🛡️ 邊界檢查：不讓喵喵跑出螢幕外
-  // 360 是對話框寬度，我們預留空間確保展開時不被切到
   const padding = 20;
-  const safeX = Math.max(padding, Math.min(newX, window.innerWidth - 90 - padding));
-  const safeY = Math.max(padding, Math.min(newY, window.innerHeight - 90 - padding));
-
-  position.value.x = (safeX / window.innerWidth) * 100;
-  position.value.y = (safeY / window.innerHeight) * 100;
+  const w = windowWidth.value   // ✅ 改這
+  const h = windowHeight.value  // ✅ 改這
+  const safeX = Math.max(padding, Math.min(newX, w - 90 - padding));
+  const safeY = Math.max(padding, Math.min(newY, h - 90 - padding));
+  position.value.x = (safeX / w) * 100;
+  position.value.y = (safeY / h) * 100;
 };
 
 const stopDrag = (e) => {
@@ -121,12 +144,15 @@ const stopDrag = (e) => {
 
   const moveDistance = Math.sqrt(
     Math.pow(e.clientX - startPos.value.x, 2) +
-    Math.pow(e.clientY - startPos.value.y, 2));
+    Math.pow(e.clientY - startPos.value.y, 2)
+  );
 
   if (moveDistance < 5) {
     toggleOpen(true);
+  } else {
+    // ✅ 拖曳後吸附角落
+    snapToNearestCorner();
   }
-
 };
 
 // ==========================================
@@ -250,27 +276,36 @@ const chatWindowStyle = computed(() => {
   const isInRightHalf = position.value.x > 50;
   const catX = pixelPosition.value.x;
   const catY = pixelPosition.value.y;
-  const windowHeight = window.innerHeight;
+  const winH = windowHeight.value;   // ✅
+  const winW = windowWidth.value;    // ✅
   const chatHeight = 520;
 
   const style = { position: 'fixed', zIndex: 10000, width: '360px' };
 
   if (isInRightHalf) {
-    style.right = `${window.innerWidth - catX + 10}px`;
-    style.left = 'auto'; style.transformOrigin = 'right center';
+    style.right = `${winW - catX + 10}px`;  // ✅
+    style.left = 'auto';
+    style.transformOrigin = 'right center';
   } else {
     style.left = `${catX + 100}px`;
-    style.right = 'auto'; style.transformOrigin = 'left center';
+    style.right = 'auto';
+    style.transformOrigin = 'left center';
   }
 
   let topPosition = catY + 45;
   if (topPosition - (chatHeight / 2) < 20) topPosition = (chatHeight / 2) + 20;
-  else if (topPosition + (chatHeight / 2) > windowHeight - 20) topPosition = windowHeight - (chatHeight / 2) - 20;
+  else if (topPosition + (chatHeight / 2) > winH - 20) topPosition = winH - (chatHeight / 2) - 20;
 
   style.top = `${topPosition}px`;
   style.transform = `translateY(-50%)`;
   return style;
 });
+
+const handleResize = () => {
+  windowWidth.value = window.innerWidth
+  windowHeight.value = window.innerHeight
+  snapToNearestCorner()
+}
 
 onMounted(async () => {
   await accountStore.loadAccounts();
@@ -278,16 +313,13 @@ onMounted(async () => {
     checkAndGreet(route.path);  // ✅ 不用傳 map
   }
 
-  window.addEventListener('resize', () => {
-    position.value.x = Math.min(Math.max(2, position.value.x), 88)
-    position.value.y = Math.min(Math.max(2, position.value.y), 88)
-    if (position.value.x > 50) position.value.x = 88; else position.value.x = 2;
-  })
+window.addEventListener('resize', handleResize)
   connectWebSocket();
 });
 
 onUnmounted(() => {
   if (ws) { ws.onclose = null; ws.close(); }
+  window.removeEventListener('resize', handleResize) // ✅ 加這行
 });
 
 
