@@ -40,9 +40,8 @@ const runTest = async () => {
     loading.value = true;
     testResult.value = null;
     loadingProgress.value = 0;
-    hw.load = 85;
+    hw.load = 75 + Math.floor(Math.random() * 15); // 推論中的動態感保留
 
-    // 🌟 每次按鈕按下時，重置最高紀錄
     peakHw.temp = 0; peakHw.vram = 0; peakHw.load = 0;
 
     loadingInterval = setInterval(() => {
@@ -50,8 +49,6 @@ const runTest = async () => {
             loadingProgress.value += Math.floor(Math.random() * 15) + 5;
             if (loadingProgress.value > 95) loadingProgress.value = 95;
         }
-
-        // 🌟 持續監控並記錄最高負載 (Peak)
         if (hw.temp > peakHw.temp) peakHw.temp = hw.temp;
         if (hw.vram > peakHw.vram) peakHw.vram = hw.vram;
         if (hw.load > peakHw.load) peakHw.load = hw.load;
@@ -64,28 +61,21 @@ const runTest = async () => {
             hnsw_ef: params.ef,
             top_k: params.k
         });
-        testResult.value = res.data || res;
+        const data = res.data || res;
+        testResult.value = data;
 
-        // 確保沒有回傳值時有預設的動態模擬數據
-        if (!testResult.value.retrieval_ms) {
-            testResult.value.retrieval_ms = Math.floor(Math.random() * 300) + 150;
-        }
-        if (!testResult.value.tokens_per_sec) {
-            testResult.value.tokens_per_sec = (Math.random() * 10 + 20).toFixed(1);
-        }
+        // 🆕 推論完成後，用後端真實硬體數據覆蓋
+        if (data.gpu_temp   != null) hw.temp = data.gpu_temp;
+        if (data.vram_usage != null) hw.vram = data.vram_usage;
+        if (data.load       != null) hw.load = data.load;
 
         ElMessage.success('檢索推論完成！');
     } catch (err) {
         ElMessage.error('B1 機房通訊異常 Check Local LLM Status.');
     } finally {
         clearInterval(loadingInterval);
-        loadingProgress.value = 100; // 瞬間填滿
-
-        // 稍微延遲一下再切換畫面，讓使用者看到 100%
-        setTimeout(() => {
-            loading.value = false;
-            hw.load = 12; // 降回待機
-        }, 400);
+        loadingProgress.value = 100;
+        setTimeout(() => { loading.value = false; }, 400);
     }
 };
 
@@ -113,15 +103,18 @@ const handleSaveLog = async () => {
 
 onMounted(() => {
     hwInterval = setInterval(() => {
-        hw.temp = 38 + Math.floor(Math.random() * 5);
-        hw.vram = 2100 + Math.floor(Math.random() * 80);
-    }, 2000);
+        // 待機時只讓溫度小幅跳動，推論完成後會被真實值蓋掉
+        if (!testResult.value) {
+            hw.temp = 38 + Math.floor(Math.random() * 3);
+        }
+    }, 3000);
 });
 
 onUnmounted(() => {
-    if (hwInterval) clearInterval(hwInterval);
-    if (loadingInterval) clearInterval(loadingInterval);
-});
+    clearInterval(hwInterval)
+    clearInterval(loadingInterval)
+})
+
 </script>
 
 <template>
@@ -143,7 +136,7 @@ onUnmounted(() => {
 
             <div class="cyber-grid">
                 <aside class="cyber-panel side animate-slide-in-left">
-                    <div class="panel-header">⚙️ HNSW PARAMETERS | 參數微調</div>
+                    <div class="panel-header">📊 TELEMETRY | 即時效能 (待機模擬 / 推論後顯示真實數據)</div>
                     <div class="panel-body">
                         <div class="param-item">
                             <div class="label-row">
